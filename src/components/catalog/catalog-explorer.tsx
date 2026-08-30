@@ -14,6 +14,7 @@ import { useMemo, useState } from "react";
 import type { CatalogCoffee } from "@/data/types";
 import type { Locale } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
+import { useIsMounted } from "@/hooks/use-is-mounted";
 import { cn } from "@/lib/utils";
 
 type Labels = Record<
@@ -105,6 +106,8 @@ export function CatalogExplorer({
   const locale = useLocale() as Locale;
   const allLabel = locale === "ar" ? "الكل" : "All";
   const reduced = useReducedMotion();
+  const mounted = useIsMounted();
+  const shouldReduce = mounted && Boolean(reduced);
   const [filters, setFilters] = useState<Filters>({
     ...initialFilters,
     location: initialLocation || "all",
@@ -224,9 +227,9 @@ export function CatalogExplorer({
         <AnimatePresence>
           {filtersOpen && (
             <motion.div
-              initial={reduced ? false : { height: 0, opacity: 0 }}
+              initial={shouldReduce ? false : { height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
-              exit={reduced ? undefined : { height: 0, opacity: 0 }}
+              exit={shouldReduce ? undefined : { height: 0, opacity: 0 }}
               className="overflow-hidden border-t border-border"
             >
               <div className="site-container grid gap-4 py-5 sm:grid-cols-2 lg:grid-cols-6">
@@ -385,9 +388,9 @@ export function CatalogExplorer({
                 <AnimatePresence initial={false}>
                   {expanded === coffee.id && (
                     <motion.div
-                      initial={reduced ? false : { height: 0, opacity: 0 }}
+                      initial={shouldReduce ? false : { height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
-                      exit={reduced ? undefined : { height: 0, opacity: 0 }}
+                      exit={shouldReduce ? undefined : { height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
                       <div className="border-t border-border bg-page/70 px-5 py-6 md:px-10">
