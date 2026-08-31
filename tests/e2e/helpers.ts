@@ -68,6 +68,89 @@ export function collectPageProblems(page: Page) {
   };
 }
 
+/** The exact React development warning reproduced in Phase 0. */
+export const SCRIPT_TAG_ERROR =
+  /script tag while rendering React component|Scripts inside React components/i;
+
+export const HYDRATION_ERROR =
+  /hydrat|did not match|Text content does not match|There was an error while hydrating/i;
+
+/**
+ * Stronger than {@link collectPageProblems}: also captures uncaught page
+ * errors, and separates out the two runtime failures Phase 2 exists to prevent.
+ *
+ * IMPORTANT: the script-tag message is a React **development** warning. It can
+ * only be observed against `npm run dev`, which is why `playwright.dev.config.ts`
+ * exists — the default config runs `npm run start`, where this class of defect
+ * is invisible.
+ */
+export function collectRuntimeProblems(page: Page) {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+  const scriptTag: string[] = [];
+  const hydration: string[] = [];
+
+  const ignorable = (text: string) =>
+    text.includes("favicon") ||
+    text.includes("/_next/hmr") ||
+    text.includes("firebase-messaging") ||
+    text.includes("Download the React DevTools");
+
+  page.on("console", (message) => {
+    const text = message.text();
+    if (SCRIPT_TAG_ERROR.test(text)) scriptTag.push(text);
+    if (HYDRATION_ERROR.test(text)) hydration.push(text);
+    if (message.type() === "error" && !ignorable(text))
+      consoleErrors.push(text);
+  });
+  page.on("pageerror", (error) => {
+    const text = String(error);
+    if (SCRIPT_TAG_ERROR.test(text)) scriptTag.push(text);
+    if (HYDRATION_ERROR.test(text)) hydration.push(text);
+    pageErrors.push(text);
+  });
+
+  return {
+    consoleErrors,
+    pageErrors,
+    scriptTag,
+    hydration,
+    /** Everything that should be empty after a clean interaction. */
+    summary: () => ({
+      scriptTag: [...scriptTag],
+      hydration: [...hydration],
+      pageErrors: [...pageErrors],
+      consoleErrors: [...consoleErrors],
+    }),
+    reset: () => {
+      consoleErrors.length = 0;
+      pageErrors.length = 0;
+      scriptTag.length = 0;
+      hydration.length = 0;
+    },
+  };
+}
+
+/**
+ * Text of the Next.js dev error overlay, or null when no error is displayed.
+ *
+ * The `nextjs-portal` element is present on every dev page, so its existence
+ * proves nothing; only overlay content indicating an error counts.
+ */
+export async function devOverlayError(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    const portal = document.querySelector("nextjs-portal");
+    const root = portal?.shadowRoot;
+    if (!root) return null;
+    const dialog = root.querySelector(
+      '[role="dialog"], [data-nextjs-dialog], [data-nextjs-error-overlay]',
+    );
+    if (!dialog) return null;
+    const text = (dialog.textContent ?? "").replace(/\s+/g, " ").trim();
+    return text.length > 0 ? text.slice(0, 400) : null;
+  });
+}
+
 export async function horizontalTravel(page: Page) {
   return page.evaluate(() => {
     window.scrollTo(9999, 0);

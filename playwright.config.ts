@@ -1,6 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
+  // dev-runtime.spec.ts asserts React *development* diagnostics, which a
+  // production server never emits. Running it here would pass vacuously and
+  // imply coverage that does not exist. It runs via playwright.dev.config.ts
+  // (`npm run test:e2e:dev`) instead.
+  testIgnore: ["dev-runtime.spec.ts"],
   timeout: 30_000,
   expect: { timeout: 7_500 },
   fullyParallel: true,

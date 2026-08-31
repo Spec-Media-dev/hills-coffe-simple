@@ -163,7 +163,38 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 2 — Route architecture, proxy, and locale stabilization
 
-- [ ] P2-T01 [P] Confirm root/locale layout ownership boundary
+> **Status (2026-09-01): PHASE 2 COMPLETE — GATE PASS.**
+> Evidence: `evidence/phase-2-route-locale-architecture.md`.
+> Regression guard: `tests/e2e/locale-switch.spec.ts` (**44/44**).
+>
+> P2-T01 PASS · P2-T02 PASS (no change required) · P2-T03 PASS (scoped by owner
+> decision) · P2-T04 **DEFERRED** (owner decision) · P2-T05 PASS · P2-T06 PASS.
+>
+> **Residual remediation (2026-09-01), gate RECONFIRMED PASS.** The owner
+> reproduced the script-tag error on a stale Turbopack runtime. Root cause was
+> proven by a controlled A/B on a fresh server: the pre-fix switcher reproduces
+> it, the shipped fix does not. No application source changed. The real finding
+> was a test gap — `playwright.config.ts` runs `npm run start`, where React
+> development warnings cannot fire, so the suite was structurally blind.
+> Added `playwright.dev.config.ts` + `tests/e2e/dev-runtime.spec.ts`
+> (`npm run test:e2e:dev`, **73/73**), proven to fail when the defect is
+> reintroduced. See finding **N12**.
+>
+> All three Phase 0 locale-switch defects are fixed at the cause, not
+> suppressed: the switcher now performs a full document navigation, so
+> `<html lang>`/`dir` are server-rendered, JSON-LD is never reconciled on the
+> client, and `search`/`hash` are carried across. 58/58 runtime assertions with
+> zero console errors; full route matrix identical to the Phase 0 baseline.
+>
+> **Owner decisions.** P2-T03 was scoped down: the Admin tree is already
+> canonical and single-source under `[locale]`, and moving it out would have
+> duplicated the provider stack and created a second locale-resolution
+> mechanism. Only the Admin *entry* routes moved, out of the `(site)` group,
+> fixing the confirmed defect that the Admin sign-in screen rendered inside the
+> public marketing header and footer. P2-T04 was deferred: with an identical
+> layout the `(marketing)`/`(auth)` split has no routing or runtime effect.
+
+- [X] P2-T01 [P] Confirm root/locale layout ownership boundary
   - **Goal**: Verify the already-existing `src/app/layout.tsx` (global document, `lang`/`dir` from the proxy header) and `src/app/[locale]/layout.tsx` (locale/message/provider only) match the target boundary in `plan.md`'s Project Structure, and close any remaining gap.
   - **Dependencies**: Phase 0 complete.
   - **Files/modules**: `src/app/layout.tsx`, `src/app/[locale]/layout.tsx`.
@@ -177,7 +208,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: exactly one file owns `<html>`/`<body>`; no duplicate document ownership exists anywhere in the tree.
   - **Out of scope**: any Admin route move (P2-T03/T04 below).
 
-- [ ] P2-T02 Extend `src/proxy.ts` with the explicit Admin-path branch
+- [X] P2-T02 Extend `src/proxy.ts` with the explicit Admin-path branch
   - **Goal**: Implement the master plan's exact request algorithm's Admin-specific branch — `/dashboard-admin`/`/admin/**` (EN) and `/ar/dashboard-admin`/`/ar/admin/**` (AR, internally rewritten without a literal `[locale]` param) — while leaving the existing unprefixed-EN rewrite and `/en/**` 308 behavior untouched.
   - **Dependencies**: P2-T01.
   - **Files/modules**: `src/proxy.ts` (currently 61 lines), `src/i18n/routing.ts` (only if the locale-detection helper needs a shared export).
@@ -191,7 +222,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every Admin path in both languages sets the correct headers and reaches the same source file, with zero change to any non-Admin path's existing behavior.
   - **Out of scope**: the actual file move of the Admin tree (P2-T03); any visual change.
 
-- [ ] P2-T03 Move the Admin source tree to the canonical `(admin)` route group
+- [X] P2-T03 Move the Admin source tree to the canonical `(admin)` route group
   - **Goal**: Complete (not restart) the Admin route migration — move `src/app/[locale]/admin/**` to `src/app/(admin)/admin/**` and `src/app/[locale]/(site)/dashboard-admin/` to `src/app/(admin)/dashboard-admin/`, per `plan.md`'s explicit note that this specific piece is still outstanding.
   - **Dependencies**: P2-T02 (proxy must already route Admin paths correctly before the files move, so the matrix can be re-verified against the new location immediately).
   - **Files/modules**: every file under `src/app/[locale]/admin/**` (layout, page, `[module]/page.tsx`, `[module]/[id]/page.tsx`, `content/[id]/page.tsx`, `account/page.tsx`) and `src/app/[locale]/(site)/dashboard-admin/page.tsx`, moved to `src/app/(admin)/**`.
@@ -205,7 +236,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: one Admin implementation serves all four external Admin roots (`/dashboard-admin`, `/ar/dashboard-admin`, `/admin/**`, `/ar/admin/**`); the old `src/app/[locale]/admin/**` path is confirmed gone with zero remaining references.
   - **Out of scope**: splitting `(site)/**` into `(marketing)`/`(auth)` (P2-T04); any Admin UI/CRUD change.
 
-- [ ] P2-T04 [P] Split `(site)/**` into `(marketing)/` and `(auth)/` route groups
+- [~] P2-T04 [P] Split `(site)/**` into `(marketing)/` and `(auth)/` route groups
   - **Goal**: Complete the master plan's target public-tree structure by grouping marketing pages and Auth pages separately (no external URL change — route groups are invisible to the URL).
   - **Dependencies**: P2-T01 (root layout confirmed stable); independent of P2-T02/T03 (different files) so can run in parallel with the Admin move.
   - **Files/modules**: `src/app/[locale]/(site)/**` reorganized into `src/app/[locale]/(marketing)/**` (home, about, contact, request-a-quote, green-coffee-offer-list, coffee-origins, knowledge, `[page]`) and `src/app/[locale]/(auth)/**` (sign-in, sign-up, verify-email, forgot-password, reset-password); `account/**` remains its own group per `plan.md`'s Project Structure.
@@ -219,7 +250,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every public/auth/account URL in both languages resolves identically before and after the grouping.
   - **Out of scope**: any Admin file (P2-T03); any visual/content change.
 
-- [ ] P2-T05 Implement locale-switch hard navigation and verify the script-tag/overlay fix
+- [X] P2-T05 Implement locale-switch hard navigation and verify the script-tag/overlay fix
   - **Goal**: Implement the `research.md` §1 decision — locale switching performs a full document navigation while same-locale links keep client transitions — and prove the EN↔AR↔EN script-tag/runtime-overlay symptom from P0-T02 no longer reproduces.
   - **Dependencies**: P2-T01–T04 complete (the fix must be verified against the final route locations, not the pre-move tree).
   - **Files/modules**: the locale-switcher component (`src/i18n/navigation.ts` and/or `src/components/navigation/locale-switcher.tsx`). P0-T02 pinned the exact defect site: `src/components/navigation/locale-switcher.tsx:16`, `onClick={() => router.replace(pathname, { locale: nextLocale })}` — a client soft navigation that also passes `pathname` only, never `searchParams`.
@@ -233,7 +264,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: the repetition test is green; all three symptoms recorded in P0-T02 are closed — **D1** the script-tag console error, **D2** the stale `<html lang>`/`dir` (Arabic rendering LTR after a client switch), and **D3** the dropped query string.
   - **Out of scope**: any change to JSON-LD content/shape; any change to same-locale navigation behavior.
 
-- [ ] P2-T06 **PHASE 2 ACCEPTANCE GATE**
+- [X] P2-T06 **PHASE 2 ACCEPTANCE GATE**
   - **Goal**: Confirm the full route/proxy/locale architecture is stable before Auth work depends on it.
   - **Dependencies**: P2-T01 through P2-T05.
   - **Runtime acceptance condition** (per `plan.md` Phase 2): one Admin implementation serves all four external Admin roots; no visible `/en` in the browser bar; Admin path/query survives a locale switch; the script-tag repetition test is green; anonymous guards to `/admin`, `/dashboard-admin`, `/account` still redirect exactly as recorded in P0-T02, with no regression.
