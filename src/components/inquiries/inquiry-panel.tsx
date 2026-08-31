@@ -3,7 +3,11 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, CheckCircle2, Loader2, X } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
-import { createProductInquiry, type InquiryState } from "@/actions/inquiries";
+import {
+  createProductInquiry,
+  createSampleRequestInquiry,
+  type InquiryState,
+} from "@/actions/inquiries";
 import { Link } from "@/i18n/navigation";
 
 const initialState: InquiryState = { status: "idle", message: "" };
@@ -13,50 +17,81 @@ export function InquiryPanel({
   coffeeName,
   warehouse,
   signedIn,
+  verifiedEmail,
   labels,
+  locale,
 }: {
   offerId: string;
   coffeeName: string;
   warehouse: string;
   signedIn: boolean;
+  verifiedEmail: boolean;
+  locale: "en" | "ar";
   labels: {
     inquire: string;
+    sample: string;
     signin: string;
-    quantity: string;
     message: string;
     send: string;
     title: string;
     body: string;
+    sampleTitle: string;
+    sampleBody: string;
+    sampleSend: string;
+    verify: string;
+    close: string;
   };
 }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(
-    createProductInquiry,
-    initialState,
-  );
-  useEffect(() => {
-    if (state.status === "success") {
-      const timer = setTimeout(() => setOpen(false), 2200);
-      return () => clearTimeout(timer);
-    }
-  }, [state]);
+  const [kind, setKind] = useState<"product" | "sample">("product");
+  const openPanel = (nextKind: "product" | "sample") => {
+    setKind(nextKind);
+    setOpen(true);
+  };
   if (!signedIn)
     return (
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/sign-in"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+        >
+          {labels.signin}
+        </Link>
+        <Link
+          href="/sign-in"
+          className="inline-flex h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary"
+        >
+          {labels.sample}
+        </Link>
+      </div>
+    );
+  if (!verifiedEmail)
+    return (
       <Link
-        href="/sign-in"
-        className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+        href="/verify-email"
+        className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
       >
-        {labels.signin}
+        {labels.verify}
       </Link>
     );
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition hover:bg-forest-light"
-      >
-        {labels.inquire}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => openPanel("product")}
+          className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition-colors hover:bg-forest-light"
+        >
+          {labels.inquire}
+        </button>
+        <button
+          type="button"
+          onClick={() => openPanel("sample")}
+          className="inline-flex h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+        >
+          {labels.sample}
+        </button>
+      </div>
       <AnimatePresence>
         {open && (
           <motion.div
@@ -82,71 +117,111 @@ export function InquiryPanel({
                 <div>
                   <p className="eyebrow">{warehouse}</p>
                   <h2 id={`inquiry-${offerId}`} className="mt-3 text-3xl">
-                    {labels.title}
+                    {kind === "sample" ? labels.sampleTitle : labels.title}
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {coffeeName} · {labels.body}
+                    {coffeeName} ·{" "}
+                    {kind === "sample" ? labels.sampleBody : labels.body}
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setOpen(false)}
-                  className="grid size-9 shrink-0 place-items-center rounded-full border border-border"
-                  aria-label="Close"
+                  className="grid size-11 shrink-0 place-items-center rounded-full border border-border"
+                  aria-label={labels.close}
                 >
                   <X className="size-4" />
                 </button>
               </div>
-              <form action={action} className="mt-7 grid gap-5">
-                <input type="hidden" name="offerId" value={offerId} />
-                <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {labels.quantity}
-                  <input
-                    type="number"
-                    min="1"
-                    max="10000"
-                    name="quantity"
-                    required
-                    defaultValue="10"
-                    className="h-12 rounded-xl border border-input bg-background px-4 text-base text-foreground outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-                  />
-                </label>
-                <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {labels.message}
-                  <textarea
-                    name="message"
-                    required
-                    minLength={10}
-                    rows={5}
-                    placeholder="Target profile, timing, sample needs…"
-                    className="resize-none rounded-xl border border-input bg-background p-4 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-                  />
-                </label>
-                {state.message && (
-                  <p
-                    className={`rounded-xl p-3 text-sm ${state.status === "success" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-gold/10 text-foreground"}`}
-                  >
-                    {state.status === "success" && (
-                      <CheckCircle2 className="me-2 inline size-4" />
-                    )}
-                    {state.message}
-                  </p>
-                )}
-                <button
-                  disabled={pending}
-                  className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-60"
-                >
-                  {pending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="size-4 rtl:rotate-180" />
-                  )}
-                  {labels.send}
-                </button>
-              </form>
+              <InquiryActionForm
+                key={kind}
+                kind={kind}
+                offerId={offerId}
+                locale={locale}
+                labels={labels}
+                onSuccess={() => setOpen(false)}
+              />
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+function InquiryActionForm({
+  kind,
+  offerId,
+  locale,
+  labels,
+  onSuccess,
+}: {
+  kind: "product" | "sample";
+  offerId: string;
+  locale: "en" | "ar";
+  labels: {
+    message: string;
+    send: string;
+    sampleSend: string;
+  };
+  onSuccess: () => void;
+}) {
+  const [state, action, pending] = useActionState(
+    kind === "sample" ? createSampleRequestInquiry : createProductInquiry,
+    initialState,
+  );
+  useEffect(() => {
+    if (state.status === "success") {
+      const timer = setTimeout(onSuccess, 2600);
+      return () => clearTimeout(timer);
+    }
+  }, [state.status, onSuccess]);
+  return (
+    <form action={action} className="mt-7 grid gap-5">
+      <input type="hidden" name="offerId" value={offerId} />
+      <input type="hidden" name="locale" value={locale} />
+      <input
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute -start-[9999px]"
+      />
+      <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        {labels.message}
+        <textarea
+          name="message"
+          required
+          minLength={10}
+          rows={5}
+          placeholder="Target profile, timing, sample needs…"
+          className="resize-none rounded-xl border border-input bg-background p-4 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+        />
+      </label>
+      {state.message && (
+        <p
+          role={state.status === "error" ? "alert" : "status"}
+          aria-live="polite"
+          className={`rounded-xl p-3 text-sm ${state.status === "success" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-gold/10 text-foreground"}`}
+        >
+          {state.status === "success" && (
+            <CheckCircle2 className="me-2 inline size-4" />
+          )}
+          {state.message}
+          {state.requestCode ? ` (${state.requestCode})` : ""}
+        </p>
+      )}
+      <button
+        disabled={pending}
+        className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+      >
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <ArrowRight className="size-4 rtl:rotate-180" />
+        )}
+        {kind === "sample" ? labels.sampleSend : labels.send}
+      </button>
+    </form>
   );
 }

@@ -1,45 +1,51 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { updatePasswordAction } from "@/actions/auth";
-import { AuthField, AuthShell } from "@/components/auth/auth-shell";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { ResetPasswordForm } from "@/components/forms/auth-forms";
+import type { Locale } from "@/i18n/routing";
+import { getViewer } from "@/lib/auth/session";
+import { Link } from "@/i18n/navigation";
 
+export const metadata: Metadata = {
+  title: "Choose a password",
+  robots: { index: false, follow: false },
+};
 export default async function ResetPage({
   params,
-  searchParams,
 }: PageProps<"/[locale]/reset-password">) {
-  const { locale } = await params;
-  const query = await searchParams;
+  const { locale } = (await params) as { locale: Locale };
   const t = await getTranslations("auth");
+  const viewer = await getViewer();
   return (
     <AuthShell
       eyebrow={t("resetTitle")}
       title={t("newPassword")}
       body={t("resetBody")}
-      asideTitle={locale === "ar" ? "خطوة أخيرة." : "One final step."}
-      asideBody={
-        locale === "ar"
-          ? "اختر كلمة مرور قوية وفريدة لهذا الحساب."
-          : "Choose a strong password unique to this account."
-      }
+      asideTitle={t("verifyTitle")}
+      asideBody={t("verifyBody")}
     >
-      <form action={updatePasswordAction} className="grid gap-5">
-        <input type="hidden" name="locale" value={locale} />
-        <AuthField
-          label={t("newPassword")}
-          name="password"
-          type="password"
-          autoComplete="new-password"
+      {viewer ? (
+        <ResetPasswordForm
+          locale={locale}
+          labels={{
+            password: t("newPassword"),
+            confirmPassword: t("confirmNewPassword"),
+            submit: t("updatePassword"),
+          }}
         />
-        {query.error && (
-          <p className="rounded-xl bg-gold/10 p-3 text-sm">
-            {locale === "ar"
-              ? "تعذر تحديث كلمة المرور."
-              : "The password could not be updated."}
-          </p>
-        )}
-        <button className="h-12 rounded-full bg-primary text-sm font-bold text-primary-foreground">
-          {t("updatePassword")}
-        </button>
-      </form>
+      ) : (
+        <p
+          role="alert"
+          className="rounded-xl border border-border bg-card p-5 text-sm"
+        >
+          {locale === "ar"
+            ? "انتهت صلاحية رابط الاستعادة."
+            : "This recovery link has expired."}{" "}
+          <Link href="/forgot-password" className="font-bold text-highlight">
+            {t("forgot")}
+          </Link>
+        </p>
+      )}
     </AuthShell>
   );
 }

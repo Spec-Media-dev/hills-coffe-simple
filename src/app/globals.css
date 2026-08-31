@@ -26,6 +26,8 @@
   --color-gold: var(--gold);
   --color-gold-bright: var(--gold-bright);
   --color-gold-contrast: var(--gold-contrast);
+  --color-gold-text: var(--gold-text);
+  --color-highlight: var(--highlight);
   --color-page: var(--page);
   --color-forest-light: var(--forest-light);
   --font-sans: var(--font-body);
@@ -38,32 +40,36 @@
 }
 
 :root {
-  --background: #f5f0e8;
-  --page: #faf7f2;
-  --foreground: #1c2a1e;
+  --background: #eee4d1;
+  --page: #f7f1e6;
+  --foreground: #173c32;
   --card: #ffffff;
-  --card-foreground: #1c2a1e;
+  --card-foreground: #173c32;
   --popover: #ffffff;
-  --popover-foreground: #1c2a1e;
-  --primary: #1c3829;
-  --primary-foreground: #faf7f2;
-  --secondary: #f0eae0;
-  --secondary-foreground: #3d4f3e;
-  --muted: #f0eae0;
-  --muted-foreground: #6b7280;
-  --accent: #c8893a;
-  --accent-foreground: #1c2a1e;
-  --destructive: #a33a32;
-  --border: #e5ddd0;
-  --input: #d4c9b8;
-  --ring: #c8893a;
-  --gold: #c8893a;
-  --gold-bright: #e8a84e;
-  --gold-contrast: #e8a84e;
-  --forest-light: #2a5c3e;
+  --popover-foreground: #173c32;
+  --primary: #173c32;
+  --primary-foreground: #eee4d1;
+  --secondary: #e5d8c2;
+  --secondary-foreground: #173c32;
+  --muted: #e5d8c2;
+  --muted-foreground: #55645e;
+  --accent: #ce8a39;
+  --accent-foreground: #173c32;
+  --highlight: #a44819;
+  --destructive: #a44819;
+  --border: #d7c8ad;
+  --input: #cbb99c;
+  --ring: #a44819;
+  --gold: #ce8a39;
+  --gold-bright: #e3aa64;
+  --gold-contrast: #f1bf7c;
+  /* Brand gold is decorative only: at small text sizes it fails WCAG AA on
+     cream/white, so gold text uses this darker on-brand variant. */
+  --gold-text: #8f5a15;
+  --forest-light: #245548;
   --radius: 0.75rem;
-  --font-body: var(--font-inter), Arial, sans-serif;
-  --font-display: var(--font-playfair), Georgia, serif;
+  --font-body: var(--font-manrope), Arial, sans-serif;
+  --font-display: var(--font-manrope), Arial, sans-serif;
   --shadow-soft: 0 18px 60px rgb(28 42 30 / 0.08);
 }
 
@@ -90,7 +96,9 @@
   --gold: #c8893a;
   --gold-bright: #e8a84e;
   --gold-contrast: #f3cf8c;
+  --gold-text: #e8a84e;
   --forest-light: #356d4b;
+  --highlight: #e07b4a;
   --shadow-soft: 0 20px 70px rgb(0 0 0 / 0.25);
 }
 
@@ -106,9 +114,11 @@
   html {
     scroll-behavior: smooth;
     background: var(--background);
+    overflow-x: clip;
   }
   body {
     min-height: 100vh;
+    overflow-x: clip;
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-body);
@@ -149,16 +159,26 @@
     letter-spacing: 0.19em;
     text-transform: uppercase;
     font-weight: 700;
-    color: var(--gold);
+    color: var(--gold-text);
   }
   [dir="rtl"] .eyebrow {
     letter-spacing: 0;
   }
+  /* Dark surfaces keep their own gold: the AA-safe on-cream gold is too dark
+     to read on the forest/footer backgrounds, so those scopes swap in the
+     bright variant (7.9:1 on the footer, 5.9:1 on primary). */
+  .site-footer,
+  .bg-primary,
+  .bg-forest,
+  [data-surface="dark"] {
+    --gold-text: var(--gold-bright);
+  }
   .display-xl {
     font-family: var(--font-display);
     font-size: clamp(3rem, 8vw, 7.2rem);
-    line-height: 0.92;
-    letter-spacing: -0.055em;
+    line-height: 0.94;
+    letter-spacing: -0.06em;
+    font-weight: 800;
   }
   [dir="rtl"] .display-xl {
     letter-spacing: -0.035em;
@@ -167,8 +187,9 @@
   .display-lg {
     font-family: var(--font-display);
     font-size: clamp(2.35rem, 5vw, 4.8rem);
-    line-height: 0.98;
+    line-height: 1;
     letter-spacing: -0.045em;
+    font-weight: 800;
   }
   [dir="rtl"] .display-lg {
     letter-spacing: -0.025em;
@@ -193,6 +214,18 @@
     pointer-events: none;
     opacity: 0.04;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+  }
+  .prose-hills {
+    color: var(--muted-foreground);
+    line-height: 1.8;
+  }
+  .prose-hills > * + * {
+    margin-top: 1rem;
+  }
+  .prose-hills a {
+    color: var(--highlight);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 }
 

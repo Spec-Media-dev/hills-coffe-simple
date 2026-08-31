@@ -4,6 +4,8 @@
     "products": "Products",
     "about": "About us",
     "contact": "Contact",
+    "origins": "Origins",
+    "knowledge": "Knowledge",
     "account": "Account",
     "all": "All coffees",
     "specialty": "Specialty",
@@ -12,7 +14,9 @@
     "dubai": "Dubai warehouse",
     "certifications": "Certifications",
     "menu": "Open menu",
-    "close": "Close menu"
+    "close": "Close menu",
+    "breadcrumb": "Breadcrumb",
+    "catalog": "Catalog"
   },
   "actions": {
     "explore": "Explore coffees",
@@ -122,7 +126,9 @@
     "send": "Send inquiry",
     "note": "Inquiries require a connected Supabase project before they can be saved.",
     "details": "Contact details",
-    "hours": "Sunday–Thursday · 9:00–17:00"
+    "hours": "Sunday–Thursday · 9:00–17:00",
+    "metaTitle": "Contact Hills Coffee",
+    "metaDescription": "Contact the Hills Coffee team or find our published warehouse locations."
   },
   "auth": {
     "signinTitle": "Welcome back",
@@ -132,7 +138,8 @@
     "email": "Email",
     "password": "Password",
     "name": "Full name",
-    "company": "Company",
+    "phone": "Phone",
+    "confirmPassword": "Confirm password",
     "forgot": "Forgot password?",
     "noAccount": "New to Hills Coffee?",
     "hasAccount": "Already have an account?",
@@ -142,14 +149,137 @@
     "sendLink": "Send recovery link",
     "newPassword": "New password",
     "updatePassword": "Update password",
-    "config": "Authentication will be available when Supabase environment variables are connected."
+    "config": "Authentication will be available when Supabase environment variables are connected.",
+    "verifyTitle": "Verify your email",
+    "verifyBody": "Use the link in your inbox to activate protected pricing, favourites, and tracked requests.",
+    "resend": "Resend verification email",
+    "adminTitle": "Admin access",
+    "adminBody": "This entry is reserved for authorised Hills Coffee administrators.",
+    "confirmNewPassword": "Confirm new password",
+    "adminEyebrow": "Administrator access",
+    "adminAsideTitle": "Hills Coffee operations",
+    "adminAsideBody": "Manage coffees, offers, protected pricing, content and customer requests.",
+    "adminNoAccess": "This account does not have administrator access.",
+    "backHome": "Home",
+    "protectedAccess": "Protected access",
+    "verify": {
+      "eyebrow": "Email verification",
+      "title": "Verify your email",
+      "body": "Your account was created. Please verify your email before continuing — we sent you a confirmation link.",
+      "expiredTitle": "That link is no longer valid",
+      "expiredBody": "The confirmation link has expired or was already used. Request a new one below.",
+      "registeredNotVerified": "Registered is not the same as verified. Protected pricing, favourites and requests unlock only after you confirm your email.",
+      "emailLabel": "Email address",
+      "resend": "Resend verification email",
+      "wait": "Resend available in {s}s",
+      "cooldown": "Check your inbox and spam folder.",
+      "signInCta": "Sign in after verifying",
+      "changeEmail": "Use a different email"
+    }
   },
   "account": {
     "title": "Your account",
     "intro": "Manage your profile and return to the catalog for protected pricing.",
     "profile": "Profile",
     "inquiries": "Recent inquiries",
-    "empty": "No saved inquiries yet."
+    "empty": "No saved inquiries yet.",
+    "nav": {
+      "overview": "Overview",
+      "profile": "Profile",
+      "favorites": "Favourites",
+      "requests": "Requests",
+      "security": "Security"
+    },
+    "name": "Name",
+    "email": "Email",
+    "company": "Company",
+    "conversations": "Product conversations",
+    "viewRequests": "View requests",
+    "profileForm": {
+      "eyebrow": "Your details",
+      "title": "Profile",
+      "intro": "Keep your contact details current so our sourcing team can reach you about requests.",
+      "name": "Full name",
+      "phone": "Phone",
+      "company": "Company",
+      "address": "Delivery address",
+      "country": "Country code",
+      "countryHint": "Two-letter country code, for example EG or AE.",
+      "save": "Save changes"
+    },
+    "security": {
+      "eyebrow": "Account security",
+      "title": "Security",
+      "intro": "Manage the email address and password used to sign in.",
+      "verified": "Email verified",
+      "unverified": "Email not verified yet",
+      "verifyCta": "Verify email",
+      "emailTitle": "Email address",
+      "emailIntro": "We send a confirmation link to the new address. The change applies only after you open that link.",
+      "newEmail": "New email address",
+      "emailHint": "You will stay signed in with your current address until the new one is confirmed.",
+      "updateEmail": "Update email",
+      "passwordTitle": "Password",
+      "passwordIntro": "Confirm your current password, then choose a new one.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "passwordHint": "At least 10 characters, including a letter and a number.",
+      "updatePassword": "Update password",
+      "sessionTitle": "Session",
+      "sessionIntro": "Sign out of this device."
+    },
+    "requestDetail": {
+      "eyebrow": "Request detail",
+      "intro": "The full record of this request and every status change our team has made.",
+      "back": "Back to requests",
+      "summary": "Request summary",
+      "code": "Request code",
+      "type": "Request type",
+      "status": "Status",
+      "submitted": "Submitted",
+      "coffee": "Coffee",
+      "offer": "Offer reference",
+      "warehouse": "Warehouse",
+      "contactTitle": "Contact details submitted",
+      "contactName": "Name",
+      "contactEmail": "Email",
+      "contactPhone": "Phone",
+      "contactCompany": "Company",
+      "contactAddress": "Address",
+      "contactCountry": "Country",
+      "messageTitle": "Your message",
+      "timelineTitle": "Status history",
+      "timelineEmpty": "No status changes recorded yet.",
+      "types": {
+        "GENERAL": "General enquiry",
+        "PRODUCT": "Product enquiry",
+        "SAMPLE_REQUEST": "Sample request"
+      },
+      "statuses": {
+        "NEW": "New",
+        "RECEIVED": "Received",
+        "CONTACTED": "Contacted",
+        "CLOSED": "Closed"
+      },
+      "changedFrom": "Changed from {status}"
+    },
+    "favorites": {
+      "eyebrow": "Saved coffees",
+      "title": "Favourites",
+      "remove": "Remove",
+      "emptyTitle": "No saved coffees yet",
+      "emptyBody": "Save coffees while browsing the offer list and they will appear here for quick access.",
+      "emptyCta": "Browse the offer list"
+    },
+    "requests": {
+      "eyebrow": "Your activity",
+      "title": "Your requests",
+      "intro": "Every enquiry and sample request you have submitted, with its current status.",
+      "emptyTitle": "No requests yet",
+      "emptyBody": "When you send a product enquiry or request a sample, it will appear here so you can track its status.",
+      "emptyCta": "Browse the offer list"
+    }
   },
   "admin": {
     "title": "Operations overview",
@@ -164,6 +294,91 @@
     "low": "Low-stock offers",
     "open": "Open inquiries",
     "activity": "Recent activity",
-    "protected": "Administrator access is verified on the server."
+    "protected": "Administrator access is verified on the server.",
+    "workspace": "Admin workspace",
+    "dashboardSubtitle": "Live counts from the Hills Coffee database. No estimated or sample figures.",
+    "emptyActivity": "No recorded activity yet. Actions performed in the admin workspace will appear here.",
+    "notConfigured": "The database connection is not configured, so live counts are unavailable.",
+    "groups": {
+      "overview": "Overview",
+      "catalog": "Catalog",
+      "coffeeData": "Coffee data",
+      "content": "Content",
+      "customers": "Customers",
+      "system": "System"
+    },
+    "nav": {
+      "overview": "Dashboard",
+      "products": "Products",
+      "offers": "Offers",
+      "pricing": "Pricing",
+      "origins": "Origins",
+      "regions": "Regions",
+      "varieties": "Varieties",
+      "warehouses": "Warehouses",
+      "taxonomy": "Taxonomy",
+      "taxonomyHint": "Types, processing, certifications, tags, notes, packaging",
+      "contentPages": "Pages & CMS",
+      "articles": "Articles",
+      "articleCategories": "Article categories",
+      "media": "Media",
+      "siteSettings": "Site & organization",
+      "users": "Users",
+      "inquiries": "Inquiries",
+      "audit": "Audit logs",
+      "account": "Admin account",
+      "primary": "Admin sections"
+    },
+    "account": {
+      "eyebrow": "Your administrator profile",
+      "title": "Admin account",
+      "intro": "Manage the name, contact details and credentials for your own administrator account.",
+      "roleAdmin": "Administrator",
+      "sessionTitle": "Session",
+      "sessionIntro": "Sign out of the admin workspace on this device.",
+      "detailsTitle": "Your details",
+      "detailsIntro": "These details identify you inside the admin workspace and on audit records."
+    },
+    "ops": {
+      "operations": "Operations",
+      "addTier": "Add tier",
+      "createDraft": "Create draft",
+      "edit": "Edit",
+      "save": "Save",
+      "delete": "Delete",
+      "archive": "Archive",
+      "status": "Status",
+      "hideSection": "Hide section",
+      "noRecords": "No records are available.",
+      "previousSamples": "Previous same-coffee sample requests ({count})"
+    },
+    "offerPicker": {
+      "search": "Search offers",
+      "searchPlaceholder": "Search by offer reference",
+      "offer": "Offer",
+      "choose": "Choose an offer",
+      "noMatch": "No matching offers."
+    }
+  },
+  "brand": {
+    "logoAlt": "Hills Coffee"
+  },
+  "quote": {
+    "metaTitle": "Request a quote",
+    "metaDescription": "Signed-in verified buyers can request a quote on an available green coffee lot.",
+    "title": "Request a quote on an available lot.",
+    "intro": "Sign in with a verified email to send a tracked request to the coffee team.",
+    "signin": "Sign in",
+    "empty": "No offers are available to quote right now."
+  },
+  "seo": {
+    "originsTitle": "Coffee origins",
+    "knowledgeTitle": "Coffee knowledge",
+    "offerListTitle": "Green coffee offer list",
+    "homeTitle": "Hills Coffee"
+  },
+  "origins": {
+    "sourcingStory": "Sourcing story",
+    "availableCoffees": "Available coffees"
   }
 }

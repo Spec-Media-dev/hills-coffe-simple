@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
 export async function AuthShell({
@@ -17,7 +17,8 @@ export async function AuthShell({
   asideTitle: string;
   asideBody: string;
 }) {
-  const locale = await getLocale();
+  const t = await getTranslations("auth");
+
   return (
     <section className="min-h-[calc(100svh-73px)] bg-page">
       <div className="site-container grid min-h-[calc(100svh-73px)] gap-8 py-8 lg:grid-cols-[.85fr_1.15fr]">
@@ -27,7 +28,7 @@ export async function AuthShell({
             className="mb-12 inline-flex items-center gap-2 self-start text-sm font-bold text-muted-foreground hover:text-gold"
           >
             <ArrowLeft className="size-4 rtl:rotate-180" />
-            {locale === "ar" ? "الرئيسية" : "Home"}
+            {t("backHome")}
           </Link>
           <p className="eyebrow">{eyebrow}</p>
           <h1 className="mt-5 font-heading text-5xl leading-none tracking-[-.045em] md:text-6xl">
@@ -43,7 +44,7 @@ export async function AuthShell({
           <div className="absolute start-14 top-16 size-40 rounded-full border-[38px] border-white/5" />
           <div className="relative">
             <p className="eyebrow !text-gold-contrast">
-              {locale === "ar" ? "وصول محمي" : "Protected access"}
+              {t("protectedAccess")}
             </p>
             <h2 className="mt-5 max-w-lg text-5xl leading-tight">
               {asideTitle}

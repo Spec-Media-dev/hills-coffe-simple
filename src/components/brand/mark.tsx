@@ -1,35 +1,55 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-export function BrandMark({ className }: { className?: string }) {
+/**
+ * Official Hills Coffee logo lockup (emblem + wordmark).
+ *
+ * The supplied artwork `/images/logo-mark.png` is 529x231 and is drawn in brand
+ * dark green (#173C32) on a transparent background, so it disappears on dark
+ * surfaces. Rather than inverting or recolouring official artwork, the lockup is
+ * placed on a brand cream plate (#EEE4D1). In the light theme the page
+ * background is the same cream, so the plate is visually seamless; on dark
+ * surfaces (dark theme, the footer, and the admin sidebar) it keeps the logo
+ * legible without altering the artwork.
+ */
+const LOGO_SRC = "/images/logo-mark.png";
+const LOGO_WIDTH = 529;
+const LOGO_HEIGHT = 231;
+const LOGO_ASPECT = LOGO_WIDTH / LOGO_HEIGHT;
+
+export function BrandMark({
+  className,
+  height = 44,
+  priority = false,
+  plate = true,
+  label = "Hills Coffee",
+}: {
+  className?: string;
+  /** Rendered logo height in px. Width is derived from the true aspect ratio. */
+  height?: number;
+  priority?: boolean;
+  /** Render the cream plate that keeps the dark artwork legible on dark surfaces. */
+  plate?: boolean;
+  label?: string;
+}) {
+  const width = Math.round(height * LOGO_ASPECT);
   return (
     <span
-      className={cn("inline-flex items-center gap-2.5", className)}
-      aria-label="Hills Coffee"
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center",
+        // Clear space around the lockup, per the brand clear-space rule.
+        plate && "rounded-xl bg-[#eee4d1] px-3 py-1.5",
+        className,
+      )}
     >
-      <svg viewBox="0 0 42 42" aria-hidden="true" className="size-9 text-gold">
-        <path
-          d="M5 31 15.7 13.5l5.1 7.6L26.1 11 37 31H5Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M10 31h22M18.2 27.2c2.7-4 7.2-5.4 11.5-3.7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="leading-none">
-        <span className="block font-heading text-[1.28rem] font-semibold tracking-[-.035em]">
-          Hills
-        </span>
-        <span className="mt-0.5 block text-[.62rem] font-bold uppercase tracking-[.22em] text-current">
-          Coffee
-        </span>
-      </span>
+      <Image
+        src={LOGO_SRC}
+        width={width}
+        height={height}
+        alt={label}
+        priority={priority}
+        className="block"
+      />
     </span>
   );
 }

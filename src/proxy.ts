@@ -1,10 +1,33 @@
-import createMiddleware from "next-intl/middleware";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import type { NextRequest } from "next/server";
-import { routing } from "./i18n/routing";
+import { type NextRequest, NextResponse } from "next/server";
 import { getSupabaseConfig, isSupabaseConfigured } from "./lib/supabase/config";
 
-const handleI18n = createMiddleware(routing);
+function localeResponse(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const headers = new Headers(request.headers);
+
+  if (headers.get("x-hills-locale-rewrite") === "en") {
+    headers.set("x-next-intl-locale", "en");
+    return NextResponse.next({ request: { headers } });
+  }
+
+  if (pathname === "/en" || pathname.startsWith("/en/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.slice(3) || "/";
+    return NextResponse.redirect(url, 308);
+  }
+
+  if (pathname === "/ar" || pathname.startsWith("/ar/")) {
+    headers.set("x-next-intl-locale", "ar");
+    return NextResponse.next({ request: { headers } });
+  }
+
+  headers.set("x-next-intl-locale", "en");
+  headers.set("x-hills-locale-rewrite", "en");
+  const url = request.nextUrl.clone();
+  url.pathname = `/en${pathname === "/" ? "" : pathname}`;
+  return NextResponse.rewrite(url, { request: { headers } });
+}
 
 export default async function proxy(request: NextRequest) {
   const pending: Array<{
@@ -26,7 +49,7 @@ export default async function proxy(request: NextRequest) {
     });
     await supabase.auth.getUser();
   }
-  const response = handleI18n(request);
+  const response = localeResponse(request);
   pending.forEach(({ name, value, options }) =>
     response.cookies.set(name, value, options),
   );

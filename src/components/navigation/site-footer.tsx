@@ -5,11 +5,12 @@ import { Link } from "@/i18n/navigation";
 export async function SiteFooter() {
   const t = await getTranslations("footer");
   const nav = await getTranslations("nav");
+  const brand = await getTranslations("brand");
   return (
     <footer className="site-footer border-t border-white/10 bg-[#13241b] text-[#eee8dc]">
       <div className="site-container grid gap-12 py-16 md:grid-cols-[1.5fr_1fr_1fr]">
         <div>
-          <BrandMark className="text-[#eee8dc]" />
+          <BrandMark height={46} label={brand("logoAlt")} />
           <p className="mt-6 max-w-sm text-2xl font-medium leading-snug text-[#c8bfb0]">
             {t("statement")}
           </p>
@@ -17,7 +18,9 @@ export async function SiteFooter() {
         <div>
           <p className="eyebrow">{t("explore")}</p>
           <div className="mt-6 grid gap-3 text-sm text-[#c8bfb0]">
-            <Link href="/products">{nav("products")}</Link>
+            <Link href="/green-coffee-offer-list">{nav("products")}</Link>
+            <Link href="/coffee-origins">{nav("origins")}</Link>
+            <Link href="/knowledge">{nav("knowledge")}</Link>
             <Link href="/about">{nav("about")}</Link>
             <Link href="/contact">{nav("contact")}</Link>
           </div>
@@ -27,7 +30,6 @@ export async function SiteFooter() {
           <div className="mt-6 grid gap-3 text-sm text-[#c8bfb0]">
             <span>{nav("egypt")}</span>
             <span>{nav("dubai")}</span>
-            <a href="mailto:hello@hillscoffee.co">hello@hillscoffee.co</a>
           </div>
         </div>
       </div>
