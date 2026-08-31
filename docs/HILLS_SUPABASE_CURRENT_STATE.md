@@ -9,6 +9,67 @@
 > race-safe sample uniqueness, Realtime publication configuration and
 > protected USER authorization boundaries.
 
+## Phase 1 verification (2026-09-01) — APPLIED, contract updated
+
+Both approved Phase 1 migrations have been **applied** and re-verified against
+the live database. Full record:
+`specs/001-platform-implementation-spec/evidence/phase-1-authorization-contract.md`.
+
+### Changes now live
+
+| Object | Change |
+|---|---|
+| `hills_profiles_update_own` | `USING` and `WITH CHECK` now additionally require `NOT public.hills_is_blocked()` |
+| `avatars_owner_insert` | `WITH CHECK` now additionally requires `NOT public.hills_is_blocked()` |
+| `avatars_owner_select` | `USING` now additionally requires `NOT public.hills_is_blocked()` |
+| `avatars_owner_update` | both clauses now additionally require `NOT public.hills_is_blocked()` |
+| `avatars_owner_delete` | `USING` now additionally requires `NOT public.hills_is_blocked()` |
+| `admin_list_users` | replaced by a single parameterized function — see below |
+
+`admin_list_users(email_query text DEFAULT NULL, name_query text DEFAULT NULL,
+blocked_filter boolean DEFAULT NULL, page integer DEFAULT 1,
+page_size integer DEFAULT 25)` returns fourteen columns: the original nine plus
+`is_blocked`, `blocked_at`, `block_reason`, `avatar_path`, `total_count`.
+`LANGUAGE plpgsql STABLE SECURITY DEFINER`, `search_path` =
+`pg_catalog, public, auth`, `is_admin()` guard unchanged, `role = 'USER'`
+filter unchanged, `page_size` clamped to 100. Execute revoked from `PUBLIC`
+and `anon`, granted to `authenticated`. Every parameter is optional, so the
+previous no-argument call still works.
+
+**Unchanged:** `hills_is_blocked()`, `hills_is_verified_user()`, `is_admin()`,
+`hills_is_admin()`, `protect_profile_block_fields()`, every other RLS policy,
+the `hills-public` bucket policies, and the `avatars` bucket's `public = false`.
+
+### Behavior confirmed live by test
+
+| Check | Result |
+|---|---|
+| blocked customer `UPDATE` own `profiles` row | denied — RLS filters the row; `204 No Content`, `RETURNING` empty, nothing persisted |
+| blocked customer avatar upload / replace | denied — `new row violates row-level security policy` |
+| blocked customer avatar read | denied — `Object not found` |
+| blocked customer avatar delete | denied — no-op, object still present |
+| unblocked customer, ADMIN, service role | full access retained |
+| unblocked customer tampering with block fields | `42501 profile_security_fields_not_editable` |
+| ADMIN unblock | restores `hills_is_verified_user() = true` and all self-service |
+
+> **Denial semantics worth knowing before writing application code.** Because
+> the blocked-state predicate lives in the policy's `USING` clause, a blocked
+> customer's `UPDATE` matches **zero rows** rather than raising. PostgreSQL does
+> not error on an RLS-filtered `UPDATE`, and the row never reaches
+> `protect_profile_block_fields()`. Server actions must therefore treat "zero
+> rows affected" as a denial, not as success — check the affected-row count,
+> not just the error field.
+
+Two behaviors that surprise callers, both still true:
+
+1. **The service-role key is not an Administrator.** It carries no
+   `auth.uid()`, so `is_admin()` is false for it and both
+   `admin_set_user_blocked()` and `admin_list_users()` refuse it.
+2. **An Administrator session cannot read a customer avatar.**
+   `avatars_owner_select` is owner-scoped and the bucket has no admin-read
+   policy. `profiles.avatar_path` *is* Admin-readable. Admin avatar viewing must
+   go through a server-side service-role signed URL.
+
 ## Important Rules
 
 - `public.profiles.role` is authoritative for application roles.

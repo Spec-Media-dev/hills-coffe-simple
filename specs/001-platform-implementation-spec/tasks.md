@@ -27,7 +27,12 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 0 — Safety baseline, decisions, and environment proof
 
-- [ ] P0-T01 [P] Re-run and record static baseline
+> **Status: COMPLETE (2026-08-31) — PHASE 0 GATE: PASS.** All recorded evidence
+> lives in `evidence/phase-0-baseline.md`; resume state in
+> `IMPLEMENTATION-CHECKPOINT.md`. Phase 0 changed no source file and wrote no
+> database row.
+
+- [X] P0-T01 [P] Re-run and record static baseline
   - **Goal**: Produce a current, dated "before" record of every static gate so later phases have a real regression baseline instead of trusting a stale report.
   - **Dependencies**: none.
   - **Files/modules**: none changed; output is a recorded log/artifact only.
@@ -41,7 +46,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: all five commands run to completion and their exact output is recorded (even if something fails — this phase documents, it does not fix).
   - **Out of scope**: fixing any failure found; any code change.
 
-- [ ] P0-T02 Record current route/redirect matrix and reproduce the locale-switch defect
+- [X] P0-T02 Record current route/redirect matrix and reproduce the locale-switch defect
   - **Goal**: Capture the exact current behavior of every route in both languages, and reproduce the EN↔AR↔EN script-tag/runtime-overlay symptom once as a concrete "before" recording that Phase 2's fix will be checked against.
   - **Dependencies**: none.
   - **Files/modules**: none changed; a recorded matrix/observation artifact only.
@@ -55,7 +60,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a written record exists showing (a) the full current route matrix with status codes/redirect targets and (b) whether/where the script-tag symptom reproduces today.
   - **Out of scope**: fixing the symptom (Phase 2); any proxy/route code change.
 
-- [ ] P0-T03 [P] Confirm live Supabase security objects and Realtime exclusions
+- [X] P0-T03 [P] Confirm live Supabase security objects and Realtime exclusions
   - **Goal**: Read-only confirmation that the database objects this entire plan depends on are genuinely live, using `docs/HILLS_SUPABASE_CURRENT_STATE.md` as the source of truth, so no later phase re-derives or second-guesses this.
   - **Dependencies**: none.
   - **Files/modules**: none.
@@ -69,7 +74,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a written confirmation, quoting the exact snapshot fields checked, exists before Phase 1 begins.
   - **Out of scope**: any migration, any schema change, any write to Supabase.
 
-- [ ] P0-T04 **PHASE 0 ACCEPTANCE GATE**
+- [X] P0-T04 **PHASE 0 ACCEPTANCE GATE**
   - **Goal**: Confirm Phase 0 is genuinely complete before Phase 1 is allowed to start.
   - **Dependencies**: P0-T01, P0-T02, P0-T03 all recorded.
   - **Runtime acceptance condition** (per `plan.md` Phase 0): current build is green (or its exact failures are recorded); current DB security objects are confirmed live; the script-tag symptom reproduction is recorded either way; no production data was touched; no source file was changed by this phase.
@@ -79,7 +84,20 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 1 — Database/storage contract verification and Admin read-path completion
 
-- [ ] P1-T01 [P] Write authorization-boundary characterization tests against staging
+> **Status (2026-09-01): PHASE 1 COMPLETE — GATE PASS.**
+> Evidence: `evidence/phase-1-authorization-contract.md` (see the post-migration
+> addendum). Harness: `tests/integration/**`, run with
+> `HILLS_ADMIN_LIST_USERS_EXTENDED=1 npm run test:integration` — **50/50, 0 skipped**.
+>
+> P1-T01 PASS · P1-T02 PASS · P1-T03 PASS · P1-T04 PASS · P1-T05 PASS.
+>
+> Both approved migrations were applied by the owner and re-verified against the
+> **live** database, not against the migration files. C1/FR-067 is closed: a
+> blocked customer can no longer update their own profile row nor upload,
+> replace, read or delete an avatar. FR-068 holds — Administrator, service-role,
+> unblocked-customer and anti-self-unblock controls all still pass.
+
+- [X] P1-T01 [P] Write authorization-boundary characterization tests against staging
   - **Goal**: Prove — with real tests against a real staging session, not by reading SQL — that `hills_is_verified_user()`, `is_admin()`, and `admin_set_user_blocked()` behave exactly as `data-model.md` documents when called through the application's own Supabase client wrappers.
   - **Dependencies**: Phase 0 complete.
   - **Files/modules**: new Vitest/staging-integration test files alongside `src/lib/auth/session.ts` and `src/lib/supabase/**` (no production code changed yet).
@@ -93,7 +111,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: all characterization tests pass against staging and clearly document the exact function/error-code contract later phases will rely on.
   - **Out of scope**: any application code change; any new database object.
 
-- [ ] P1-T02 Finalize the owner-approved `admin_list_users()` read-path extension specification
+- [X] P1-T02 Finalize the owner-approved `admin_list_users()` read-path extension specification
   - **Goal**: The extension itself is **already owner-approved** (decided during consistency analysis): extend the customer-user read path, using the current database contract only, to support search by email, search by name, pagination, the blocked/unblocked filter and value, and the avatar reference. This task produces the exact, reviewable technical specification (not code, not SQL) the database owner applies, per `contracts/admin-users-actions.md`'s updated `searchUsers` contract.
   - **Dependencies**: P0-T03.
   - **Files/modules**: a written specification artifact (e.g., appended to this plan's tracking, not application code) describing the exact additional return columns and parameters; **no RPC/SQL is written or executed by this task** — the database owner authors and applies the RPC definition as a separate, reviewed unit.
@@ -107,7 +125,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a complete, unambiguous technical specification exists, matching `contracts/admin-users-actions.md`'s `searchUsers` contract exactly, ready for the database owner to apply before Phase 5 begins any Admin Users implementation work.
   - **Out of scope**: writing or applying the migration/RPC SQL itself; adding any field beyond the owner-approved scope (email search, name search, pagination, blocked filter/value, avatar reference).
 
-- [ ] P1-T03 Regenerate `src/lib/supabase/types.generated.ts` once the Phase 1 extension is applied
+- [X] P1-T03 Regenerate `src/lib/supabase/types.generated.ts` once the Phase 1 extension is applied
   - **Goal**: Keep the generated Supabase types in sync with the approved, applied `admin_list_users()` extension from P1-T02, so Phase 5's TypeScript consumers are correctly typed.
   - **Dependencies**: P1-T02 approved and applied by the database owner (this task does not apply the change itself — it only regenerates types after the owner has).
   - **Files/modules**: `src/lib/supabase/types.generated.ts`.
@@ -121,7 +139,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: generated types compile and match the approved RPC signature exactly.
   - **Out of scope**: applying the extension itself (that is an owner/database action outside this plan's execution).
 
-- [ ] P1-T04 Apply the owner-approved RLS/storage hardening for blocked-user enforcement
+- [X] P1-T04 Apply the owner-approved RLS/storage hardening for blocked-user enforcement
   - **Goal**: Close the gap found during consistency analysis and approved by the owner: `hills_profiles_update_own` (RLS) and the four `avatars_owner_*` storage policies (`avatars_owner_insert`, `avatars_owner_select`, `avatars_owner_update`, `avatars_owner_delete`) currently enforce ownership only, with no blocked-state predicate — unlike `hills_favorites_*`, `hills_inquiries_*`, and `hills_price_tiers_verified_users`, which all correctly require `hills_is_verified_user()`. A blocked customer with a still-valid session can therefore bypass the application's `requireVerifiedUser()` gate entirely via a direct database or storage call. Implements `spec.md` FR-067/FR-068.
   - **Dependencies**: P0-T03; approved per owner decision (this task authors and applies the fix — the decision itself is no longer pending).
   - **Files/modules**: a reviewed, owner-authored RLS/storage migration unit tightening exactly the five named policies (conceptual scope only — no SQL is written or executed by this planning document; the migration is applied by the database owner as its own reviewed unit, per Constitution Principle XV).
@@ -135,7 +153,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` FR-067 and FR-068 both hold, proven by the before/after test pair above, not by inspecting the policy definition alone.
   - **Out of scope**: authoring or executing the SQL as part of this planning artifact (the database owner applies it as a separate, reviewed migration); any change to `protect_profile_block_fields()`, `hills_is_blocked()`, `hills_is_verified_user()`, or `is_admin()`; any change to the `hills-public` bucket or its policies.
 
-- [ ] P1-T05 **PHASE 1 ACCEPTANCE GATE**
+- [X] P1-T05 **PHASE 1 ACCEPTANCE GATE**
   - **Goal**: Confirm the database contract this entire plan depends on is verified, the required read-path gap has an owner decision on record, and the approved blocked-user RLS/storage hardening is applied and proven — before any UI work depends on any of it.
   - **Dependencies**: P1-T01, P1-T02, P1-T04, (P1-T03 if approved).
   - **Runtime acceptance condition** (per `plan.md` Phase 1): a blocked-profile JWT cannot pass `hills_is_verified_user()`; a non-admin cannot alter block fields (proven by test, not by reading source); the owner-approved `admin_list_users()` extension's technical specification is finalized and ready for the database owner to apply (P1-T02), with types regenerated once applied (P1-T03); a blocked customer's direct-client profile update and all four avatar storage operations are denied, with Administrator/service-role access and the anti-self-unblock guarantee both unaffected (FR-067, FR-068, proven by P1-T04's before/after tests).
@@ -204,15 +222,15 @@ change is made by this document** — it is the task breakdown only.
 - [ ] P2-T05 Implement locale-switch hard navigation and verify the script-tag/overlay fix
   - **Goal**: Implement the `research.md` §1 decision — locale switching performs a full document navigation while same-locale links keep client transitions — and prove the EN↔AR↔EN script-tag/runtime-overlay symptom from P0-T02 no longer reproduces.
   - **Dependencies**: P2-T01–T04 complete (the fix must be verified against the final route locations, not the pre-move tree).
-  - **Files/modules**: the locale-switcher component (`src/i18n/navigation.ts` and/or `src/components/navigation/locale-switcher.tsx`).
+  - **Files/modules**: the locale-switcher component (`src/i18n/navigation.ts` and/or `src/components/navigation/locale-switcher.tsx`). P0-T02 pinned the exact defect site: `src/components/navigation/locale-switcher.tsx:16`, `onClick={() => router.replace(pathname, { locale: nextLocale })}` — a client soft navigation that also passes `pathname` only, never `searchParams`.
   - **KEEP**: the existing server-rendered JSON-LD emission exactly as-is (`dangerouslySetInnerHTML` with `<` escaped) — this task does not touch JSON-LD generation, only navigation behavior.
   - **REFACTOR/MOVE/REMOVE**: refactor the locale-switch handler to use a full document navigation (not the App Router's client `<Link>` transition) specifically when the locale prefix changes; same-locale navigation is unaffected.
   - **Supabase/DB contract**: none.
   - **Auth/security**: none.
   - **Realtime**: none.
   - **EN/AR/RTL**: this task's entire purpose.
-  - **Tests required**: a Playwright repetition test navigating EN→AR→EN across homepage, catalog, coffee detail, origin, article, account, and Admin, asserting zero `console.error`/`pageerror`/hydration warning/Dev Overlay and that path/query/theme/logo are preserved at every hop (per `quickstart.md`'s Language switching row) — this is the console-error failure gate for locale switching specifically.
-  - **Runtime acceptance condition**: the repetition test is green; the symptom recorded in P0-T02 does not reproduce.
+  - **Tests required**: a Playwright repetition test navigating EN→AR→EN across homepage, catalog, coffee detail, origin, article, account, and Admin, asserting zero `console.error`/`pageerror`/hydration warning/Dev Overlay and that path/query/theme/logo are preserved at every hop (per `quickstart.md`'s Language switching row) — this is the console-error failure gate for locale switching specifically. The test MUST additionally assert, after **every** switch, that `<html lang>`/`dir` match the destination locale (`ar`/`rtl`, `en`/`ltr`) — P0-T02 finding **F1/D2** proved these go stale on a client switch while the URL updates, so a URL-only assertion would pass against the broken build. It MUST also cover the concrete query-preservation case from P0-T02 finding **F2/D3**: `/green-coffee-offer-list?origin=ethiopia&sort=newest` → `/ar/green-coffee-offer-list?origin=ethiopia&sort=newest`. Note when writing the Dev Overlay assertion: the `nextjs-portal` element is present on every dev page including error-free ones, so assert on console/`pageerror` events, not on that element's existence.
+  - **Runtime acceptance condition**: the repetition test is green; all three symptoms recorded in P0-T02 are closed — **D1** the script-tag console error, **D2** the stale `<html lang>`/`dir` (Arabic rendering LTR after a client switch), and **D3** the dropped query string.
   - **Out of scope**: any change to JSON-LD content/shape; any change to same-locale navigation behavior.
 
 - [ ] P2-T06 **PHASE 2 ACCEPTANCE GATE**

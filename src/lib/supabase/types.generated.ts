@@ -1,5 +1,11 @@
 /* Generated-contract equivalent for the approved Post-DB0 snapshot.
- * Refresh with `supabase gen types typescript --linked` when credentials are available. */
+ * Refresh with `supabase gen types typescript --linked` when credentials are available.
+ *
+ * Last synced 2026-09-01 (task P1-T03) against the LIVE PostgREST schema, not
+ * against the migration files. The Supabase CLI is still unavailable here (no
+ * SUPABASE_ACCESS_TOKEN and no database password), so the Functions block below
+ * was derived from the project's live OpenAPI document. Re-run the CLI command
+ * above to replace this file wholesale once credentials exist. */
 export type Json =
   | string
   | number
@@ -37,6 +43,14 @@ export interface Profile extends Stamp {
   address: string | null;
   country_code: string | null;
   role: AppRole;
+  /* Live columns that were missing from this contract before P1-T03.
+   * The four block fields are writable only by admin_set_user_blocked();
+   * protect_profile_block_fields() rejects every direct write to them. */
+  avatar_path: string | null;
+  is_blocked: boolean;
+  blocked_at: string | null;
+  blocked_by: string | null;
+  block_reason: string | null;
 }
 export interface Coffee extends Stamp {
   id: string;
@@ -379,8 +393,17 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      /* P1-T03: synced 2026-09-01 with the applied P1-T02 extension.
+       * Every parameter is optional, so an existing no-argument call still
+       * returns page 1 at 25 rows. `page_size` is clamped to 100 server-side. */
       admin_list_users: {
-        Args: Record<string, never>;
+        Args: {
+          email_query?: string | null;
+          name_query?: string | null;
+          blocked_filter?: boolean | null;
+          page?: number | null;
+          page_size?: number | null;
+        };
         Returns: {
           id: string;
           full_name: string;
@@ -391,8 +414,24 @@ export interface Database {
           registered_at: string;
           favorites_count: number;
           inquiries_count: number;
+          is_blocked: boolean;
+          blocked_at: string | null;
+          block_reason: string | null;
+          avatar_path: string | null;
+          total_count: number;
         }[];
       };
+      admin_set_user_blocked: {
+        Args: {
+          target_user_id: string;
+          blocked: boolean;
+          reason?: string | null;
+        };
+        Returns: undefined;
+      };
+      hills_is_admin: { Args: Record<string, never>; Returns: boolean };
+      hills_is_blocked: { Args: Record<string, never>; Returns: boolean };
+      hills_is_verified_user: { Args: Record<string, never>; Returns: boolean };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_email_verified: { Args: Record<string, never>; Returns: boolean };
     };
