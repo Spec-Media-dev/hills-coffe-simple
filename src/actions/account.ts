@@ -18,7 +18,7 @@ import {
   type AvatarRejection,
 } from "@/lib/avatar";
 import { localizedPath } from "@/lib/auth/redirects";
-import { requireVerifiedUser } from "@/lib/auth/session";
+import { requireAccountOwner, requireVerifiedUser } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -77,7 +77,9 @@ export async function updateProfileAction(
   _: ActionFormState,
   formData: FormData,
 ): Promise<ActionResult> {
-  const viewer = await requireVerifiedUser();
+  // Own-account edit, so the own-account gate: an Administrator manages their
+  // own profile here too, and RLS still scopes the write to `auth.uid()`.
+  const viewer = await requireAccountOwner();
   if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
 
   const parsed = profileSchema.safeParse({
@@ -213,7 +215,7 @@ export async function changeEmailAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const locale = localeFrom(formData.get("locale"));
-  const viewer = await requireVerifiedUser();
+  const viewer = await requireAccountOwner();
   if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
   if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
 
@@ -230,8 +232,13 @@ export async function changeEmailAction(
   const { error } = await supabase.auth.updateUser(
     { email: parsed.data.email },
     {
+      // Return the confirming click to the settings page the caller actually
+      // uses: an Administrator has no access to the customer account area.
       emailRedirectTo: `${env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=${encodeURIComponent(
-        localizedPath(locale, "/account/settings"),
+        localizedPath(
+          locale,
+          viewer.role === "ADMIN" ? "/admin/account" : "/account/settings",
+        ),
       )}`,
     },
   );
@@ -245,7 +252,7 @@ export async function changePasswordAction(
   _: ActionFormState,
   formData: FormData,
 ): Promise<ActionResult> {
-  const viewer = await requireVerifiedUser();
+  const viewer = await requireAccountOwner();
   if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
   if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
 

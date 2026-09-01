@@ -220,6 +220,15 @@ test.describe("Phase 3 real Auth state machine", () => {
     await expect(
       page.getByText(/waiting for email confirmation/i),
     ).toBeVisible();
+
+    // The countdown's deadline is set by a client effect, so fast-forwarding
+    // before hydration simply moves the deadline with the clock and the timer
+    // never expires. Prove the timer is actually live first — one tick off the
+    // server-rendered 3:00 — and only then jump past the three minutes.
+    await expect(page.getByText(/^3:00$/)).toBeVisible();
+    await page.clock.runFor(1_000);
+    await expect(page.getByText(/^2:59$/)).toBeVisible();
+
     await page.clock.fastForward(181_000);
     await expect(page.getByText(/still awaiting verification/i)).toBeVisible();
     expect(await fixtures.userStillExists(fixtures.unverified.id)).toBe(true);

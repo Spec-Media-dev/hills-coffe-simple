@@ -28,6 +28,7 @@ export default async function OriginsPage({
 }: PageProps<"/[locale]/coffee-origins">) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const originsT = await getTranslations("origins");
   const origins = await getOrigins(locale as Locale);
   const text =
     locale === "ar"
@@ -72,6 +73,10 @@ export default async function OriginsPage({
                       {origin.summary}
                     </p>
                   ) : null}
+                  {/* Aggregated in one query for all origins, not one per card. */}
+                  <p className="mt-5 text-xs font-bold text-highlight">
+                    {originsT("coffeeCount", { count: origin.coffeeCount })}
+                  </p>
                 </Link>
               ))}
             </div>

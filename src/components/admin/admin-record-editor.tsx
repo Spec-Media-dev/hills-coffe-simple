@@ -1,8 +1,6 @@
 import {
   saveArticleAction,
-  saveCoffeeAction,
   saveNamedEntityAction,
-  saveOfferAction,
   saveOriginAction,
   saveRegionAction,
   saveVarietyAction,
@@ -47,114 +45,6 @@ function definition(module: string, options: Options) {
     string,
     { action: EditorAction; fields: Field[]; hidden?: Record<string, string> }
   > = {
-    products: {
-      action: saveCoffeeAction,
-      fields: [
-        { name: "slug", label: "Slug", required: true },
-        {
-          name: "coffeeTypeId",
-          label: "Coffee type",
-          type: "select",
-          options: options.coffeeTypes,
-          required: true,
-        },
-        {
-          name: "originId",
-          label: "Origin",
-          type: "select",
-          options: options.origins,
-          required: true,
-        },
-        {
-          name: "regionId",
-          label: "Region",
-          type: "select",
-          options: options.regions,
-        },
-        {
-          name: "processingMethodId",
-          label: "Processing method",
-          type: "select",
-          options: options.processingMethods,
-        },
-        { name: "grade", label: "Grade" },
-        {
-          name: "status",
-          label: "Status",
-          type: "select",
-          options: statuses(["DRAFT", "PUBLISHED", "ARCHIVED"]),
-          required: true,
-        },
-        { name: "nameEn", label: "English name", required: true },
-        { name: "nameAr", label: "Arabic name", required: true },
-        {
-          name: "descriptionEn",
-          label: "English short description",
-          type: "textarea",
-        },
-        {
-          name: "descriptionAr",
-          label: "Arabic short description",
-          type: "textarea",
-        },
-      ],
-    },
-    offers: {
-      action: saveOfferAction,
-      fields: [
-        {
-          name: "coffeeId",
-          label: "Coffee",
-          type: "select",
-          options: options.coffees,
-          required: true,
-        },
-        {
-          name: "warehouseId",
-          label: "Warehouse",
-          type: "select",
-          options: options.warehouses,
-          required: true,
-        },
-        { name: "referenceNumber", label: "Reference number", required: true },
-        {
-          name: "bagsQuantity",
-          label: "Bags available",
-          type: "number",
-          required: true,
-        },
-        {
-          name: "bagWeightKg",
-          label: "Bag weight (kg)",
-          type: "number",
-          required: true,
-          step: "0.01",
-        },
-        {
-          name: "status",
-          label: "Status",
-          type: "select",
-          options: statuses([
-            "ARRIVING_SOON",
-            "NEW_ARRIVAL",
-            "IN_STORE",
-            "DISCOUNT",
-            "SOLD_OUT",
-            "INACTIVE",
-          ]),
-          required: true,
-        },
-        { name: "currency", label: "Currency", required: true },
-        { name: "pricingUnit", label: "Pricing unit", required: true },
-        {
-          name: "isVisible",
-          label: "Visibility",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
     origins: {
       action: saveOriginAction,
       fields: [

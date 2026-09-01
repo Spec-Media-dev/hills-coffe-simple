@@ -5,8 +5,7 @@ import type { Locale } from "@/i18n/routing";
 import { getAdminFormOptions, getAdminRecordForEdit } from "@/lib/data/admin";
 
 const editableModules = [
-  "products",
-  "offers",
+  // "products" and "offers" edit through their own workspace routes.
   "origins",
   "regions",
   "warehouses",

@@ -10,7 +10,7 @@ and `.specify/memory/constitution.md`.
 instruction — **not** by user-story priority. Every phase ends with a
 **PHASE ACCEPTANCE GATE** task; the next phase's tasks MUST NOT be marked
 complete until that phase's own gate task passes (some phases may start in
-parallel per the Dependency Graph in `plan.md`, but none may be *closed out*
+parallel per the Dependency Graph in `plan.md`, but none may be _closed out_
 before its gate passes).
 
 **Task ID scheme**: `P{phase}-T{seq}`, stable and sequential within each
@@ -32,7 +32,7 @@ change is made by this document** — it is the task breakdown only.
 > `IMPLEMENTATION-CHECKPOINT.md`. Phase 0 changed no source file and wrote no
 > database row.
 
-- [X] P0-T01 [P] Re-run and record static baseline
+- [x] P0-T01 [P] Re-run and record static baseline
   - **Goal**: Produce a current, dated "before" record of every static gate so later phases have a real regression baseline instead of trusting a stale report.
   - **Dependencies**: none.
   - **Files/modules**: none changed; output is a recorded log/artifact only.
@@ -46,7 +46,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: all five commands run to completion and their exact output is recorded (even if something fails — this phase documents, it does not fix).
   - **Out of scope**: fixing any failure found; any code change.
 
-- [X] P0-T02 Record current route/redirect matrix and reproduce the locale-switch defect
+- [x] P0-T02 Record current route/redirect matrix and reproduce the locale-switch defect
   - **Goal**: Capture the exact current behavior of every route in both languages, and reproduce the EN↔AR↔EN script-tag/runtime-overlay symptom once as a concrete "before" recording that Phase 2's fix will be checked against.
   - **Dependencies**: none.
   - **Files/modules**: none changed; a recorded matrix/observation artifact only.
@@ -60,7 +60,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a written record exists showing (a) the full current route matrix with status codes/redirect targets and (b) whether/where the script-tag symptom reproduces today.
   - **Out of scope**: fixing the symptom (Phase 2); any proxy/route code change.
 
-- [X] P0-T03 [P] Confirm live Supabase security objects and Realtime exclusions
+- [x] P0-T03 [P] Confirm live Supabase security objects and Realtime exclusions
   - **Goal**: Read-only confirmation that the database objects this entire plan depends on are genuinely live, using `docs/HILLS_SUPABASE_CURRENT_STATE.md` as the source of truth, so no later phase re-derives or second-guesses this.
   - **Dependencies**: none.
   - **Files/modules**: none.
@@ -74,7 +74,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a written confirmation, quoting the exact snapshot fields checked, exists before Phase 1 begins.
   - **Out of scope**: any migration, any schema change, any write to Supabase.
 
-- [X] P0-T04 **PHASE 0 ACCEPTANCE GATE**
+- [x] P0-T04 **PHASE 0 ACCEPTANCE GATE**
   - **Goal**: Confirm Phase 0 is genuinely complete before Phase 1 is allowed to start.
   - **Dependencies**: P0-T01, P0-T02, P0-T03 all recorded.
   - **Runtime acceptance condition** (per `plan.md` Phase 0): current build is green (or its exact failures are recorded); current DB security objects are confirmed live; the script-tag symptom reproduction is recorded either way; no production data was touched; no source file was changed by this phase.
@@ -97,7 +97,7 @@ change is made by this document** — it is the task breakdown only.
 > replace, read or delete an avatar. FR-068 holds — Administrator, service-role,
 > unblocked-customer and anti-self-unblock controls all still pass.
 
-- [X] P1-T01 [P] Write authorization-boundary characterization tests against staging
+- [x] P1-T01 [P] Write authorization-boundary characterization tests against staging
   - **Goal**: Prove — with real tests against a real staging session, not by reading SQL — that `hills_is_verified_user()`, `is_admin()`, and `admin_set_user_blocked()` behave exactly as `data-model.md` documents when called through the application's own Supabase client wrappers.
   - **Dependencies**: Phase 0 complete.
   - **Files/modules**: new Vitest/staging-integration test files alongside `src/lib/auth/session.ts` and `src/lib/supabase/**` (no production code changed yet).
@@ -111,7 +111,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: all characterization tests pass against staging and clearly document the exact function/error-code contract later phases will rely on.
   - **Out of scope**: any application code change; any new database object.
 
-- [X] P1-T02 Finalize the owner-approved `admin_list_users()` read-path extension specification
+- [x] P1-T02 Finalize the owner-approved `admin_list_users()` read-path extension specification
   - **Goal**: The extension itself is **already owner-approved** (decided during consistency analysis): extend the customer-user read path, using the current database contract only, to support search by email, search by name, pagination, the blocked/unblocked filter and value, and the avatar reference. This task produces the exact, reviewable technical specification (not code, not SQL) the database owner applies, per `contracts/admin-users-actions.md`'s updated `searchUsers` contract.
   - **Dependencies**: P0-T03.
   - **Files/modules**: a written specification artifact (e.g., appended to this plan's tracking, not application code) describing the exact additional return columns and parameters; **no RPC/SQL is written or executed by this task** — the database owner authors and applies the RPC definition as a separate, reviewed unit.
@@ -125,7 +125,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a complete, unambiguous technical specification exists, matching `contracts/admin-users-actions.md`'s `searchUsers` contract exactly, ready for the database owner to apply before Phase 5 begins any Admin Users implementation work.
   - **Out of scope**: writing or applying the migration/RPC SQL itself; adding any field beyond the owner-approved scope (email search, name search, pagination, blocked filter/value, avatar reference).
 
-- [X] P1-T03 Regenerate `src/lib/supabase/types.generated.ts` once the Phase 1 extension is applied
+- [x] P1-T03 Regenerate `src/lib/supabase/types.generated.ts` once the Phase 1 extension is applied
   - **Goal**: Keep the generated Supabase types in sync with the approved, applied `admin_list_users()` extension from P1-T02, so Phase 5's TypeScript consumers are correctly typed.
   - **Dependencies**: P1-T02 approved and applied by the database owner (this task does not apply the change itself — it only regenerates types after the owner has).
   - **Files/modules**: `src/lib/supabase/types.generated.ts`.
@@ -139,7 +139,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: generated types compile and match the approved RPC signature exactly.
   - **Out of scope**: applying the extension itself (that is an owner/database action outside this plan's execution).
 
-- [X] P1-T04 Apply the owner-approved RLS/storage hardening for blocked-user enforcement
+- [x] P1-T04 Apply the owner-approved RLS/storage hardening for blocked-user enforcement
   - **Goal**: Close the gap found during consistency analysis and approved by the owner: `hills_profiles_update_own` (RLS) and the four `avatars_owner_*` storage policies (`avatars_owner_insert`, `avatars_owner_select`, `avatars_owner_update`, `avatars_owner_delete`) currently enforce ownership only, with no blocked-state predicate — unlike `hills_favorites_*`, `hills_inquiries_*`, and `hills_price_tiers_verified_users`, which all correctly require `hills_is_verified_user()`. A blocked customer with a still-valid session can therefore bypass the application's `requireVerifiedUser()` gate entirely via a direct database or storage call. Implements `spec.md` FR-067/FR-068.
   - **Dependencies**: P0-T03; approved per owner decision (this task authors and applies the fix — the decision itself is no longer pending).
   - **Files/modules**: a reviewed, owner-authored RLS/storage migration unit tightening exactly the five named policies (conceptual scope only — no SQL is written or executed by this planning document; the migration is applied by the database owner as its own reviewed unit, per Constitution Principle XV).
@@ -153,7 +153,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` FR-067 and FR-068 both hold, proven by the before/after test pair above, not by inspecting the policy definition alone.
   - **Out of scope**: authoring or executing the SQL as part of this planning artifact (the database owner applies it as a separate, reviewed migration); any change to `protect_profile_block_fields()`, `hills_is_blocked()`, `hills_is_verified_user()`, or `is_admin()`; any change to the `hills-public` bucket or its policies.
 
-- [X] P1-T05 **PHASE 1 ACCEPTANCE GATE**
+- [x] P1-T05 **PHASE 1 ACCEPTANCE GATE**
   - **Goal**: Confirm the database contract this entire plan depends on is verified, the required read-path gap has an owner decision on record, and the approved blocked-user RLS/storage hardening is applied and proven — before any UI work depends on any of it.
   - **Dependencies**: P1-T01, P1-T02, P1-T04, (P1-T03 if approved).
   - **Runtime acceptance condition** (per `plan.md` Phase 1): a blocked-profile JWT cannot pass `hills_is_verified_user()`; a non-admin cannot alter block fields (proven by test, not by reading source); the owner-approved `admin_list_users()` extension's technical specification is finalized and ready for the database owner to apply (P1-T02), with types regenerated once applied (P1-T03); a blocked customer's direct-client profile update and all four avatar storage operations are denied, with Administrator/service-role access and the anti-self-unblock guarantee both unaffected (FR-067, FR-068, proven by P1-T04's before/after tests).
@@ -189,12 +189,12 @@ change is made by this document** — it is the task breakdown only.
 > **Owner decisions.** P2-T03 was scoped down: the Admin tree is already
 > canonical and single-source under `[locale]`, and moving it out would have
 > duplicated the provider stack and created a second locale-resolution
-> mechanism. Only the Admin *entry* routes moved, out of the `(site)` group,
+> mechanism. Only the Admin _entry_ routes moved, out of the `(site)` group,
 > fixing the confirmed defect that the Admin sign-in screen rendered inside the
 > public marketing header and footer. P2-T04 was deferred: with an identical
 > layout the `(marketing)`/`(auth)` split has no routing or runtime effect.
 
-- [X] P2-T01 [P] Confirm root/locale layout ownership boundary
+- [x] P2-T01 [P] Confirm root/locale layout ownership boundary
   - **Goal**: Verify the already-existing `src/app/layout.tsx` (global document, `lang`/`dir` from the proxy header) and `src/app/[locale]/layout.tsx` (locale/message/provider only) match the target boundary in `plan.md`'s Project Structure, and close any remaining gap.
   - **Dependencies**: Phase 0 complete.
   - **Files/modules**: `src/app/layout.tsx`, `src/app/[locale]/layout.tsx`.
@@ -208,7 +208,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: exactly one file owns `<html>`/`<body>`; no duplicate document ownership exists anywhere in the tree.
   - **Out of scope**: any Admin route move (P2-T03/T04 below).
 
-- [X] P2-T02 Extend `src/proxy.ts` with the explicit Admin-path branch
+- [x] P2-T02 Extend `src/proxy.ts` with the explicit Admin-path branch
   - **Goal**: Implement the master plan's exact request algorithm's Admin-specific branch — `/dashboard-admin`/`/admin/**` (EN) and `/ar/dashboard-admin`/`/ar/admin/**` (AR, internally rewritten without a literal `[locale]` param) — while leaving the existing unprefixed-EN rewrite and `/en/**` 308 behavior untouched.
   - **Dependencies**: P2-T01.
   - **Files/modules**: `src/proxy.ts` (currently 61 lines), `src/i18n/routing.ts` (only if the locale-detection helper needs a shared export).
@@ -222,7 +222,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every Admin path in both languages sets the correct headers and reaches the same source file, with zero change to any non-Admin path's existing behavior.
   - **Out of scope**: the actual file move of the Admin tree (P2-T03); any visual change.
 
-- [X] P2-T03 Move the Admin source tree to the canonical `(admin)` route group
+- [x] P2-T03 Move the Admin source tree to the canonical `(admin)` route group
   - **Goal**: Complete (not restart) the Admin route migration — move `src/app/[locale]/admin/**` to `src/app/(admin)/admin/**` and `src/app/[locale]/(site)/dashboard-admin/` to `src/app/(admin)/dashboard-admin/`, per `plan.md`'s explicit note that this specific piece is still outstanding.
   - **Dependencies**: P2-T02 (proxy must already route Admin paths correctly before the files move, so the matrix can be re-verified against the new location immediately).
   - **Files/modules**: every file under `src/app/[locale]/admin/**` (layout, page, `[module]/page.tsx`, `[module]/[id]/page.tsx`, `content/[id]/page.tsx`, `account/page.tsx`) and `src/app/[locale]/(site)/dashboard-admin/page.tsx`, moved to `src/app/(admin)/**`.
@@ -250,7 +250,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every public/auth/account URL in both languages resolves identically before and after the grouping.
   - **Out of scope**: any Admin file (P2-T03); any visual/content change.
 
-- [X] P2-T05 Implement locale-switch hard navigation and verify the script-tag/overlay fix
+- [x] P2-T05 Implement locale-switch hard navigation and verify the script-tag/overlay fix
   - **Goal**: Implement the `research.md` §1 decision — locale switching performs a full document navigation while same-locale links keep client transitions — and prove the EN↔AR↔EN script-tag/runtime-overlay symptom from P0-T02 no longer reproduces.
   - **Dependencies**: P2-T01–T04 complete (the fix must be verified against the final route locations, not the pre-move tree).
   - **Files/modules**: the locale-switcher component (`src/i18n/navigation.ts` and/or `src/components/navigation/locale-switcher.tsx`). P0-T02 pinned the exact defect site: `src/components/navigation/locale-switcher.tsx:16`, `onClick={() => router.replace(pathname, { locale: nextLocale })}` — a client soft navigation that also passes `pathname` only, never `searchParams`.
@@ -264,7 +264,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: the repetition test is green; all three symptoms recorded in P0-T02 are closed — **D1** the script-tag console error, **D2** the stale `<html lang>`/`dir` (Arabic rendering LTR after a client switch), and **D3** the dropped query string.
   - **Out of scope**: any change to JSON-LD content/shape; any change to same-locale navigation behavior.
 
-- [X] P2-T06 **PHASE 2 ACCEPTANCE GATE**
+- [x] P2-T06 **PHASE 2 ACCEPTANCE GATE**
   - **Goal**: Confirm the full route/proxy/locale architecture is stable before Auth work depends on it.
   - **Dependencies**: P2-T01 through P2-T05.
   - **Runtime acceptance condition** (per `plan.md` Phase 2): one Admin implementation serves all four external Admin roots; no visible `/en` in the browser bar; Admin path/query survives a locale switch; the script-tag repetition test is green; anonymous guards to `/admin`, `/dashboard-admin`, `/account` still redirect exactly as recorded in P0-T02, with no regression.
@@ -283,7 +283,7 @@ change is made by this document** — it is the task breakdown only.
 > **Owner-observed blocker fixed.** A real Supabase confirmation link returned
 > the session in the URL **fragment** (implicit flow). A fragment never reaches
 > the server, so `/auth/callback` saw no `code`/`token_hash` and reported a
-> *successful* confirmation as `link_expired`, with no session. Now delegated to
+> _successful_ confirmation as `link_expired`, with no session. Now delegated to
 > a browser-side handler that hands the tokens to the Supabase client and
 > returns to the server for the same authoritative classification. Full journey
 > verified with a genuine Supabase-minted token in a real browser:
@@ -291,11 +291,11 @@ change is made by this document** — it is the task breakdown only.
 > sign-in SUCCESS. **N1 (HIGH) closed**: the customer guard is now
 > authenticated + verified + `role = USER` + unblocked.
 
-- [X] P3-T01 [P] Adopt the `ActionResult` contract in `src/actions/auth.ts`
+- [x] P3-T01 [P] Adopt the `ActionResult` contract in `src/actions/auth.ts`
   - **Goal**: Bring every Auth action onto the single typed result shape in `contracts/action-result.md`, replacing any ad hoc result type.
   - **Dependencies**: Phase 2 complete (routes stable).
   - **Files/modules**: `src/actions/auth.ts`, `src/lib/actions.ts` (shared type), Auth-consuming form components.
-  - **KEEP**: the existing Supabase call sequences for sign-up/sign-in/resend/reset — this task changes the *result shape*, not the underlying calls, which are already functionally correct per the prior completion pass.
+  - **KEEP**: the existing Supabase call sequences for sign-up/sign-in/resend/reset — this task changes the _result shape_, not the underlying calls, which are already functionally correct per the prior completion pass.
   - **REFACTOR/MOVE/REMOVE**: refactor each action's return statements to the `ActionResult` discriminated union with the closed domain-code set from `contracts/action-result.md`.
   - **Supabase/DB contract**: none new.
   - **Auth/security**: no `messageKey` may ever carry a raw Postgres/Supabase error string (Constitution Principle XII) — this is the mechanical enforcement point.
@@ -305,7 +305,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `npm run typecheck` passes with the new shared type; no raw error string appears in any Auth action's output for any tested failure path.
   - **Out of scope**: changing sign-up/sign-in/reset business logic itself (that is P3-T02–T04).
 
-- [X] P3-T02 Harden `signIn`/`adminSignIn` state-machine branches
+- [x] P3-T02 Harden `signIn`/`adminSignIn` state-machine branches
   - **Goal**: Verify and, where needed, correct the exact ordering `spec.md` FR-004/FR-008/FR-009/FR-014 require: unverified → `VERIFICATION_REQUIRED`; blocked → `BLOCKED` with session cleared and no reason disclosed; Admin via customer sign-in → `ADMIN_PORTAL_REQUIRED` with no customer session; customer via Admin sign-in → `FORBIDDEN`.
   - **Dependencies**: P3-T01; Phase 1 verification (P1-T01) that `hills_is_verified_user()`/`is_admin()` behave as documented.
   - **Files/modules**: `src/actions/auth.ts` (`signIn`, `adminSignIn`), `src/lib/auth/session.ts`.
@@ -319,7 +319,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every branch in `spec.md` User Story 1's acceptance scenarios 2, 5, 7 passes.
   - **Out of scope**: password recovery (P3-T04); the three-minute verification UX (P3-T03).
 
-- [X] P3-T03 Verify the three-minute verification UX is presentational-only
+- [x] P3-T03 Verify the three-minute verification UX is presentational-only
   - **Goal**: Confirm (and correct if needed) that the post-signup waiting window is a UX convention, never treated as token expiry, and that resend is server-rate-limited rather than only client-timer-gated (FR-006, FR-007).
   - **Dependencies**: P3-T01.
   - **Files/modules**: `src/app/[locale]/(auth)/verify-email/page.tsx` (post-Phase-2 location), `src/components/forms/verify-email-form.tsx`, `src/actions/auth.ts` (`resendVerification`).
@@ -333,7 +333,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` Edge Cases row "customer never confirms within the three-minute window" passes.
   - **Out of scope**: the real email-click confirmation itself (P3-T04).
 
-- [X] P3-T04 Harden `/auth/callback` real-state re-verification
+- [x] P3-T04 Harden `/auth/callback` real-state re-verification
   - **Goal**: Confirm the callback route re-reads the actual resulting user/session state (not just "callback was reached") before granting any protected destination, for both signup-confirmation and recovery purposes, and that a purpose-mismatched or expired/reused link is handled safely (FR-005).
   - **Dependencies**: P3-T01–T02.
   - **Files/modules**: `src/app/auth/callback/route.ts`.
@@ -347,7 +347,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every callback purpose-mixing/expiry case in `spec.md` Edge Cases passes; no protected destination is ever reached without a genuinely re-verified state.
   - **Out of scope**: the reset-password form itself (P3-T05).
 
-- [X] P3-T05 [P] Harden forgot/reset password recovery-session enforcement
+- [x] P3-T05 [P] Harden forgot/reset password recovery-session enforcement
   - **Goal**: Confirm `requestPasswordReset` returns a neutral response regardless of account existence (FR-003) and that `resetPassword` refuses to operate outside a genuine, server-verified recovery session (FR-012), invalidating that recovery context after a successful update (FR-013).
   - **Dependencies**: P3-T01, P3-T04 (recovery arrives via the same callback route).
   - **Files/modules**: `src/actions/auth.ts` (`requestPasswordReset`, `resetPassword`), `src/app/[locale]/(auth)/forgot-password/page.tsx`, `reset-password/page.tsx`.
@@ -389,7 +389,7 @@ change is made by this document** — it is the task breakdown only.
 > integration 62/62; Phase 3 personas 12/12; production Playwright 146;
 > dev Playwright 73/73; build 56/56.
 
-- [X] P4-T01 Implement `uploadAvatar`/`deleteAvatar` actions
+- [x] P4-T01 Implement `uploadAvatar`/`deleteAvatar` actions
   - **Goal**: Deliver `contracts/account-avatar-actions.md`'s avatar upload/delete contract in full — server-side MIME/size/signature validation, owner-derived storage path, safe replace/orphan-cleanup ordering.
   - **Dependencies**: Phase 3 complete (requires `requireVerifiedUser()`).
   - **Files/modules**: `src/actions/account.ts`, a new avatar-resolving helper shared with Phase 5's Admin avatar view.
@@ -403,7 +403,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 2 acceptance scenarios 1–3 pass.
   - **Out of scope**: the Admin read-only avatar viewer (Phase 5); the project logo (Phase 8) — these never share storage location or actions with customer avatars (FR-022).
 
-- [X] P4-T02 [P] Build the header avatar/account menu
+- [x] P4-T02 [P] Build the header avatar/account menu
   - **Goal**: Replace the anonymous sign-in CTA with a resolved avatar/default-icon menu for a signed-in verified customer, per the master plan's Header Auth State section.
   - **Dependencies**: P4-T01 (avatar resolver must exist).
   - **Files/modules**: `src/components/navigation/site-header.tsx`, `src/components/navigation/mobile-menu.tsx`.
@@ -417,7 +417,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: the avatar menu is stable across navigation/theme/locale changes (no flash of the wrong state).
   - **Out of scope**: the sign-out confirmation dialog itself (P4-T03).
 
-- [X] P4-T03 [P] Build the sign-out confirmation dialog
+- [x] P4-T03 [P] Build the sign-out confirmation dialog
   - **Goal**: A localized, theme-aware confirmation dialog with Cancel/Sign Out; success clears the session, invalidates viewer caches, closes menus, and navigates home.
   - **Dependencies**: P4-T02 (menu must exist to trigger this dialog from).
   - **Files/modules**: a new shared confirmation-dialog component (reusable by Phase 5's Admin sign-out and Phase 7's destructive Admin actions), wired into the header menu and account/security page.
@@ -431,7 +431,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` Header Auth State sign-out behavior passes for both customer and (later, Phase 5) Admin contexts using the same shared component.
   - **Out of scope**: Admin-specific sign-out wiring (Phase 5 references this component, does not rebuild it).
 
-- [X] P4-T04 [P] Finalize the account overview dashboard
+- [x] P4-T04 [P] Finalize the account overview dashboard
   - **Goal**: Real favorites count, real active-sample count (all non-`CLOSED` `SAMPLE_REQUEST` states), recent request activity, and quick links — with zero fabricated business metric (FR-016).
   - **Dependencies**: Phase 3 complete.
   - **Files/modules**: `src/app/[locale]/account/page.tsx`.
@@ -445,7 +445,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 2 acceptance scenario 5 passes.
   - **Out of scope**: the request list/detail pages themselves (P4-T06).
 
-- [X] P4-T05 [P] Verify favorites cross-user isolation
+- [x] P4-T05 [P] Verify favorites cross-user isolation
   - **Goal**: Confirm `toggleFavorite`/list-favorites are scoped to `user_id = auth.uid()` with no possible cross-user read/write (FR-020, part of FR-021's spirit for favorites).
   - **Dependencies**: Phase 3 complete.
   - **Files/modules**: `src/actions/account.ts` (`toggleFavoriteAction`), `src/app/[locale]/account/favorites/page.tsx`.
@@ -459,7 +459,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: zero cross-user favorite access possible.
   - **Out of scope**: the catalog data those favorites reference (Phase 6).
 
-- [X] P4-T06 Finalize request history list/detail/timeline
+- [x] P4-T06 Finalize request history list/detail/timeline
   - **Goal**: A verified customer can list and open their own request history with an immutable, chronological status timeline (FR-021).
   - **Dependencies**: Phase 3 complete.
   - **Note (not a dependency)**: this task uses whatever status labels exist today for `NEW`/`RECEIVED`/`CONTACTED`/`CLOSED`; it is not blocked on Phase 7, but is revisited without reopening by `P7-T04`, which adds the `SAMPLE_SENT`/`DELIVERED` labels this task's timeline component then also renders.
@@ -474,7 +474,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 2 acceptance scenario 5 (history) and the Requests contract in `contracts/account-avatar-actions.md` pass.
   - **Out of scope**: Admin's view of the same data (Phase 5/7).
 
-- [X] P4-T07 Consolidate `account/profile` and `account/security` toward `account/settings`
+- [x] P4-T07 Consolidate `account/profile` and `account/security` toward `account/settings`
   - **Goal**: Converge on the master plan's target `account/settings` route per its Route Migration Map, keeping the old URLs alive as compatibility redirects rather than deleting them outright.
   - **Dependencies**: P4-T01 (avatar must be part of settings), P3-T05 (password-change semantics finalized).
   - **Files/modules**: new `src/app/[locale]/account/settings/page.tsx`; `profile/page.tsx` and `security/page.tsx` become redirect stubs once parity is confirmed.
@@ -488,7 +488,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: no bookmarked old URL breaks; `settings` is feature-complete relative to the two pages it replaces.
   - **Out of scope**: any new settings field not already present on `profile`/`security`.
 
-- [X] P4-T08 **PHASE 4 ACCEPTANCE GATE**
+- [x] P4-T08 **PHASE 4 ACCEPTANCE GATE**
   - **Goal**: Confirm the customer account experience is complete and correctly isolated before Admin-side avatar viewing (Phase 5) or public redesign (Phase 9) depends on it.
   - **Dependencies**: P4-T01 through P4-T07.
   - **Runtime acceptance condition** (per `plan.md` Phase 4, `spec.md` SC-001): default/uploaded avatar stable across navigation/theme/locale; account counts and timeline are real; zero unauthorized account/avatar/favorite/request access by any tested means.
@@ -498,7 +498,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 5 — Admin authorization, users, blocking, and settings
 
-- [ ] P5-T01 [P] Verify the Admin overview dashboard against the moved route tree
+- [x] P5-T01 [P] Verify the Admin overview dashboard against the moved route tree
   - **Goal**: Confirm the already-implemented real-metrics Admin dashboard (published coffees, offers, leads, content state, recent activity — no invented KPIs) still renders correctly at its new `src/app/(admin)/admin/page.tsx` location after Phase 2's move.
   - **Dependencies**: Phase 2 complete (route move), Phase 4 complete.
   - **Files/modules**: `src/app/(admin)/admin/page.tsx`.
@@ -512,7 +512,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: dashboard renders identically (content-wise) before and after the Phase 2 move.
   - **Out of scope**: any new metric.
 
-- [ ] P5-T02 Build the paginated/searchable Admin Users read path
+- [x] P5-T02 Build the paginated/searchable Admin Users read path
   - **Goal**: Consume the Phase 1 `admin_list_users()` extension (or its approved alternative) to deliver `contracts/admin-users-actions.md`'s `searchUsers`/`getUserDetail`.
   - **Dependencies**: P1-T02/T03 (extension approved and typed); Phase 2 complete.
   - **Files/modules**: `src/lib/data/admin.ts`, a new Admin Users workspace route (replacing the generic `[module]` view for `users`).
@@ -526,7 +526,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 3 acceptance scenario 3 passes.
   - **Out of scope**: block/unblock actions themselves (P5-T03).
 
-- [ ] P5-T03 Implement `setUserBlocked`/`unblockUser` with Auth-ban synchronization
+- [x] P5-T03 Implement `setUserBlocked`/`unblockUser` with Auth-ban synchronization
   - **Goal**: Deliver `contracts/admin-users-actions.md`'s block/unblock contract in full, including the defense-in-depth Supabase Auth ban and its partial-failure handling per `research.md` §5.
   - **Dependencies**: P5-T02; Phase 1 verification (P1-T01) of `admin_set_user_blocked()`'s refusal behavior.
   - **Files/modules**: `src/actions/admin-operations.ts` (add the two actions), a new server-only service-role module (`server-only` directive, never imported by a client component) for the Auth-ban call.
@@ -540,7 +540,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 3 acceptance scenarios 4–6 pass.
   - **Out of scope**: any change to the durable block's authority (Auth ban is always secondary, never primary).
 
-- [ ] P5-T04 [P] Build the Admin user detail view with read-only avatar
+- [x] P5-T04 [P] Build the Admin user detail view with read-only avatar
   - **Goal**: A single-customer detail read (profile, avatar reference, verification state, block state/history, favorites/inquiry summary) reusing Phase 4's avatar-resolving component in read-only mode.
   - **Dependencies**: P5-T02; P4-T01 (shared avatar resolver).
   - **Files/modules**: the new Admin Users workspace's detail route/component.
@@ -554,7 +554,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 3 acceptance scenario 3 (avatar viewing without edit capability) passes.
   - **Out of scope**: any Admin write to customer avatar data.
 
-- [ ] P5-T05 [P] Verify Site/Profile/Account settings independence
+- [x] P5-T05 [P] Verify Site/Profile/Account settings independence
   - **Goal**: Confirm (per the master plan) that Site settings, Admin's own Profile settings, and Admin's own Account (email/password) settings are three independently submittable forms/actions, so a failure in one never discards another.
   - **Dependencies**: Phase 2 complete (route move to `src/app/(admin)/admin/settings/**` or equivalent).
   - **Files/modules**: `src/app/(admin)/admin/account/page.tsx` (already exists), site-settings module.
@@ -568,7 +568,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 6 acceptance scenario 2 (specific to settings validation) passes for all three areas.
   - **Out of scope**: any new settings field not already approved.
 
-- [ ] P5-T06 **PHASE 5 ACCEPTANCE GATE**
+- [x] P5-T06 **PHASE 5 ACCEPTANCE GATE**
   - **Goal**: Confirm Admin authorization, user management, and blocking are correct and audited before Lead Inbox (Phase 7) or Admin CRUD redesign (Phase 10) depends on this shell.
   - **Dependencies**: P5-T01 through P5-T05.
   - **Runtime acceptance condition** (per `plan.md` Phase 5, `spec.md` SC-004/SC-009): one localized Admin workspace, no public navigation link to it, real searchable user data, audited durable blocking that takes effect immediately, no cross-user/self/role escalation possible by any tested means.
@@ -578,7 +578,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 6 — Catalog, protected pricing, and Origins query layer
 
-- [ ] P6-T01 Replace in-memory catalog filtering with the composed database query
+- [x] P6-T01 Replace in-memory catalog filtering with the composed database query
   - **Goal**: Implement `contracts/catalog-query.md`'s `queryCatalog` — filtering, sorting, and pagination evaluated by the database, not by JavaScript after a full-table fetch, per `research.md` §4.
   - **Dependencies**: Phase 2 complete (route stable); a representative fixture set for meaningful before/after comparison (may still be sparse given the current near-empty database — the query contract must be correct at any scale, not only measured at production scale).
   - **Files/modules**: `src/lib/data/catalog.ts` (currently 24 queries with in-memory filtering), the catalog page's data-fetching call site.
@@ -592,7 +592,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 4 acceptance scenario 4 (server-side, paginated, bounded) passes.
   - **Out of scope**: any bespoke SQL view/RPC (deferred per `research.md` §4 unless evidence-justified).
 
-- [ ] P6-T02 [P] Enforce origin-dependent region filtering
+- [x] P6-T02 [P] Enforce origin-dependent region filtering
   - **Goal**: The available region filter set depends on the selected origin at the query layer, and an inconsistent origin/region pair is treated as "region cleared," not an error (FR-033).
   - **Dependencies**: P6-T01.
   - **Files/modules**: the same catalog query module; the filter UI component.
@@ -606,7 +606,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 4 acceptance scenario 5 passes.
   - **Out of scope**: origin/region Admin CRUD (already covered by existing Admin modules, untouched here).
 
-- [ ] P6-T03 Re-verify the protected-pricing isolation boundary post-refactor
+- [x] P6-T03 Re-verify the protected-pricing isolation boundary post-refactor
   - **Goal**: Prove `contracts/pricing-query.md` still holds exactly after P6-T01's catalog refactor — no price in anonymous/unverified HTML, RSC payload, metadata, JSON-LD, sitemap, or shared cache; an authenticated Admin browsing publicly does not receive customer pricing through this path (FR-030, FR-031).
   - **Dependencies**: P6-T01.
   - **Files/modules**: `src/lib/data/pricing.ts` (verification only — no change expected), the catalog/coffee-detail page components.
@@ -618,9 +618,9 @@ change is made by this document** — it is the task breakdown only.
   - **EN/AR/RTL**: the "sign in to see price" locked-price message localized.
   - **Tests required**: a full five-persona price-presence/absence scan across every catalog/detail route, in both languages, including a grep-style scan of the rendered HTML/JSON-LD for price-shaped tokens.
   - **Runtime acceptance condition**: `spec.md` User Story 4 acceptance scenarios 1–3 and SC-008 pass.
-  - **Out of scope**: Admin price *management* (unchanged, separate contract).
+  - **Out of scope**: Admin price _management_ (unchanged, separate contract).
 
-- [ ] P6-T04 [P] Finalize origin listing/detail aggregation
+- [x] P6-T04 [P] Finalize origin listing/detail aggregation
   - **Goal**: Active, non-deleted origins/regions with an efficiently computed published-coffee count (no N+1 per coffee) and dependent-region aggregation on origin detail.
   - **Dependencies**: Phase 2 complete; independent of P6-T01–T03 (different data module) so can run in parallel.
   - **Files/modules**: origin listing/detail data modules and pages.
@@ -634,7 +634,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 4 acceptance scenario 6 (empty/partial data honesty) and the origin-count performance property both pass.
   - **Out of scope**: origin/region CRUD (existing Admin modules, untouched).
 
-- [ ] P6-T05 Run the filter/pagination/price persona test matrix and query-plan comparison
+- [x] P6-T05 Run the filter/pagination/price persona test matrix and query-plan comparison
   - **Goal**: Produce the actual evidence (not a description) that this phase's runtime acceptance criteria hold, and record whether any evidence-backed index/RPC is now justified per `research.md` §4.
   - **Dependencies**: P6-T01 through P6-T04.
   - **Files/modules**: Playwright specs under `tests/e2e/**`.
@@ -648,7 +648,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a bounded, paginated database query regardless of catalog size; stable URL filter state; no shared/public cache ever contains a price value; correct origin→region dependency — all with attached evidence per `quickstart.md`.
   - **Out of scope**: applying any index/RPC found necessary (recorded as a follow-up decision only).
 
-- [ ] P6-T06 **PHASE 6 ACCEPTANCE GATE**
+- [x] P6-T06 **PHASE 6 ACCEPTANCE GATE**
   - **Goal**: Confirm the catalog/pricing/origins query layer is correct, bounded, and price-safe before the public redesign (Phase 9) builds on it.
   - **Dependencies**: P6-T01 through P6-T05.
   - **Runtime acceptance condition** (per `plan.md` Phase 6, `spec.md` SC-006/SC-008): all conditions in P6-T05 hold with recorded evidence.
@@ -662,7 +662,7 @@ change is made by this document** — it is the task breakdown only.
   - **Goal**: Catch `uq_inquiries_active_sample_user_coffee`'s unique-violation on insert, look up the caller's existing active request for that `coffee_id`, and return `DUPLICATE_SAMPLE` with `conflict.requestCode` set — never surfacing the raw constraint violation (FR-039, SC-005).
   - **Dependencies**: Phase 3, Phase 6 complete (needs verified-user gate and trusted-offer resolution).
   - **Files/modules**: `src/actions/inquiries.ts`, `src/lib/inquiries/sample-request.ts`.
-  - **KEEP**: the existing application-level pre-check (`user_id + coffee_id + type='SAMPLE_REQUEST'`, never `offer_id`) and its 16 existing behavioral unit tests — this task adds the database-level backstop *in addition to*, not instead of, that pre-check.
+  - **KEEP**: the existing application-level pre-check (`user_id + coffee_id + type='SAMPLE_REQUEST'`, never `offer_id`) and its 16 existing behavioral unit tests — this task adds the database-level backstop _in addition to_, not instead of, that pre-check.
   - **REFACTOR/MOVE/REMOVE**: refactor the insert path to catch the specific unique-violation error code and map it per `contracts/inquiry-actions.md`.
   - **Supabase/DB contract**: `uq_inquiries_active_sample_user_coffee` — already live per `data-model.md`, covering `NEW`/`RECEIVED`/`CONTACTED`/`SAMPLE_SENT`/`DELIVERED`.
   - **Auth/security**: this is the authoritative, race-safe implementation of the one-active-sample rule (Constitution-adjacent correctness requirement carried from the master plan).
@@ -718,7 +718,7 @@ change is made by this document** — it is the task breakdown only.
   - **Goal**: Replace or harden the existing custom inquiry dialog's focus management with a proven accessible primitive — focus trap, Escape-to-close, focus restoration, inert background, scroll lock — per the master plan's Accessibility Plan callout for this specific component.
   - **Dependencies**: none beyond Phase 4 (dialog is reachable from coffee detail/account pages).
   - **Files/modules**: `src/components/inquiries/inquiry-panel.tsx`, `request-quote-form.tsx`.
-  - **KEEP**: the existing form logic/validation inside the dialog exactly as-is — this task replaces the dialog *shell*, not the form.
+  - **KEEP**: the existing form logic/validation inside the dialog exactly as-is — this task replaces the dialog _shell_, not the form.
   - **REFACTOR/MOVE/REMOVE**: refactor the dialog wrapper onto an accessible primitive (the codebase already depends on `@base-ui/react`, which provides one).
   - **Supabase/DB contract**: none new.
   - **Auth/security**: none beyond the existing `requireVerifiedUser()` gate on submission.

@@ -10,22 +10,25 @@ import {
 import {
   archiveAdminRecordAction,
   createCmsPageAction,
-  deletePriceTierAction,
-  savePriceTierAction,
   updateWorkflowStatusAction,
 } from "@/actions/admin-operations";
 import { AdminActionForm } from "@/components/admin/admin-action-form";
 import { AdminModuleForm } from "@/components/admin/admin-module-form";
-import { OfferPicker } from "@/components/admin/offer-picker";
 
 const modules = [
-  "products",
-  "offers",
+  // "products", "offers" and "pricing" are deliberately absent: each has a
+  // dedicated workspace under `admin/products|offers|pricing` with dependent
+  // selects, inline validation and image management the generic renderer
+  // cannot express. The static segments win the route match anyway; removing
+  // them here keeps that intentional rather than incidental.
   "inquiries",
-  "pricing",
   "origins",
   "taxonomy",
-  "users",
+  // "users" is deliberately absent: the customer directory has its own
+  // workspace at `admin/users/**` (search, pagination, block/unblock, detail),
+  // which the generic renderer cannot express. The static segment would win
+  // the route match anyway — removing it here keeps that intentional rather
+  // than incidental.
   "content",
   "settings",
   "regions",
@@ -95,32 +98,6 @@ export default async function AdminModulePage({
             Filter
           </button>
         </form>
-      ) : null}
-      {module === "pricing" ? (
-        <AdminActionForm
-          action={savePriceTierAction}
-          submitLabel={ops("addTier")}
-          className="mt-7 grid gap-3 rounded-2xl border border-border bg-card p-5 md:grid-cols-[1fr_.5fr_.5fr_auto]"
-        >
-          <OfferPicker offers={options.offers} />
-          <input
-            name="minBags"
-            required
-            type="number"
-            min="1"
-            placeholder="Min bags"
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
-          />
-          <input
-            name="price"
-            required
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="USD / kg"
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
-          />
-        </AdminActionForm>
       ) : null}
       {module === "content" ? (
         <AdminActionForm
@@ -264,9 +241,6 @@ async function RowAction({
   module,
   id,
   status,
-  actionValue,
-  secondary,
-  detail,
   entity,
 }: {
   module: string;
@@ -278,43 +252,6 @@ async function RowAction({
   entity?: string;
 }) {
   const ops = await getTranslations("admin.ops");
-  if (module === "pricing" && actionValue)
-    return (
-      <div className="flex flex-wrap gap-2">
-        <AdminActionForm
-          action={savePriceTierAction}
-          submitLabel={ops("save")}
-          className="flex flex-wrap gap-2"
-        >
-          <input type="hidden" name="id" value={id} />
-          <input type="hidden" name="offerId" value={actionValue} />
-          <input
-            name="minBags"
-            type="number"
-            min="1"
-            defaultValue={secondary}
-            aria-label="Minimum bags"
-            className="h-11 w-20 rounded-lg border border-input bg-background px-2 text-xs"
-          />
-          <input
-            name="price"
-            type="number"
-            min=".01"
-            step=".01"
-            defaultValue={detail}
-            aria-label="Price per kilogram"
-            className="h-11 w-24 rounded-lg border border-input bg-background px-2 text-xs"
-          />
-        </AdminActionForm>
-        <AdminActionForm
-          action={deletePriceTierAction}
-          submitLabel={ops("delete")}
-          danger
-        >
-          <input type="hidden" name="id" value={id} />
-        </AdminActionForm>
-      </div>
-    );
   const config =
     module === "inquiries"
       ? {

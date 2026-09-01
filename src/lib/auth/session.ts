@@ -103,6 +103,42 @@ export async function requireVerifiedUser() {
 }
 
 /**
+ * The own-account gate: authenticated AND email-confirmed AND NOT blocked,
+ * for **either** role.
+ *
+ * This exists because `requireVerifiedUser()` is deliberately narrower — it
+ * also requires `role = 'USER'`, which is what stops an Administrator
+ * inheriting customer protected-price entitlement (Principle VI). Applying
+ * that same gate to "edit your own name / email / password" locked
+ * Administrators out of their own account page, which is a different question
+ * from entitlement.
+ *
+ * What this gate grants is strictly self-scoped: it returns the caller's own
+ * viewer and nothing else. It confers no customer entitlement and no Admin
+ * capability, so it must never be substituted for `requireVerifiedUser()` on a
+ * pricing/favorites path or for `requireAdmin()` on an Admin path. Every write
+ * behind it is additionally constrained to `auth.uid()` by RLS.
+ */
+export async function requireAccountOwner() {
+  if (await hasRecoveryMarker()) return null;
+  const viewer = await getViewer();
+  if (!viewer) return null;
+  if (!viewer.emailVerified) return null;
+  if (viewer.isBlocked) {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut({ scope: "local" });
+    return null;
+  }
+
+  // Composed against the live database helper for the same reason
+  // `requireVerifiedUser()` is: the application check must not become a second
+  // definition that can drift from RLS.
+  const supabase = await createSupabaseServerClient();
+  const { data: blocked, error } = await supabase.rpc("hills_is_blocked");
+  return !error && blocked === false ? viewer : null;
+}
+
+/**
  * Administrator gate. `is_blocked` is checked defensively: the database
  * refuses to block a non-USER row (`only_user_accounts_can_be_blocked`), so
  * this should be unreachable, but an Administrator flagged by any future path

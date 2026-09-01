@@ -226,7 +226,8 @@ export interface SiteSectionTranslation extends TranslationStamp {
   cta_label: string | null;
 }
 export interface SiteSettings {
-  id: string;
+  /** Single-row table: a smallint key defaulting to 1, not a uuid. */
+  id: number;
   org_legal_name: string | null;
   org_brand_name: string | null;
   org_email: string | null;
@@ -241,7 +242,7 @@ export interface SiteSettings {
   updated_at: string;
 }
 export interface SiteSettingsTranslation extends TranslationStamp {
-  settings_id: string;
+  settings_id: number;
   org_display_name: string | null;
   org_tagline: string | null;
   org_address: string | null;

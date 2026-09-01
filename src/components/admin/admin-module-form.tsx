@@ -1,8 +1,6 @@
 import {
   saveArticleAction,
-  saveCoffeeAction,
   saveNamedEntityAction,
-  saveOfferAction,
   saveOriginAction,
   saveRegionAction,
   saveVarietyAction,
@@ -116,113 +114,8 @@ export function AdminModuleForm({
   options: Options;
   settings: SettingsData;
 }) {
-  if (module === "products")
-    return (
-      <AdminActionForm
-        action={saveCoffeeAction}
-        submitLabel="Create coffee"
-        className={grid}
-      >
-        <Input name="slug" label="Slug" required placeholder="ethiopia-guji" />
-        <Select
-          name="coffeeTypeId"
-          label="Coffee type"
-          options={options.coffeeTypes}
-          required
-        />
-        <Select
-          name="originId"
-          label="Origin"
-          options={options.origins}
-          required
-        />
-        <Select name="regionId" label="Region" options={options.regions} />
-        <Select
-          name="processingMethodId"
-          label="Processing method"
-          options={options.processingMethods}
-        />
-        <Input name="grade" label="Grade" />
-        <Select
-          name="status"
-          label="Status"
-          required
-          options={["DRAFT", "PUBLISHED", "ARCHIVED"].map((value) => ({
-            id: value,
-            label: value,
-          }))}
-          empty="Choose status"
-        />
-        <Input name="nameEn" label="English name" required />
-        <Input name="nameAr" label="Arabic name" required />
-        <Textarea name="descriptionEn" label="English short description" />
-        <Textarea name="descriptionAr" label="Arabic short description" />
-      </AdminActionForm>
-    );
-  if (module === "offers")
-    return (
-      <AdminActionForm
-        action={saveOfferAction}
-        submitLabel="Create offer"
-        className={grid}
-      >
-        <Select
-          name="coffeeId"
-          label="Coffee"
-          options={options.coffees}
-          required
-        />
-        <Select
-          name="warehouseId"
-          label="Warehouse"
-          options={options.warehouses}
-          required
-        />
-        <Input name="referenceNumber" label="Reference number" required />
-        <Input
-          name="bagsQuantity"
-          label="Bags available"
-          type="number"
-          required
-          defaultValue={0}
-        />
-        <Input
-          name="bagWeightKg"
-          label="Bag weight (kg)"
-          type="number"
-          required
-          defaultValue={60}
-        />
-        <Select
-          name="status"
-          label="Status"
-          required
-          options={[
-            "ARRIVING_SOON",
-            "NEW_ARRIVAL",
-            "IN_STORE",
-            "DISCOUNT",
-            "SOLD_OUT",
-            "INACTIVE",
-          ].map((value) => ({ id: value, label: value }))}
-          empty="Choose status"
-        />
-        <Input name="currency" label="Currency" required defaultValue="USD" />
-        <Input
-          name="pricingUnit"
-          label="Pricing unit"
-          required
-          defaultValue="KG"
-        />
-        <Select
-          name="isVisible"
-          label="Visibility"
-          options={booleanOptions}
-          required
-          empty="Choose visibility"
-        />
-      </AdminActionForm>
-    );
+  // "products" and "offers" have dedicated Phase 6 workspaces with dependent
+  // selects, inline validation and image management.
   if (module === "origins")
     return (
       <AdminActionForm

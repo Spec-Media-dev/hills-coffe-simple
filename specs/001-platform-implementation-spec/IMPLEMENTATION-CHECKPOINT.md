@@ -4,17 +4,17 @@
 
 ## Current Phase
 
-**Phase 4 — Customer account, avatar, and header identity — COMPLETE, GATE
-PASSED.**
+**Phase 6 — Catalog, Admin data entry, protected pricing, and origins —
+COMPLETE, GATE PASSED.**
 
-Phase 5 **has not been started**.
+Phase 7 **has not been started**.
 
 > ### Still outstanding from Phase 3 — one manual step
 >
-> `P3-T06` remains open pending a single manual Gmail confirmation. Phase 4
-> was executed on instruction and does not depend on it: it depends on the
-> Auth guards, which are proven by the 12/12 real-persona suite and the 50/50
-> Phase 1 security suite. To close P3-T06: sign up at
+> `P3-T06` remains open pending a single manual Gmail confirmation. Phases 4
+> and 5 were executed on instruction and do not depend on it: they depend on
+> the Auth guards, which are proven by the 12/12 real-persona suite and the
+> 74/74 live security suite. To close P3-T06: sign up at
 > <http://localhost:3000/sign-up> with a real inbox (Company Name may be left
 > blank), click the confirmation link, expect **/account**, then sign out and
 > sign in again.
@@ -84,76 +84,160 @@ Evidence: `evidence/phase-4-account-avatar-header.md`
 **No database or storage change.** The `avatars` bucket stays private and
 every `avatars_owner_*` policy is untouched; Phase 1 re-ran green at 50/50.
 
+### Phase 5 — COMPLETE, gate PASSED
+
+| Task                           | Status   | Notes                                                                                                                       |
+| ------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `P5-T01` Admin overview        | **PASS** | verification only; every metric proven to come from a live query, EN + AR, `requireAdmin()` re-verified                     |
+| `P5-T02` Users workspace       | **PASS** | dedicated `admin/users/**`; `users` removed from the generic `[module]` renderer and from `lib/data/admin.ts`               |
+| `P5-T03` block / unblock       | **PASS** | durable RPC on the Admin's own session + Auth ban as defense in depth, with a distinct non-blocking partial-failure warning |
+| `P5-T04` customer detail       | **PASS** | avatar view-only via a service-role signed URL; no broad Admin storage-read policy added                                    |
+| `P5-T05` settings independence | **PASS** | verified independent, and two real defects fixed (N25, N26)                                                                 |
+| `P5-T06` **PHASE 5 GATE**      | **PASS** | 13/13 Admin Users + 6/6 Admin settings browser assertions, 0 console errors                                                 |
+
+Evidence: `evidence/phase-5-admin-users-blocking-settings.md`
+
+**No database or storage change.** `admin_list_users()` and
+`admin_set_user_blocked()` used exactly as they already exist; the `avatars`
+bucket and its four `avatars_owner_*` policies are untouched. Phase 1's
+contract re-ran green.
+
+Closed here: **N2** (Admin avatar view via service-role signed URL), **N3**
+(admin RPCs carry the Admin's own session), **N4** (Auth-layer ban applied),
+**N5** and **N7** and **N8** (all confirmed as intended behavior and now
+covered by tests), **N9** (zero-rows treated as denial in the Phase 5 paths).
+
+### Phase 6 — COMPLETE, gate PASSED
+
+| Task                         | Status   | Notes                                                                                                                 |
+| ---------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `P6-T01` catalog query       | **PASS** | filtering, ordering and pagination moved into one bounded database query; the listing had no pagination at all before |
+| `P6-T02` origin→region       | **PASS** | the client narrows the list and clears a stale region; the server re-checks the relationship and owns the refusal     |
+| `P6-T03` price isolation     | **PASS** | five-persona runtime matrix; the price table is pinned to a four-module allow-list by a unit invariant                |
+| `P6-T04` origins aggregation | **PASS** | published-coffee count in one query for all origins (no N+1); detail scoped by the database; dependent regions listed |
+| `P6-T05` test matrix         | **PASS** | 18/18 catalog + 4/4 Admin-wide smoke, against real data                                                               |
+| `P6-T06` **PHASE 6 GATE**    | **PASS** | full connected flow proven: reference data → coffee → images → offer → pricing → catalog → verified-customer price    |
+
+**Beyond `tasks.md`, on the owner's instruction**: the Admin catalog data-entry
+flow was made operational — dedicated `admin/products|offers|pricing`
+workspaces, inline per-field bilingual validation replacing browser-native
+popups and bottom-of-form English lists, form-value preservation on failure,
+server-side reference verification, and multi-image coffee management on the
+existing `coffee_media` model.
+
+Evidence: `evidence/phase-6-catalog-admin-flow.md`
+
+**No database, RLS or storage change.** Owner-approved QA/demo **rows** were
+inserted and are inventoried in the evidence file.
+
+Closed here: **N30** (offer save wrote a non-existent column — offers had never
+saved), **N31** (single-value check constraints surfaced only as opaque
+failures), **N34** (unique violations attributed to the wrong field), **N35**
+(an out-of-range catalog page treated as an error).
+
 ## Current / Next Task
 
-**Next**: `P3-T01` — first task of Phase 3 (Auth state machine).
+**Next**: `P7-T01` — first task of Phase 7 (inquiry and sample delivery
+workflow). Not started; do not begin it without instruction.
 
-Phase 3 owns **N1 (HIGH)**, the top open risk: `requireVerifiedUser()`
-(`src/lib/auth/session.ts:48`) checks only `emailVerified`, not unblocked and
-not `role === 'USER'`, and `getViewer()` does not select `is_blocked`. The
-generated types needed for the fix were put in place by P1-T03. Phase 3 also
-owns **N6** (an `auth.users` row with no `profiles` row behaves as signed-out)
-and should reconcile **N11** (the `knownRoots` allow-list in
-`src/lib/auth/redirects.ts`).
+Two items need an owner decision before a later phase leans on them:
+
+- **N23** — a block is audited by `blocked_by`/`blocked_at`/`block_reason` on
+  the profile row, which is current-state only: unblock clears all four, so
+  there is no history of past blocks. `public.profiles` has no audit trigger
+  and `audit_logs` has no INSERT policy. Adding either is a database change,
+  which Phase 5 was instructed to report rather than apply.
+- **N27** — `admin-operations.ts` still returns the legacy `AdminActionState`
+  with hardcoded English prose, so Site-settings feedback is English-only in
+  both locales until the Phase 11 domain-result migration.
 
 ## Tests Passed
 
-| Suite                                                        | Result                                                        |
-| ------------------------------------------------------------ | ------------------------------------------------------------- |
-| `npm run test:e2e` (production, desktop + mobile)            | **134 passed, 20 skipped, 0 failed**                          |
-| `npm run test:e2e:dev` (**development server**)              | **73 passed, 0 failed**                                       |
-| `tests/e2e/locale-switch.spec.ts` (new in Phase 2)           | **44/44** production, and re-run under the dev config         |
-| `HILLS_ADMIN_LIST_USERS_EXTENDED=1 npm run test:integration` | **50/50, 0 skipped**                                          |
-| `npm test` (hermetic)                                        | **30/30**, 5 files                                            |
-| `npm run typecheck`                                          | PASS, 0 errors                                                |
-| `npm run lint`                                               | PASS, 0/0                                                     |
-| `npm run build`                                              | PASS, **51/51** static pages                                  |
-| `npm run format:check`                                       | 31 files — the unchanged baseline; 0 in `src/`, 0 in `tests/` |
+| Suite                                               | Result                                                                  |
+| --------------------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run test:e2e` (production, desktop + mobile)   | **200 passed, 74 skipped, 0 failed** (verified server; see N39)         |
+| `npm run test:e2e:dev` (**development server**)     | **73 passed, 0 failed**                                                 |
+| `tests/e2e/admin-catalog.spec.ts` (new in Phase 6)  | **18/18**                                                               |
+| `tests/e2e/admin-smoke.spec.ts` (new in Phase 6)    | **4/4** — all 20 Admin routes, EN + AR                                  |
+| `tests/e2e/admin-reference.spec.ts` (closure audit) | **7/7** — reference/taxonomy modules                                    |
+| `tests/e2e/admin-users.spec.ts` (Phase 5)           | **13/13**                                                               |
+| `tests/e2e/admin-settings.spec.ts` (Phase 5)        | **6/6**                                                                 |
+| `tests/e2e/auth-state-machine.spec.ts` (Phase 3)    | **12/12**                                                               |
+| `npm run test:integration`                          | **74/74, 0 skipped**                                                    |
+| `npm test` (hermetic)                               | **103/103**, 12 files                                                   |
+| `npm run typecheck`                                 | PASS, 0 errors                                                          |
+| `npm run lint`                                      | PASS, 0/0                                                               |
+| `npm run build`                                     | PASS, **68/68** static pages                                            |
+| `npm run format:check`                              | 41 docs/tooling files (F5 baseline); 0 in `src/`, `tests/`, `messages/` |
 
-Set `HILLS_ADMIN_LIST_USERS_EXTENDED=1` for the integration suite, or its seven
-`admin_list_users()` extension assertions skip.
+`HILLS_ADMIN_LIST_USERS_EXTENDED` is gone: the owner-approved
+`admin_list_users()` extension is applied and Phase 5 depends on it, so its
+seven assertions now always run instead of skipping behind an env flag.
 
 ## Known Pending
 
-| ID      | Severity   | Item                                                                                                                                                                                                                                                                                                                              | Owner phase                        |
-| ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **N1**  | **HIGH**   | **Top open risk.** `requireVerifiedUser()` checks only `emailVerified` — not unblocked, not `role === 'USER'`; `getViewer()` does not select `is_blocked`. Constitution V and VI unimplemented at the application layer. The database enforces this correctly on its own, so it is a defence-in-depth gap rather than a live leak | Phase 3                            |
-| N2      | **HIGH**   | An ADMIN session cannot read customer avatars; Admin view needs a server-side service-role signed URL                                                                                                                                                                                                                             | Phase 5                            |
-| N3      | **MEDIUM** | The service-role key is **not** an Administrator (`is_admin()` false — no `auth.uid()`); admin RPCs need the Admin's own session                                                                                                                                                                                                  | Phase 5                            |
-| N4      | **MEDIUM** | Blocked customers can still sign in; Auth-layer ban not implemented                                                                                                                                                                                                                                                               | Phase 5                            |
-| N5      | **MEDIUM** | `protect_profile_block_fields()` refuses even the service role — `admin_set_user_blocked()` is the only path to block state                                                                                                                                                                                                       | Phase 5                            |
-| N6      | **MEDIUM** | An `auth.users` row (`shadyshref2001@gmail.com`) has no `profiles` row, so it behaves as signed-out                                                                                                                                                                                                                               | Phase 3                            |
-| N9      | **MEDIUM** | An RLS-denied `UPDATE` returns `204 No Content` with zero rows rather than an error. Server actions must treat "zero rows affected" as a denial                                                                                                                                                                                   | Phases 4 and 5                     |
-| F3      | **MEDIUM** | Catalog/origin/article tables empty and all 18 `site_pages` DRAFT; `/about` 404 is content-blocked, not a route failure; protected-pricing RLS still only verifiable negatively                                                                                                                                                   | Phase 12 before Phase 4/5 evidence |
-| N7      | **LOW**    | Deleting an Admin who has blocked someone fails on the `blocked_by` FK                                                                                                                                                                                                                                                            | Phase 5                            |
-| N8      | **LOW**    | `admin_cannot_block_self` precedes `only_user_accounts_can_be_blocked` in the refusal order                                                                                                                                                                                                                                       | Phase 5                            |
-| **N10** | **LOW**    | **New.** A locale switch is now a full page load, the deliberate cost of correctness. A later performance pass must not turn it back into a client transition without keeping `locale-switch.spec.ts` green                                                                                                                       | Phase 13                           |
-| **N11** | **LOW**    | **New.** `knownRoots` in `src/lib/auth/redirects.ts` omits `/dashboard-admin`, `/sign-in`, `/knowledge`, `/coffee-origins`, so `assertSafeRedirect` falls back to `/account` for those. Not reachable today                                                                                                                       | Phase 3                            |
-| P2-T04  | —          | `(marketing)`/`(auth)` route-group split deferred by owner decision                                                                                                                                                                                                                                                               | phase owning the public redesign   |
-| F4      | **LOW**    | `NEXT_PUBLIC_SUPABASE_URL` carries a `/rest/v1/` suffix                                                                                                                                                                                                                                                                           | Phase 13                           |
-| F5      | **LOW**    | `format:check` fails on 31 docs/tooling files                                                                                                                                                                                                                                                                                     | Phase 13                           |
+| ID      | Severity   | Item                                                                                                                                                                                                                                                                                                                                                                                                                             | Owner phase                      |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **N23** | **MEDIUM** | **New.** A block is audited only by `blocked_by`/`blocked_at`/`block_reason` on the profile row — attributable and unforgeable, but current-state only: unblock clears all four. `public.profiles` has no audit trigger and `audit_logs` has no INSERT policy, so block _history_ would need a database change. **Owner decision required.**                                                                                     | owner / a later phase            |
+| **N32** | **MEDIUM** | **New.** `varieties` has a plain `name` column and **no** `variety_translations` table, so varieties are English-only _by schema_ and an Arabic Admin necessarily sees English names. Closing it needs a migration — **owner decision required**, not applied                                                                                                                                                                    | owner / a later phase            |
+| **N33** | **MEDIUM** | **New.** Sensory notes attach to **offers** (`offer_sensory_notes`), not coffees — there is no `coffee_sensory_notes`. Implemented per the live schema; confirm this matches the intended product model                                                                                                                                                                                                                          | owner                            |
+| **N37** | **LOW**    | **New.** The legacy `admin-operations.ts` modules Phase 6 did not take (CMS, articles, media, taxonomy, origins, regions, warehouses, varieties) still return hardcoded English prose in both locales. Extends N27                                                                                                                                                                                                               | Phase 11                         |
+| **N39** | **HIGH**   | **New.** `reuseExistingServer: true` in both Playwright configs lets a suite attach to whatever holds port 3000. A stale server produced a 104-failure run that was pure artifact; the same suite passed 200/0 against a verified one. The dev config has the mirror hazard — with a production server up the dev suite passes vacuously. **Verify the server answers correctly before trusting a suite result.** Supersedes N29 | noted for every later phase      |
+| **N40** | **MEDIUM** | **New.** The locale switcher drops the query string if clicked before hydration (its `href` is pathname-only by design, to keep the shared header statically rendered). No client-side fix exists. Accepted limitation                                                                                                                                                                                                           | owner / Phase 13                 |
+| **N38** | —          | **New, fixed in the Phase 6 closure audit.** Taxonomy terms were created without either name: the shared action sent a `description` column to all seven translation tables but only three have one, so four entities failed their translation upsert and displayed as raw slugs                                                                                                                                                 | noted for every later phase      |
+| **N41** | —          | **New, fixed in the Phase 6 closure audit.** The catalog write path verified each many-to-many id with its own query (~15 sequential round trips per coffee save); replaced with one `in (…)` per group. Same guarantee, suite time 10.7 → 8.8 min                                                                                                                                                                               | noted for every later phase      |
+| N6      | **MEDIUM** | An `auth.users` row (`shadyshref2001@gmail.com`) has no `profiles` row, so it behaves as signed-out                                                                                                                                                                                                                                                                                                                              | Phase 3                          |
+| **N27** | **LOW**    | **New.** `admin-operations.ts` still returns the legacy `AdminActionState` with hardcoded English prose, so Site-settings feedback is English-only in both locales                                                                                                                                                                                                                                                               | Phase 11                         |
+| **N24** | **LOW**    | **New.** The staging Supabase project rejects `@example.com` for outbound mail, so no fixture can prove an email send end to end                                                                                                                                                                                                                                                                                                 | Phase 12/13 test infrastructure  |
+| **N26** | —          | **New, fixed in Phase 5.** `requireAccountOwner()` now gates self-scoped account edits. A later pass must not "harden" it back to `requireVerifiedUser()` or widen it beyond self-scoped writes                                                                                                                                                                                                                                  | noted for every later phase      |
+| **N25** | —          | **New, fixed in Phase 5.** `site_settings.id` is a `smallint`, not a uuid. Broader lesson: `types.generated.ts` is curated, not generated, and can drift from the live schema                                                                                                                                                                                                                                                    | noted for every later phase      |
+| **N28** | **LOW**    | **New.** Phase 5's block/unblock actions live in `src/actions/admin-users.ts`, not `admin-operations.ts` as `tasks.md` P5-T03 suggests — deliberate, to keep the two result contracts apart                                                                                                                                                                                                                                      | documentation only               |
+| F3      | **MEDIUM** | Catalog/origin/article tables empty and all 18 `site_pages` DRAFT; `/about` 404 is content-blocked, not a route failure                                                                                                                                                                                                                                                                                                          | Phase 12 before further evidence |
+| **N10** | **LOW**    | A locale switch is a full page load, the deliberate cost of correctness. A later performance pass must not turn it back into a client transition without keeping `locale-switch.spec.ts` green                                                                                                                                                                                                                                   | Phase 13                         |
+| **N11** | **LOW**    | `knownRoots` in `src/lib/auth/redirects.ts` omits `/dashboard-admin`, `/sign-in`, `/knowledge`, `/coffee-origins`. Not reachable today                                                                                                                                                                                                                                                                                           | Phase 3                          |
+| N19     | **LOW**    | Supabase Storage serves a deleted object from its edge cache for the cache lifetime; assert deletion against the bucket listing, never a download                                                                                                                                                                                                                                                                                | noted for every later phase      |
+| N20     | **LOW**    | Real-backend persona specs mutate shared Supabase state and cannot run in parallel; the suite is single-worker                                                                                                                                                                                                                                                                                                                   | noted for every later phase      |
+| **N29** | **MEDIUM** | **New.** `reuseExistingServer: true` keeps one `next start` alive across every Playwright invocation; after hours it reached 2.06 GB and stalled `page.goto` for 30 s, failing 2-3 different tests per run. A fresh server runs all 216 in 5.5 min with 0 failures. Kill node before trusting a full-suite result. Supersedes the N20/N21 explanations                                                                           | noted for every later phase      |
+| N21     | **LOW**    | Concurrent dev servers corrupt `.next` and produce a global JSON `SyntaxError` on every route while `npm run build` still succeeds                                                                                                                                                                                                                                                                                               | noted for every later phase      |
+| N22     | **LOW**    | `getViewer()` stays in the account layout on purpose — it needs the denial _reason_ to route correctly                                                                                                                                                                                                                                                                                                                           | noted for every later phase      |
+| P2-T04  | —          | `(marketing)`/`(auth)` route-group split deferred by owner decision                                                                                                                                                                                                                                                                                                                                                              | phase owning the public redesign |
+| F4      | **LOW**    | `NEXT_PUBLIC_SUPABASE_URL` carries a `/rest/v1/` suffix                                                                                                                                                                                                                                                                                                                                                                          | Phase 13                         |
+| F5      | **LOW**    | `format:check` fails on 41 docs/tooling files; `src/`, `tests/` and `messages/` are clean                                                                                                                                                                                                                                                                                                                                        | Phase 13                         |
 
 **Closed in Phase 1**: C1 / FR-067 / FR-068.
 **Closed in Phase 2**: D1 (script-tag), D2 / F1 (stale `lang`/`dir`), D3 / F2
 (dropped query string).
+**Closed in Phase 3**: N1 (HIGH — the verified-customer gate now requires
+authenticated + confirmed + unblocked + `role = 'USER'`).
+**Closed in Phase 6**: N30 (offer save wrote a non-existent column), N31
+(single-value check constraints), N34 (unique violation attributed to the wrong
+field), N35 (out-of-range catalog page).
+**Closed in Phase 5**: N2 (Admin avatar view), N3 (admin RPCs carry the Admin's
+own session), N4 (Auth-layer ban), N5, N7, N8 (all confirmed intended and now
+test-covered), N9 (zero-rows treated as denial), N25, N26.
 
 ## Last Safe Checkpoint
 
-- **Branch**: `main`; Phase 0/1 work already committed.
-- **Database**: unchanged by Phase 2 — no migration, no policy, no schema
-  change. Phase 1's contract re-verified green at 50/50.
-- **Uncommitted work (Phase 2 only)**:
-  - moved: `(site)/dashboard-admin/page.tsx` → `(admin)/dashboard-admin/page.tsx`
-  - moved: `(site)/admin/login/page.tsx` → `(admin)/admin/login/page.tsx`
-  - new: `src/app/[locale]/(admin)/layout.tsx`
-  - modified: `src/components/navigation/locale-switcher.tsx`
-  - new: `tests/e2e/locale-switch.spec.ts`
-  - new: `playwright.dev.config.ts`, `tests/e2e/dev-runtime.spec.ts`
-  - modified: `tests/e2e/helpers.ts` (runtime collector + overlay reader),
-    `playwright.config.ts` (`testIgnore`), `package.json` (`test:e2e:dev`)
-  - removed: empty `(site)/products/` leftover directories
-- **Unchanged**: `src/proxy.ts`, `src/i18n/**`, `src/app/layout.tsx`,
-  `src/app/[locale]/layout.tsx`, and the entire Admin workspace tree.
-- **Rollback**: revert the locale-switcher file and `git mv` the two entry
-  pages back into `(site)`, deleting `(admin)/layout.tsx`. No database or
-  configuration state to undo.
+- **Branch**: `main`; Phases 0–5 committed. Phase 6 is uncommitted.
+- **Database**: unchanged by Phase 6 — no migration, no function, RLS, storage
+  policy or bucket change. Owner-approved QA/demo **rows** were inserted and
+  are inventoried in `evidence/phase-6-catalog-admin-flow.md`.
+- **Phase 6 additions**:
+  - new: `src/actions/admin-catalog.ts`, `src/lib/admin/validation.ts`,
+    `src/lib/data/admin-catalog.ts`, `src/lib/data/catalog-query.ts`
+  - new: `src/components/admin/{admin-form,coffee-form,coffee-images,offer-form,delete-tier-button}.tsx`,
+    `src/components/catalog/catalog-card.tsx`
+  - new routes: `src/app/[locale]/admin/{products,offers,pricing}/**`
+  - new tests: `src/lib/catalog-boundaries.test.ts`,
+    `tests/e2e/{admin-catalog,admin-smoke}.spec.ts`,
+    `tests/e2e/catalog-fixtures.ts`
+  - new: `scripts/seed-qa-catalog.mjs` (idempotent QA/demo seed)
+  - modified: the generic `[module]` renderer and `admin-record-editor`
+    (catalog modules removed), `admin-operations.ts` (superseded actions
+    deleted), `lib/data/{admin,pricing,editorial}.ts`, the catalog listing and
+    both origin pages, `messages/{en,ar}.json`, `types.generated.ts`
+- **Unchanged**: `src/proxy.ts`, `src/i18n/**`, every layout, the Admin entry
+  routes, every storage policy, and `pricing.ts`'s `requireVerifiedUser()` gate.
+- **Rollback**: delete the new files above and revert the modified ones. The
+  QA/demo rows are data; the evidence file lists the delete order. No schema
+  state to undo.

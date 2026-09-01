@@ -66,6 +66,26 @@ async function documentState(page: Page) {
 
 /** Clicks the switcher and waits for the resulting document navigation. */
 async function switchLocale(page: Page) {
+  // The switcher is a real anchor whose `href` is only the localized pathname;
+  // `search` and `hash` are re-added by its click handler, deliberately read
+  // from `window.location` rather than `useSearchParams()` so that placing it
+  // in the shared header does not opt every page out of static rendering.
+  //
+  // That means a click landing BEFORE hydration follows the bare href and
+  // loses the query string — a real, narrow limitation recorded as N40, not
+  // something the click handler can fix. Waiting for hydration here keeps this
+  // test measuring the switcher's behaviour instead of racing React, and the
+  // pre-hydration case is covered by the finding rather than by a coin flip.
+  await page.locator(SWITCHER).first().waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const anchor = document.querySelector<HTMLAnchorElement>(
+      'a[hreflang="ar"], a[hreflang="en"]',
+    );
+    // React attaches its listener during hydration; once the root is
+    // hydrated Next marks the document ready for interaction.
+    return Boolean(anchor) && document.readyState === "complete";
+  });
+
   // Wait for the URL to actually change rather than for a load state: the fix
   // is a full document navigation, and `waitForLoadState` can resolve against
   // the outgoing document, which races the assertions that follow.

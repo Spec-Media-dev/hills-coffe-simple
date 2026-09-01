@@ -48,7 +48,15 @@ const projectUrl = hasAuthFixtureCredentials
     })()
   : "";
 
-const service: SupabaseClient = hasAuthFixtureCredentials
+/**
+ * Exported so a second persona suite (Phase 5's Admin Users workspace) can
+ * build its own fixtures without duplicating the `.env.local` loader and the
+ * bare-origin URL normalization.
+ */
+export const supabaseProjectUrl = projectUrl;
+export const supabasePublicKey = publicKey;
+
+export const service: SupabaseClient = hasAuthFixtureCredentials
   ? createClient(projectUrl, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     })

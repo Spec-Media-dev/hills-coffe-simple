@@ -1,14 +1,17 @@
 "use server";
 
+/**
+ * Legacy Admin operations.
+ *
+ * Coffee, Offer and Pricing moved to `src/actions/admin-catalog.ts` in Phase 6,
+ * where they use the project's real `ActionResult` contract with localized
+ * message keys. What remains here still returns the older `AdminActionState`
+ * with hardcoded English prose and is scheduled for the Phase 11 migration.
+ */
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/session";
 import type { AdminActionState } from "@/lib/admin/action-state";
-import {
-  createAdminPriceTier,
-  deleteAdminPriceTier,
-  updateAdminPriceTier,
-} from "@/lib/data/pricing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const uuid = z.string().uuid();
@@ -97,16 +100,22 @@ export async function saveNamedEntityAction(
         .single();
   if (baseResult.error || !baseResult.data) return failed();
   const entityId = baseResult.data.id;
+  // Only four of the seven taxonomy translation tables actually have a
+  // `description` column. Sending it to the others made PostgREST reject the
+  // whole upsert with PGRST204, so the term kept its slug as its name in both
+  // languages — every coffee type, sensory note, tag and article category
+  // created through this form was silently untranslated (finding N38).
+  const supportsDescription = (
+    ["processing_methods", "packaging_types", "certifications"] as const
+  ).includes(input.entity as "processing_methods");
   const translations = (
     [
       ["en", input.nameEn, input.descriptionEn],
       ["ar", input.nameAr, input.descriptionAr],
     ] as const
-  ).map(([locale, name, description]) => ({
-    locale,
-    name,
-    description,
-  }));
+  ).map(([locale, name, description]) =>
+    supportsDescription ? { locale, name, description } : { locale, name },
+  );
   let error: { message: string } | null = null;
   if (input.entity === "coffee_types")
     ({ error } = await db.from("coffee_type_translations").upsert(
@@ -298,78 +307,6 @@ export async function saveRegionAction(
   return saved(input.id ? "Region updated." : "Region created.");
 }
 
-const coffeeSchema = z.object({
-  id: optionalUuid.optional(),
-  slug,
-  coffeeTypeId: uuid,
-  originId: uuid,
-  regionId: optionalUuid,
-  processingMethodId: optionalUuid,
-  grade: optionalText(80),
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
-  nameEn: z.string().trim().min(1).max(200),
-  nameAr: z.string().trim().min(1).max(200),
-  descriptionEn: optionalText(1000),
-  descriptionAr: optionalText(1000),
-});
-
-export async function saveCoffeeAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = coffeeSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const input = parsed.data;
-  const values = {
-    slug: input.slug,
-    coffee_type_id: input.coffeeTypeId,
-    origin_id: input.originId,
-    region_id: input.regionId,
-    processing_method_id: input.processingMethodId,
-    grade: input.grade,
-    status: input.status,
-    published_at:
-      input.status === "PUBLISHED" ? new Date().toISOString() : null,
-    updated_by: context.admin.id,
-  };
-  const base = input.id
-    ? await context.db
-        .from("coffees")
-        .update(values)
-        .eq("id", input.id)
-        .select("id")
-        .single()
-    : await context.db
-        .from("coffees")
-        .insert({ ...values, created_by: context.admin.id })
-        .select("id")
-        .single();
-  if (base.error || !base.data) return failed();
-  const { error } = await context.db.from("coffee_translations").upsert(
-    [
-      {
-        coffee_id: base.data.id,
-        locale: "en",
-        name: input.nameEn,
-        short_description: input.descriptionEn,
-      },
-      {
-        coffee_id: base.data.id,
-        locale: "ar",
-        name: input.nameAr,
-        short_description: input.descriptionAr,
-      },
-    ],
-    { onConflict: "coffee_id,locale" },
-  );
-  if (error)
-    return failed("The coffee was saved, but its translations were not.");
-  revalidatePath("/", "layout");
-  return saved(input.id ? "Coffee updated." : "Coffee created.");
-}
-
 const warehouseSchema = z.object({
   id: optionalUuid.optional(),
   code: z.enum(["EGYPT", "DUBAI"]),
@@ -437,57 +374,6 @@ export async function saveWarehouseAction(
     return failed("The warehouse was saved, but its translations were not.");
   revalidatePath("/", "layout");
   return saved(input.id ? "Warehouse updated." : "Warehouse created.");
-}
-
-const offerSchema = z.object({
-  id: optionalUuid.optional(),
-  coffeeId: uuid,
-  warehouseId: uuid,
-  referenceNumber: z.string().trim().min(2).max(80),
-  bagsQuantity: z.coerce.number().int().min(0),
-  bagWeightKg: z.coerce.number().positive().max(1000),
-  status: z.enum([
-    "ARRIVING_SOON",
-    "NEW_ARRIVAL",
-    "IN_STORE",
-    "DISCOUNT",
-    "SOLD_OUT",
-    "INACTIVE",
-  ]),
-  currency: z.string().trim().length(3).toUpperCase(),
-  pricingUnit: z.string().trim().min(1).max(40),
-  isVisible: z.enum(["true", "false"]),
-});
-
-export async function saveOfferAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = offerSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const input = parsed.data;
-  const values = {
-    coffee_id: input.coffeeId,
-    warehouse_id: input.warehouseId,
-    reference_number: input.referenceNumber,
-    bags_quantity: input.bagsQuantity,
-    bag_weight_kg: input.bagWeightKg,
-    status: input.status,
-    currency: input.currency,
-    pricing_unit: input.pricingUnit,
-    is_visible: input.isVisible === "true",
-    updated_by: context.admin.id,
-  };
-  const result = input.id
-    ? await context.db.from("coffee_offers").update(values).eq("id", input.id)
-    : await context.db
-        .from("coffee_offers")
-        .insert({ ...values, created_by: context.admin.id });
-  if (result.error) return failed();
-  revalidatePath("/", "layout");
-  return saved(input.id ? "Offer updated." : "Offer created.");
 }
 
 const articleSchema = z.object({
@@ -766,7 +652,10 @@ export async function updateSiteSettingsAction(
 ): Promise<AdminActionState> {
   const parsed = z
     .object({
-      id: uuid,
+      // `site_settings` is a single-row table keyed by a smallint (id = 1),
+      // not a uuid. Validating it as a uuid rejected every submission with
+      // "Invalid UUID", so Site settings could never be saved (finding N25).
+      id: z.coerce.number().int().nonnegative(),
       brandName: optionalText(160),
       legalName: optionalText(200),
       email: z.preprocess(
@@ -879,46 +768,6 @@ export async function updateWorkflowStatusAction(
   if (error) return failed(error.message);
   revalidatePath("/", "layout");
   return saved("Status updated.");
-}
-
-export async function savePriceTierAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      id: optionalUuid.optional(),
-      offerId: uuid,
-      minBags: z.coerce.number().int().min(1),
-      price: z.coerce.number().positive().max(10000),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const ok = parsed.data.id
-    ? await updateAdminPriceTier({
-        id: parsed.data.id,
-        offerId: parsed.data.offerId,
-        minBags: parsed.data.minBags,
-        price: parsed.data.price,
-      })
-    : await createAdminPriceTier(parsed.data);
-  if (!ok)
-    return failed(
-      "The tier could not be saved. Check that bag thresholds are unique and prices do not increase with volume.",
-    );
-  revalidatePath("/admin/pricing");
-  return saved(parsed.data.id ? "Price tier updated." : "Price tier created.");
-}
-
-export async function deletePriceTierAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = uuid.safeParse(formData.get("id"));
-  if (!parsed.success) return failed("Invalid price tier.");
-  if (!(await deleteAdminPriceTier(parsed.data))) return failed();
-  revalidatePath("/admin/pricing");
-  return saved("Price tier deleted.");
 }
 
 export async function createCmsPageAction(

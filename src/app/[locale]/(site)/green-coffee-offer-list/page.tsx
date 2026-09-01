@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { OfferCard } from "@/components/catalog/offer-card";
+import { CatalogCard } from "@/components/catalog/catalog-card";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/auth/session";
-import { getOfferList } from "@/lib/data/catalog";
+import {
+  getCatalogFacets,
+  queryCatalog,
+  type CatalogFilters,
+} from "@/lib/data/catalog-query";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 
@@ -25,6 +29,7 @@ export async function generateMetadata({
         : "Browse green coffee offers available from Hills Coffee.",
   });
 }
+
 const first = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
@@ -37,46 +42,45 @@ export default async function OfferListPage({
   const t = await getTranslations("catalog");
   const actions = await getTranslations("actions");
   const nav = await getTranslations("nav");
-  const data = await getOfferList(locale as Locale);
+
+  const filters: CatalogFilters = {
+    q: (first(query.q) ?? "").trim() || undefined,
+    origin: first(query.origin) || undefined,
+    process: first(query.process) || undefined,
+    location: first(query.location) || undefined,
+    type: first(query.type) || undefined,
+    page: Math.max(1, Number.parseInt(first(query.page) ?? "1", 10) || 1),
+  };
+
+  // Filtering, ordering and pagination are all evaluated by the database, so
+  // the page transfers one page of rows whatever the catalog's size.
+  const [result, facets] = await Promise.all([
+    queryCatalog(locale as Locale, filters),
+    getCatalogFacets(locale as Locale),
+  ]);
+
+  // The price read is gated inside `getProtectedPriceTiers` by
+  // `requireVerifiedUser()`; this check only avoids a pointless round trip for
+  // visitors who cannot possibly be entitled.
   const viewer = await getViewer();
-  const search = (first(query.q) ?? "").trim().toLocaleLowerCase(locale);
-  const origin = first(query.origin);
-  const process = first(query.process);
-  const location = first(query.location);
-  const type = first(query.type);
-  const certified = first(query.certified) === "true";
-  const filtered = data.offers.filter(
-    (item) =>
-      (!search ||
-        [item.name, item.origin, item.region, ...item.sensory]
-          .filter(Boolean)
-          .join(" ")
-          .toLocaleLowerCase(locale)
-          .includes(search)) &&
-      (!origin || item.origin === origin) &&
-      (!process || item.process === process) &&
-      (!location ||
-        item.warehouse
-          .toLocaleLowerCase()
-          .includes(location.toLocaleLowerCase())) &&
-      (!type || item.type === type) &&
-      (!certified || item.certifications.length > 0),
-  );
   const prices = viewer?.emailVerified
-    ? await getProtectedPriceTiers(filtered.map((item) => item.id))
+    ? await getProtectedPriceTiers(result.rows.map((item) => item.id))
     : new Map();
+
   const labels = {
     bags: t("bags"),
     pricing: actions("pricing"),
     view: actions("view"),
   };
+
+  // Structured data describes only what this page shows, and never a price.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    numberOfItems: filtered.length,
-    itemListElement: filtered.map((item, index) => ({
+    numberOfItems: result.rows.length,
+    itemListElement: result.rows.map((item, index) => ({
       "@type": "ListItem",
-      position: index + 1,
+      position: (result.page - 1) * result.pageSize + index + 1,
       url: localizedUrl(
         locale as Locale,
         `/green-coffee-offer-list/${item.slug}`,
@@ -84,6 +88,21 @@ export default async function OfferListPage({
       name: item.name,
     })),
   };
+
+  const pageHref = (page: number) => {
+    const qs = new URLSearchParams();
+    if (filters.q) qs.set("q", filters.q);
+    if (filters.origin) qs.set("origin", filters.origin);
+    if (filters.process) qs.set("process", filters.process);
+    if (filters.location) qs.set("location", filters.location);
+    if (filters.type) qs.set("type", filters.type);
+    if (page > 1) qs.set("page", String(page));
+    const value = qs.toString();
+    return value
+      ? `/green-coffee-offer-list?${value}`
+      : "/green-coffee-offer-list";
+  };
+
   return (
     <>
       <script
@@ -112,10 +131,13 @@ export default async function OfferListPage({
           >
             <label className="relative">
               <span className="sr-only">{t("search")}</span>
-              <Search className="absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                className="absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
               <input
                 name="q"
-                defaultValue={search}
+                defaultValue={filters.q ?? ""}
                 placeholder={t("search")}
                 className="h-12 w-full rounded-xl border border-input bg-background ps-11 pe-4"
               />
@@ -123,38 +145,51 @@ export default async function OfferListPage({
             <Filter
               name="origin"
               label={t("origin")}
-              value={origin}
-              options={data.origins}
+              value={filters.origin}
+              options={facets.origins.map((o) => ({
+                value: o.slug,
+                label: o.label,
+              }))}
               all={nav("all")}
             />
             <Filter
               name="process"
               label={t("process")}
-              value={process}
-              options={data.processes}
+              value={filters.process}
+              options={facets.processes.map((p) => ({
+                value: p.slug,
+                label: p.label,
+              }))}
               all={nav("all")}
             />
             <Filter
               name="location"
               label={t("location")}
-              value={location}
-              options={data.warehouses}
+              value={filters.location}
+              options={facets.warehouses.map((w) => ({
+                value: w.code,
+                label: w.label,
+              }))}
               all={nav("all")}
             />
             <Filter
               name="type"
               label={t("category")}
-              value={type}
-              options={data.types}
+              value={filters.type}
+              options={facets.types.map((c) => ({
+                value: c.slug,
+                label: c.label,
+              }))}
               all={nav("all")}
             />
             <button className="h-12 rounded-xl bg-highlight px-5 font-bold text-white">
               {t("filters")}
             </button>
           </form>
+
           <div className="mt-8 flex items-center justify-between">
-            <p className="text-sm font-bold">
-              {t("showing", { count: filtered.length })}
+            <p className="text-sm font-bold" aria-live="polite">
+              {t("showing", { count: result.total })}
             </p>
             {Object.keys(query).length ? (
               <Link
@@ -165,17 +200,53 @@ export default async function OfferListPage({
               </Link>
             ) : null}
           </div>
-          {filtered.length ? (
-            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((item) => (
-                <OfferCard
-                  key={item.id}
-                  item={item}
-                  price={prices.get(item.id)?.[0]?.pricePerKgUsd}
-                  labels={labels}
-                />
-              ))}
-            </div>
+
+          {result.rows.length ? (
+            <>
+              <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {result.rows.map((item) => (
+                  <CatalogCard
+                    key={item.id}
+                    item={item}
+                    price={prices.get(item.id)?.[0]?.pricePerKgUsd}
+                    labels={labels}
+                  />
+                ))}
+              </div>
+              {result.pageCount > 1 ? (
+                <nav
+                  aria-label={t("title")}
+                  className="mt-10 flex items-center justify-between gap-3"
+                >
+                  <PageLink
+                    href={pageHref(result.page - 1)}
+                    disabled={result.page <= 1}
+                    label={actions("previous")}
+                    icon={
+                      <ChevronLeft
+                        className="size-4 rtl:rotate-180"
+                        aria-hidden="true"
+                      />
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {result.page} / {result.pageCount}
+                  </span>
+                  <PageLink
+                    href={pageHref(result.page + 1)}
+                    disabled={result.page >= result.pageCount}
+                    label={actions("next")}
+                    icon={
+                      <ChevronRight
+                        className="size-4 rtl:rotate-180"
+                        aria-hidden="true"
+                      />
+                    }
+                    trailing
+                  />
+                </nav>
+              ) : null}
+            </>
           ) : (
             <div className="mt-8 rounded-2xl border border-dashed border-border p-12 text-center">
               <h2 className="text-2xl">{t("noResults")}</h2>
@@ -203,7 +274,7 @@ function Filter({
   name: string;
   label: string;
   value?: string;
-  options: string[];
+  options: { value: string; label: string }[];
   all: string;
 }) {
   return (
@@ -212,15 +283,49 @@ function Filter({
       <select
         name={name}
         defaultValue={value ?? ""}
-        className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm"
+        className="h-12 w-full rounded-xl border border-input bg-background px-4"
       >
         <option value="">
-          {label}: {all}
+          {label} — {all}
         </option>
         {options.map((option) => (
-          <option key={option}>{option}</option>
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
         ))}
       </select>
     </label>
+  );
+}
+
+function PageLink({
+  href,
+  disabled,
+  label,
+  icon,
+  trailing = false,
+}: {
+  href: string;
+  disabled: boolean;
+  label: string;
+  icon: React.ReactNode;
+  trailing?: boolean;
+}) {
+  const className =
+    "inline-flex h-12 min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-bold";
+  if (disabled)
+    return (
+      <span aria-disabled="true" className={`${className} opacity-40`}>
+        {trailing ? null : icon}
+        {label}
+        {trailing ? icon : null}
+      </span>
+    );
+  return (
+    <Link href={href} className={`${className} hover:border-highlight`}>
+      {trailing ? null : icon}
+      {label}
+      {trailing ? icon : null}
+    </Link>
   );
 }

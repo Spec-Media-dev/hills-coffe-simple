@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { SafeMarkdown } from "@/components/content/safe-markdown";
-import { OfferCard } from "@/components/catalog/offer-card";
+import { CatalogCard } from "@/components/catalog/catalog-card";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import type { Locale } from "@/i18n/routing";
-import { getOfferList } from "@/lib/data/catalog";
-import { getOriginBySlug } from "@/lib/data/editorial";
+import { queryCatalog } from "@/lib/data/catalog-query";
+import { getOriginBySlug, getOriginRegions } from "@/lib/data/editorial";
 import { localizedMetadata } from "@/lib/seo/metadata";
 
 export async function generateMetadata({
@@ -29,12 +29,15 @@ export default async function OriginPage({
   const { locale, slug } = await params;
   const seo = await getTranslations("seo");
   const originsT = await getTranslations("origins");
-  const [origin, catalog] = await Promise.all([
-    getOriginBySlug(slug, locale as Locale),
-    getOfferList(locale as Locale),
-  ]);
+  const origin = await getOriginBySlug(slug, locale as Locale);
   if (!origin) notFound();
-  const offers = catalog.offers.filter((x) => x.originSlug === slug);
+  // Scoped to this origin by the database rather than fetched whole and
+  // filtered in JavaScript, matching the catalog listing (P6-T01/T04).
+  const [catalog, regions] = await Promise.all([
+    queryCatalog(locale as Locale, { origin: slug, page: 1 }),
+    getOriginRegions(origin.id, locale as Locale),
+  ]);
+  const offers = catalog.rows;
   const labels =
     locale === "ar"
       ? { bags: "كيس", pricing: "سجّل الدخول لعرض السعر", view: "عرض المحصول" }
@@ -93,13 +96,30 @@ export default async function OriginPage({
           ) : null}
         </div>
       </section>
+      {regions.length ? (
+        <section className="border-t border-border py-10">
+          <div className="site-container">
+            <h2 className="eyebrow">{originsT("regions")}</h2>
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {regions.map((region) => (
+                <li
+                  key={region.id}
+                  className="rounded-full border border-border bg-card px-4 py-2 text-sm"
+                >
+                  {region.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
       {offers.length ? (
         <section className="section-space bg-page">
           <div className="site-container">
             <h2 className="display-lg">{originsT("availableCoffees")}</h2>
             <div className="mt-9 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {offers.map((item) => (
-                <OfferCard key={item.id} item={item} labels={labels} />
+                <CatalogCard key={item.id} item={item} labels={labels} />
               ))}
             </div>
           </div>

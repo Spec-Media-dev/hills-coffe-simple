@@ -3,7 +3,6 @@ import type { Locale } from "@/i18n/routing";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOfferList } from "./catalog";
-import { getAdminPriceTiers } from "./pricing";
 import { pickTranslation } from "./shared";
 
 export type AdminRow = {
@@ -76,150 +75,8 @@ export async function getAdminModuleRows(
 ): Promise<AdminRow[]> {
   if (!isSupabaseConfigured()) return [];
   const db = await createSupabaseServerClient();
-  if (module === "products" || module === "offers") {
-    if (module === "products") {
-      const [coffeesQ, translationsQ, originsQ, originTranslationsQ] =
-        await Promise.all([
-          db
-            .from("coffees")
-            .select("id,slug,origin_id,status,grade,deleted_at"),
-          db.from("coffee_translations").select("coffee_id,name,locale"),
-          db.from("origins").select("id,slug"),
-          db.from("origin_translations").select("origin_id,name,locale"),
-        ]);
-      const origins = new Map(
-        (originsQ.data ?? []).map((row) => [row.id, row]),
-      );
-      return (coffeesQ.data ?? []).map((coffee) => {
-        const name =
-          pickTranslation(
-            (translationsQ.data ?? []).filter(
-              (row) => row.coffee_id === coffee.id,
-            ),
-            locale,
-          ).translation?.name ?? coffee.slug;
-        const origin = origins.get(coffee.origin_id);
-        const originName = origin
-          ? (pickTranslation(
-              (originTranslationsQ.data ?? []).filter(
-                (row) => row.origin_id === origin.id,
-              ),
-              locale,
-            ).translation?.name ?? origin.slug)
-          : "—";
-        return {
-          id: coffee.id,
-          primary: name,
-          secondary: originName,
-          detail: coffee.grade ?? "—",
-          status: coffee.deleted_at ? "deleted" : coffee.status,
-        };
-      });
-    }
-    const [offersQ, translationsQ, warehousesQ] = await Promise.all([
-      db
-        .from("coffee_offers")
-        .select(
-          "id,coffee_id,warehouse_id,reference_number,bags_quantity,status,is_visible,deleted_at",
-        ),
-      db.from("coffee_translations").select("coffee_id,name,locale"),
-      db.from("warehouses").select("id,name"),
-    ]);
-    const warehouses = new Map(
-      (warehousesQ.data ?? []).map((row) => [row.id, row.name]),
-    );
-    return (offersQ.data ?? []).map((offer) => ({
-      id: offer.id,
-      primary: offer.reference_number,
-      secondary:
-        pickTranslation(
-          (translationsQ.data ?? []).filter(
-            (row) => row.coffee_id === offer.coffee_id,
-          ),
-          locale,
-        ).translation?.name ?? offer.coffee_id,
-      detail: `${warehouses.get(offer.warehouse_id) ?? "—"} · ${offer.bags_quantity}`,
-      status: offer.deleted_at
-        ? "deleted"
-        : offer.is_visible
-          ? offer.status
-          : "hidden",
-    }));
-  }
-  if (module === "inquiries") {
-    const [inquiriesQ, sampleHistoryQ] = await Promise.all([
-      db
-        .from("inquiries")
-        .select(
-          "id,request_code,full_name,email,status,type,user_id,coffee_id,created_at",
-        )
-        .order("created_at", { ascending: false })
-        .limit(100),
-      db
-        .from("inquiries")
-        .select("id,user_id,coffee_id,request_code,status,created_at")
-        .eq("type", "SAMPLE_REQUEST"),
-    ]);
-    const data = inquiriesQ.data;
-    const sampleHistory = new Map<
-      string,
-      { id: string; requestCode: string; status: string; createdAt: string }[]
-    >();
-    for (const inquiry of sampleHistoryQ.data ?? []) {
-      if (inquiry.user_id && inquiry.coffee_id) {
-        const key = `${inquiry.user_id}:${inquiry.coffee_id}`;
-        const previous = sampleHistory.get(key) ?? [];
-        previous.push({
-          id: inquiry.id,
-          requestCode: inquiry.request_code,
-          status: inquiry.status,
-          createdAt: new Intl.DateTimeFormat(locale, {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }).format(new Date(inquiry.created_at)),
-        });
-        sampleHistory.set(key, previous);
-      }
-    }
-    return (data ?? []).map((x) => ({
-      id: x.id,
-      primary: x.request_code,
-      secondary: `${x.full_name} · ${x.type}`,
-      detail: x.email,
-      status: x.status,
-      sampleHistory:
-        x.type === "SAMPLE_REQUEST" && x.user_id && x.coffee_id
-          ? (sampleHistory.get(`${x.user_id}:${x.coffee_id}`) ?? [])
-              .filter((entry) => entry.id !== x.id)
-              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-              .map(({ requestCode, status, createdAt }) => ({
-                requestCode,
-                status,
-                createdAt,
-              }))
-          : undefined,
-    }));
-  }
-  if (module === "pricing") {
-    return (await getAdminPriceTiers()).map((tier) => ({
-      id: tier.id,
-      primary: tier.reference,
-      secondary: String(tier.minBags),
-      detail: tier.price.toFixed(2),
-      status: "protected",
-      actionValue: tier.offerId,
-    }));
-  }
-  if (module === "users") {
-    const { data } = await db.rpc("admin_list_users");
-    return (data ?? []).map((x) => ({
-      id: x.id,
-      primary: x.full_name,
-      secondary: x.email,
-      detail: `${x.favorites_count} favourites · ${x.inquiries_count} requests`,
-      status: x.email_verified ? "verified" : "unverified",
-    }));
-  }
+  // "products", "offers" and "pricing" are served by their own Phase 6
+  // workspaces (`src/lib/data/admin-catalog.ts`), not by this generic router.
   if (module === "content") {
     const { data } = await db
       .from("site_pages")
@@ -437,7 +294,9 @@ export async function getAdminModuleRows(
       .from("site_settings")
       .select("id,org_brand_name,org_email,updated_at");
     return (data ?? []).map((x) => ({
-      id: x.id,
+      // `AdminRow.id` is a string across every module; site settings is the
+      // one table with an integer key.
+      id: String(x.id),
       primary: x.org_brand_name ?? "Hills Coffee",
       secondary: x.org_email ?? "—",
       detail: x.updated_at,
@@ -701,48 +560,6 @@ export async function getAdminRecordForEdit(
       descriptionAr: ar?.description ?? "",
       isActive: String(record.is_active),
     };
-  }
-  if (module === "products") {
-    const [recordQ, translationsQ] = await Promise.all([
-      db.from("coffees").select("*").eq("id", recordId).maybeSingle(),
-      db.from("coffee_translations").select("*").eq("coffee_id", recordId),
-    ]);
-    if (!recordQ.data) return null;
-    const en = translationsQ.data?.find((row) => row.locale === "en");
-    const ar = translationsQ.data?.find((row) => row.locale === "ar");
-    return {
-      slug: recordQ.data.slug,
-      coffeeTypeId: recordQ.data.coffee_type_id,
-      originId: recordQ.data.origin_id,
-      regionId: recordQ.data.region_id,
-      processingMethodId: recordQ.data.processing_method_id,
-      grade: recordQ.data.grade,
-      status: recordQ.data.status,
-      nameEn: en?.name ?? "",
-      nameAr: ar?.name ?? "",
-      descriptionEn: en?.short_description ?? "",
-      descriptionAr: ar?.short_description ?? "",
-    };
-  }
-  if (module === "offers") {
-    const { data } = await db
-      .from("coffee_offers")
-      .select("*")
-      .eq("id", recordId)
-      .maybeSingle();
-    return data
-      ? {
-          coffeeId: data.coffee_id,
-          warehouseId: data.warehouse_id,
-          referenceNumber: data.reference_number,
-          bagsQuantity: data.bags_quantity,
-          bagWeightKg: data.bag_weight_kg,
-          status: data.status,
-          currency: data.currency,
-          pricingUnit: data.pricing_unit,
-          isVisible: String(data.is_visible),
-        }
-      : null;
   }
   if (module === "origins") {
     const [recordQ, translationsQ] = await Promise.all([

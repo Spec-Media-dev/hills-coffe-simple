@@ -49,72 +49,9 @@ export async function getAdminPriceTiers() {
     price: Number(tier.price_per_kg_usd),
   }));
 }
-async function priceLadderIsValid(
-  offerId: string,
-  candidate: { id?: string; minBags: number; price: number },
-) {
-  const db = await createSupabaseServerClient();
-  const { data } = await db
-    .from("offer_price_tiers")
-    .select("id,min_bags,price_per_kg_usd")
-    .eq("offer_id", offerId);
-  const tiers = (data ?? [])
-    .filter((row) => row.id !== candidate.id)
-    .map((row) => ({
-      minBags: row.min_bags,
-      price: Number(row.price_per_kg_usd),
-    }));
-  tiers.push({ minBags: candidate.minBags, price: candidate.price });
-  tiers.sort((a, b) => a.minBags - b.minBags);
-  return (
-    new Set(tiers.map((tier) => tier.minBags)).size === tiers.length &&
-    tiers.every(
-      (tier, index) => index === 0 || tier.price <= tiers[index - 1].price,
-    )
-  );
-}
-export async function createAdminPriceTier(input: {
-  offerId: string;
-  minBags: number;
-  price: number;
-}) {
-  if (
-    !(await requireAdmin()) ||
-    !(await priceLadderIsValid(input.offerId, input))
-  )
-    return false;
-  const db = await createSupabaseServerClient();
-  const { error } = await db.from("offer_price_tiers").insert({
-    offer_id: input.offerId,
-    min_bags: input.minBags,
-    price_per_kg_usd: input.price,
-  });
-  return !error;
-}
-export async function updateAdminPriceTier(input: {
-  id: string;
-  offerId: string;
-  minBags: number;
-  price: number;
-}) {
-  if (
-    !(await requireAdmin()) ||
-    !(await priceLadderIsValid(input.offerId, input))
-  )
-    return false;
-  const db = await createSupabaseServerClient();
-  const { error } = await db
-    .from("offer_price_tiers")
-    .update({ min_bags: input.minBags, price_per_kg_usd: input.price })
-    .eq("id", input.id);
-  return !error;
-}
-export async function deleteAdminPriceTier(tierId: string) {
-  if (!(await requireAdmin())) return false;
-  const db = await createSupabaseServerClient();
-  const { error } = await db
-    .from("offer_price_tiers")
-    .delete()
-    .eq("id", tierId);
-  return !error;
-}
+/* `createAdminPriceTier` / `updateAdminPriceTier` / `deleteAdminPriceTier`
+ * and their shared ladder check were removed in Phase 6. The ladder rules
+ * (unique `min_bags`, price never rising with volume) now live in
+ * `src/actions/admin-catalog.ts`, where each violation can be attributed to
+ * the field the Admin has to change instead of collapsing into one boolean.
+ * This module keeps only the price *reads*. */
