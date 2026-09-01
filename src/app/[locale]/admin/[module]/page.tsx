@@ -21,7 +21,12 @@ const modules = [
   // selects, inline validation and image management the generic renderer
   // cannot express. The static segments win the route match anyway; removing
   // them here keeps that intentional rather than incidental.
-  "inquiries",
+  // "inquiries" is deliberately absent: the Lead Inbox has its own workspace
+  // at `admin/inquiries/**` (server-side search/filter/pagination, request
+  // context, immutable status timeline, prior same-coffee history, and only
+  // the status actions the request's own lifecycle allows). The static
+  // segment wins the route match anyway — removing it here keeps that
+  // intentional rather than incidental.
   "origins",
   "taxonomy",
   // "users" is deliberately absent: the customer directory has its own
@@ -252,30 +257,28 @@ async function RowAction({
   entity?: string;
 }) {
   const ops = await getTranslations("admin.ops");
+  // The inquiries branch is gone with the module: its four-status dropdown
+  // predated SAMPLE_SENT/DELIVERED and let an Admin pick transitions the
+  // database rejects. Status changes now go through the Lead Inbox.
   const config =
-    module === "inquiries"
+    module === "offers"
       ? {
-          entity: "inquiries",
-          options: ["NEW", "RECEIVED", "CONTACTED", "CLOSED"],
+          entity: "offers",
+          options: [
+            "ARRIVING_SOON",
+            "NEW_ARRIVAL",
+            "IN_STORE",
+            "DISCOUNT",
+            "SOLD_OUT",
+            "INACTIVE",
+          ],
         }
-      : module === "offers"
+      : module === "content"
         ? {
-            entity: "offers",
-            options: [
-              "ARRIVING_SOON",
-              "NEW_ARRIVAL",
-              "IN_STORE",
-              "DISCOUNT",
-              "SOLD_OUT",
-              "INACTIVE",
-            ],
+            entity: "content",
+            options: ["DRAFT", "PUBLISHED", "ARCHIVED"],
           }
-        : module === "content"
-          ? {
-              entity: "content",
-              options: ["DRAFT", "PUBLISHED", "ARCHIVED"],
-            }
-          : null;
+        : null;
   const archiveEntity = entity ?? module;
   const canArchive = [
     "products",

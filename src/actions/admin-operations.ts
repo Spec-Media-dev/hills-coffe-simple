@@ -719,7 +719,12 @@ export async function updateWorkflowStatusAction(
   const parsed = z
     .object({
       id: uuid,
-      entity: z.enum(["inquiries", "offers", "content"]),
+      // "inquiries" was removed here in Phase 7: `updateInquiryStatusAction`
+      // is now the single writer of inquiry status. This path knew only four
+      // of the six live statuses and returned the provider's own error text,
+      // which would have put the transition trigger's wording in front of an
+      // Administrator.
+      entity: z.enum(["offers", "content"]),
       status: z.string(),
     })
     .safeParse(Object.fromEntries(formData));
@@ -728,16 +733,7 @@ export async function updateWorkflowStatusAction(
   if (!context) return failed("Your admin session has expired.");
   const { id, entity, status } = parsed.data;
   let error: { message: string } | null = null;
-  if (entity === "inquiries") {
-    const valid = z
-      .enum(["NEW", "RECEIVED", "CONTACTED", "CLOSED"])
-      .safeParse(status);
-    if (!valid.success) return failed("Choose a valid inquiry status.");
-    ({ error } = await context.db
-      .from("inquiries")
-      .update({ status: valid.data })
-      .eq("id", id));
-  } else if (entity === "offers") {
+  if (entity === "offers") {
     const valid = z
       .enum([
         "ARRIVING_SOON",

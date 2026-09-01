@@ -658,7 +658,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 7 — Inquiry and sample delivery workflow
 
-- [ ] P7-T01 Map the database unique-violation to `DUPLICATE_SAMPLE`
+- [x] P7-T01 Map the database unique-violation to `DUPLICATE_SAMPLE`
   - **Goal**: Catch `uq_inquiries_active_sample_user_coffee`'s unique-violation on insert, look up the caller's existing active request for that `coffee_id`, and return `DUPLICATE_SAMPLE` with `conflict.requestCode` set — never surfacing the raw constraint violation (FR-039, SC-005).
   - **Dependencies**: Phase 3, Phase 6 complete (needs verified-user gate and trusted-offer resolution).
   - **Files/modules**: `src/actions/inquiries.ts`, `src/lib/inquiries/sample-request.ts`.
@@ -672,7 +672,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 5 acceptance scenario 2 passes under genuine concurrency, not just sequential calls.
   - **Out of scope**: changing the duplicate-identity key away from `(user_id, coffee_id)`.
 
-- [ ] P7-T02 [P] Map inquiry status-transition rejections to `CONFLICT`
+- [x] P7-T02 [P] Map inquiry status-transition rejections to `CONFLICT`
   - **Goal**: The application attempts the status-update write and translates `validate_inquiry_status_transition()`'s raised exceptions into the `CONFLICT` domain error, per `contracts/inquiry-actions.md` — never pre-validating and duplicating the transition graph client-side.
   - **Dependencies**: Phase 5 complete (`requireAdmin()` for status changes).
   - **Files/modules**: `src/actions/inquiries.ts` (`updateInquiryStatus`), any Admin inquiry-status UI.
@@ -686,7 +686,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 5 acceptance scenario 5 and 7 pass.
   - **Out of scope**: any change to the transition graph itself (it is already correctly defined in the database).
 
-- [ ] P7-T03 Build the Admin Lead Inbox
+- [x] P7-T03 Build the Admin Lead Inbox
   - **Goal**: Replace the generic inquiries module view with the task-focused workspace from `contracts/inquiry-actions.md`'s `listLeadInbox`/`getInquiryDetail` — search/filter/pagination, allowed-actions-only status control, and prior-same-coffee history display (FR-040).
   - **Dependencies**: P7-T01, P7-T02; Phase 5 complete (Admin shell/auth).
   - **Files/modules**: a new Admin Lead Inbox route (replacing the generic `[module]` view for `inquiries`), `src/lib/data/admin.ts` (or a new inquiries-specific data module).
@@ -700,7 +700,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 5 acceptance scenarios 5–6 and User Story 6 acceptance scenario 1 (Admin nav grouping including Leads) pass.
   - **Out of scope**: any change to the underlying transition rules or duplicate-identity key.
 
-- [ ] P7-T04 [P] Finalize customer-facing sample status labels
+- [x] P7-T04 [P] Finalize customer-facing sample status labels
   - **Goal**: Implement the master plan's customer wording table for `SAMPLE_SENT`/`DELIVERED` (and confirm the existing labels for the other statuses) in both languages, with native-language review.
   - **Dependencies**: Phase 4's request timeline (P4-T06) already exists to extend.
   - **Files/modules**: `messages/en.json`, `messages/ar.json`, the customer request-detail/timeline component.
@@ -714,7 +714,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 5 acceptance scenario in the customer timeline context, and FR-043's "Admin-recorded confirmation" framing, are both correctly communicated in the copy (never implying customer self-confirmation).
   - **Out of scope**: any change to when/how `DELIVERED` is set (that is Admin-only, per P7-T02/T03).
 
-- [ ] P7-T05 [P] Harden the sample/product inquiry dialog's accessibility
+- [x] P7-T05 [P] Harden the sample/product inquiry dialog's accessibility
   - **Goal**: Replace or harden the existing custom inquiry dialog's focus management with a proven accessible primitive — focus trap, Escape-to-close, focus restoration, inert background, scroll lock — per the master plan's Accessibility Plan callout for this specific component.
   - **Dependencies**: none beyond Phase 4 (dialog is reachable from coffee detail/account pages).
   - **Files/modules**: `src/components/inquiries/inquiry-panel.tsx`, `request-quote-form.tsx`.
@@ -728,7 +728,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 7 acceptance scenario 5 (modal dialog focus management) passes specifically for this dialog.
   - **Out of scope**: the sign-out or block/unblock dialogs (already covered elsewhere).
 
-- [ ] P7-T06 Run the full sample lifecycle test matrix
+- [x] P7-T06 Run the full sample lifecycle test matrix
   - **Goal**: Produce the actual evidence for every acceptance scenario in `spec.md` User Story 5, including the exact-timing duplicate race, invalid/backward/cross-type transitions, and the zero-fulfillment-side-effect confirmation.
   - **Dependencies**: P7-T01 through P7-T05.
   - **Files/modules**: `tests/e2e/**`, `src/lib/inquiries/sample-request.test.ts` (extended).
@@ -742,7 +742,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: warehouse-switching cannot bypass the duplicate rule; a `CLOSED` request permits a new manual-review submission; `SAMPLE_SENT`/`DELIVERED` are Admin-only to set and customer-visible to read; zero quantity field or automatic fulfillment side effect anywhere — all with attached evidence.
   - **Out of scope**: any shipment/inventory/reservation feature (explicitly forbidden).
 
-- [ ] P7-T07 **PHASE 7 ACCEPTANCE GATE**
+- [x] P7-T07 **PHASE 7 ACCEPTANCE GATE**
   - **Goal**: Confirm the complete inquiry/sample lifecycle is correct, race-safe, and accessible before the public redesign or Admin redesign builds further UI on top of it.
   - **Dependencies**: P7-T01 through P7-T06.
   - **Runtime acceptance condition** (per `plan.md` Phase 7, `spec.md` SC-005): all conditions in P7-T06 hold with recorded evidence.

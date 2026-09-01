@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowRight, ClipboardList } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
+import { getInquiryLabels } from "@/lib/inquiries/labels";
 import { Link } from "@/i18n/navigation";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -22,19 +23,8 @@ export default async function RequestsPage() {
     .order("created_at", { ascending: false });
 
   const t = await getTranslations("account.requests");
-  const detail = await getTranslations("account.requestDetail");
   const format = await getFormatter();
-  const statuses: Record<string, string> = {
-    NEW: detail("statuses.NEW"),
-    RECEIVED: detail("statuses.RECEIVED"),
-    CONTACTED: detail("statuses.CONTACTED"),
-    CLOSED: detail("statuses.CLOSED"),
-  };
-  const types: Record<string, string> = {
-    GENERAL: detail("types.GENERAL"),
-    PRODUCT: detail("types.PRODUCT"),
-    SAMPLE_REQUEST: detail("types.SAMPLE_REQUEST"),
-  };
+  const labels = await getInquiryLabels();
 
   return (
     <section className="site-container section-space">
@@ -52,19 +42,17 @@ export default async function RequestsPage() {
               >
                 <div className="min-w-0">
                   <strong className="block truncate">
-                    {row.coffee_name_snapshot ??
-                      types[String(row.type)] ??
-                      String(row.type)}
+                    {row.coffee_name_snapshot ?? labels.type(row.type)}
                   </strong>
                   <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
                     {row.request_code}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {types[String(row.type)] ?? String(row.type)}
+                  {labels.type(row.type)}
                 </p>
                 <span className="justify-self-start rounded-full bg-muted px-3 py-1 text-xs font-bold">
-                  {statuses[String(row.status)] ?? String(row.status)}
+                  {labels.status(row.status)}
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted-foreground">
                   {row.created_at

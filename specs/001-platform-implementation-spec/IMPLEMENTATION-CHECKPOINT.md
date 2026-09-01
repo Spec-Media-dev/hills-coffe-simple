@@ -135,10 +135,43 @@ saved), **N31** (single-value check constraints surfaced only as opaque
 failures), **N34** (unique violations attributed to the wrong field), **N35**
 (an out-of-range catalog page treated as an error).
 
+### Phase 7 — COMPLETE, gate PASSED
+
+| Task                          | Status   | Notes                                                                                                                               |
+| ----------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `P7-T01` duplicate sample     | **PASS** | 23505 -> `DUPLICATE_SAMPLE` + `conflict.requestCode`; the active-status set now matches the live index predicate exactly (N42)      |
+| `P7-T02` transition conflict  | **PASS** | 23514 -> `CONFLICT`; the graph is not duplicated in write code; stale updates match zero rows and are refused                       |
+| `P7-T03` Admin Lead Inbox     | **PASS** | server-side search/filter/pagination, full request context, immutable timeline, prior same-coffee history, allowed-actions-only     |
+| `P7-T04` customer wording     | **PASS** | three copies of the status vocabulary collapsed into one namespace; wording follows FR-039/FR-043                                   |
+| `P7-T05` dialog accessibility | **PASS** | shared `ModalDialog`; keyboard script green; focus no longer lands on the honeypot; typed values survive a rejection                |
+| `P7-T06` lifecycle matrix     | **PASS** | 11/11 live-database + 9/9 browser, covering FLOW A-E, the invalid-transition matrix, isolation and zero fulfillment effects         |
+| `P7-T07` **PHASE 7 GATE**     | **PASS** | the complete flow proven end to end: request -> code -> customer timeline -> Lead Inbox -> legal transitions -> reopen after CLOSED |
+
+Evidence: `evidence/phase-7-inquiry-sample-workflow.md`
+
+**No database, RLS or storage change.** The pending N32 Variety translation
+migration was not touched. Every Phase 7 fixture account and inquiry row was
+removed; the owner-approved Phase 6 QA catalog is preserved (verified: 0 stray
+accounts, 0 inquiry rows, 2 coffees / 3 offers).
+
+Closed here: **N42** (the duplicate rule covered 3 of the index's 5 statuses),
+**N43** (`InquiryStatus` was missing `SAMPLE_SENT`/`DELIVERED`, making the
+sample lifecycle untypeable), **N44** (blocked users _and_ Administrators could
+create customer requests), **N45** (a second status writer knew only four
+statuses and returned raw provider text), **N46** (dialog focus landed on the
+aria-hidden honeypot), **N47** (a rejected submission erased the form),
+**N48** (the final legal transition confirmed nothing to the Administrator).
+
+Opened here: **N49 (MEDIUM)** — `updateWorkflowStatusAction` still returns
+`error.message` for its **offers** and **content** branches. Its inquiry branch
+was removed in Phase 7; the other two are a pre-existing Phase 6 surface and a
+Constitution Principle XII concern. Deferred to Phase 11 rather than widening
+Phase 7's scope.
+
 ## Current / Next Task
 
-**Next**: `P7-T01` — first task of Phase 7 (inquiry and sample delivery
-workflow). Not started; do not begin it without instruction.
+**Next**: `P8-T01` — first task of Phase 8 (CMS, media, articles and project
+logo). Not started; do not begin it without instruction.
 
 Two items need an owner decision before a later phase leans on them:
 
@@ -218,10 +251,11 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
 
 ## Last Safe Checkpoint
 
-- **Branch**: `main`; Phases 0–5 committed. Phase 6 is uncommitted.
-- **Database**: unchanged by Phase 6 — no migration, no function, RLS, storage
-  policy or bucket change. Owner-approved QA/demo **rows** were inserted and
-  are inventoried in `evidence/phase-6-catalog-admin-flow.md`.
+- **Branch**: `main`; Phases 0–5 committed. Phases 6 and 7 are uncommitted.
+- **Database**: unchanged by Phases 6 and 7 — no migration, no function, RLS,
+  storage policy or bucket change. Owner-approved QA/demo **rows** were
+  inserted in Phase 6 and are inventoried in
+  `evidence/phase-6-catalog-admin-flow.md`. Phase 7 left no rows behind.
 - **Phase 6 additions**:
   - new: `src/actions/admin-catalog.ts`, `src/lib/admin/validation.ts`,
     `src/lib/data/admin-catalog.ts`, `src/lib/data/catalog-query.ts`
@@ -241,3 +275,22 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
 - **Rollback**: delete the new files above and revert the modified ones. The
   QA/demo rows are data; the evidence file lists the delete order. No schema
   state to undo.
+
+- **Phase 7 additions**:
+  - new: `src/actions/admin-inquiries.ts`, `src/lib/data/lead-inbox.ts`,
+    `src/lib/inquiries/{labels,transitions}.ts`
+  - new: `src/components/ui/modal-dialog.tsx`,
+    `src/components/admin/{lead-badges,lead-status-actions}.tsx`
+  - new routes: `src/app/[locale]/admin/inquiries/{page.tsx,[id]/page.tsx}`
+  - new tests: `tests/integration/inquiry-lifecycle.test.ts`,
+    `tests/e2e/{inquiry-workflow.spec.ts,inquiry-fixtures.ts}`
+  - modified: `src/actions/inquiries.ts` (rewritten onto `requireVerifiedUser()`
+    and the `ActionResult` contract), `src/lib/inquiries/sample-request.ts`,
+    `src/lib/actions.ts` (`fieldErrorsOf` made generic),
+    `src/components/inquiries/{inquiry-panel,request-quote-form}.tsx`,
+    the customer request list/detail/dashboard pages, the coffee detail page
+    (hardcoded AR/EN label table removed), the generic `[module]` renderer and
+    `admin-operations.ts` (inquiry status writer removed),
+    `messages/{en,ar}.json`, `types.generated.ts`
+- **Phase 7 rollback**: delete the new files above and revert the modified ones.
+  No schema state and no data to undo.

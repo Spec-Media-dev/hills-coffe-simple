@@ -62,7 +62,7 @@ export default async function RequestQuotePage({
       <section className="section-space">
         <div className="site-container max-w-3xl">
           {viewer && offers.length ? (
-            <RequestQuoteForm locale={locale as Locale} offers={offers} />
+            <RequestQuoteForm offers={offers} />
           ) : viewer ? (
             <p className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
               {text.empty}

@@ -41,6 +41,7 @@ export default async function CoffeePage({
   const t = await getTranslations("product");
   const actions = await getTranslations("actions");
   const catalog = await getTranslations("catalog");
+  const inquiry = await getTranslations("inquiry");
   const viewer = await getViewer();
   const prices: Map<string, { minBags: number; pricePerKgUsd: number }[]> =
     viewer?.emailVerified
@@ -66,37 +67,23 @@ export default async function CoffeePage({
     countryOfOrigin: coffee.origin,
     url: localizedUrl(locale as Locale, `/green-coffee-offer-list/${slug}`),
   };
-  const inquiryLabels =
-    locale === "ar"
-      ? {
-          inquire: "إرسال طلب",
-          sample: "طلب عينة",
-          signin: actions("signin"),
-          message: "تفاصيل الطلب",
-          send: "إرسال الطلب",
-          title: "اسأل عن هذا العرض",
-          body: "يتم التحقق من سياق العرض على الخادم",
-          sampleTitle: "اطلب عينة للمراجعة",
-          sampleBody: "طلب للمراجعة اليدوية ولا يضمن إرسال عينة",
-          sampleSend: "إرسال طلب العينة",
-          verify: "تأكيد البريد للمتابعة",
-          close: "إغلاق",
-        }
-      : {
-          inquire: "Send request",
-          sample: "Request sample",
-          signin: actions("signin"),
-          message: "Request details",
-          send: "Send request",
-          title: "Ask about this offer",
-          body: "Offer context is verified on the server",
-          sampleTitle: "Request a sample for review",
-          sampleBody:
-            "Manual business review only; submission does not guarantee a physical sample",
-          sampleSend: "Submit sample request",
-          verify: "Verify email to continue",
-          close: "Close",
-        };
+  // Every string here comes from the catalogue. A `locale === "ar"` table
+  // used to live in this file, which is precisely how a label gets added in
+  // one language only; the EN/AR parity test now covers these keys.
+  const inquiryLabels = {
+    inquire: inquiry("inquire"),
+    sample: inquiry("sample"),
+    signin: actions("signin"),
+    message: inquiry("message"),
+    send: inquiry("send"),
+    title: inquiry("title"),
+    body: inquiry("body"),
+    sampleTitle: inquiry("sampleTitle"),
+    sampleBody: inquiry("sampleBody"),
+    sampleSend: inquiry("sampleSend"),
+    verify: inquiry("verify"),
+    close: inquiry("close"),
+  };
   return (
     <>
       <script
@@ -243,7 +230,6 @@ export default async function CoffeePage({
                   warehouse={offer.warehouse}
                   signedIn={Boolean(viewer)}
                   verifiedEmail={Boolean(viewer?.emailVerified)}
-                  locale={locale as Locale}
                   labels={inquiryLabels}
                 />
               </article>

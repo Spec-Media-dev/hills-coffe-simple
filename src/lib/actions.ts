@@ -56,9 +56,11 @@ export function settled<T>(state: ActionFormState<T>): ActionResult<T> | null {
   return isIdle(state) ? null : (state as ActionResult<T>);
 }
 
-export function fieldErrorsOf(state: ActionFormState): FieldErrors | undefined {
+export function fieldErrorsOf<T>(
+  state: ActionFormState<T>,
+): FieldErrors | undefined {
   return !state.ok && state.code !== "IDLE"
-    ? (state as Extract<ActionResult, { ok: false }>).fieldErrors
+    ? (state as Extract<ActionResult<T>, { ok: false }>).fieldErrors
     : undefined;
 }
 

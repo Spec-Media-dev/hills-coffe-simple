@@ -1,17 +1,31 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, CheckCircle2, Loader2, X } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useActionState, useState } from "react";
 import {
   createProductInquiry,
   createSampleRequestInquiry,
-  type InquiryState,
 } from "@/actions/inquiries";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Link } from "@/i18n/navigation";
+import {
+  fieldErrorsOf,
+  idleActionState,
+  settled,
+  type ActionFormState,
+} from "@/lib/actions";
 
-const initialState: InquiryState = { status: "idle", message: "" };
+type Created = { requestCode: string };
 
+/**
+ * Product-inquiry / sample-request entry point on a coffee.
+ *
+ * The dialog shell is the shared `ModalDialog`, so focus trapping, Escape,
+ * focus restoration, scroll lock and the inert background are the ones already
+ * proven for the confirmation dialog rather than a second implementation
+ * (P7-T05).
+ */
 export function InquiryPanel({
   offerId,
   coffeeName,
@@ -19,14 +33,12 @@ export function InquiryPanel({
   signedIn,
   verifiedEmail,
   labels,
-  locale,
 }: {
   offerId: string;
   coffeeName: string;
   warehouse: string;
   signedIn: boolean;
   verifiedEmail: boolean;
-  locale: "en" | "ar";
   labels: {
     inquire: string;
     sample: string;
@@ -44,142 +56,106 @@ export function InquiryPanel({
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<"product" | "sample">("product");
-  const openPanel = (nextKind: "product" | "sample") => {
-    setKind(nextKind);
-    setOpen(true);
-  };
+
   if (!signedIn)
     return (
       <div className="flex flex-wrap gap-2">
         <Link
           href="/sign-in"
-          className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
         >
           {labels.signin}
         </Link>
         <Link
           href="/sign-in"
-          className="inline-flex h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary"
+          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary"
         >
           {labels.sample}
         </Link>
       </div>
     );
+
   if (!verifiedEmail)
     return (
       <Link
         href="/verify-email"
-        className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+        className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
       >
         {labels.verify}
       </Link>
     );
+
+  const openPanel = (next: "product" | "sample") => {
+    setKind(next);
+    setOpen(true);
+  };
+
   return (
     <>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => openPanel("product")}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition-colors hover:bg-forest-light"
+          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition-colors hover:bg-forest-light"
         >
           {labels.inquire}
         </button>
         <button
           type="button"
           onClick={() => openPanel("sample")}
-          className="inline-flex h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
         >
           {labels.sample}
         </button>
       </div>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="fixed inset-0 z-[80] grid place-items-end bg-black/55 p-0 backdrop-blur-sm sm:place-items-center sm:p-5"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onMouseDown={(event) => {
-              if (event.currentTarget === event.target) setOpen(false);
-            }}
-          >
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={`inquiry-${offerId}`}
-              initial={{ opacity: 0, y: 28, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 18, scale: 0.98 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-lg rounded-t-2xl border border-border bg-card p-6 shadow-2xl sm:rounded-2xl sm:p-8"
-            >
-              <div className="flex items-start justify-between gap-5">
-                <div>
-                  <p className="eyebrow">{warehouse}</p>
-                  <h2 id={`inquiry-${offerId}`} className="mt-3 text-3xl">
-                    {kind === "sample" ? labels.sampleTitle : labels.title}
-                  </h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {coffeeName} ·{" "}
-                    {kind === "sample" ? labels.sampleBody : labels.body}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="grid size-11 shrink-0 place-items-center rounded-full border border-border"
-                  aria-label={labels.close}
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-              <InquiryActionForm
-                key={kind}
-                kind={kind}
-                offerId={offerId}
-                locale={locale}
-                labels={labels}
-                onSuccess={() => setOpen(false)}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+      <ModalDialog
+        open={open}
+        eyebrow={warehouse}
+        title={kind === "sample" ? labels.sampleTitle : labels.title}
+        description={`${coffeeName} · ${kind === "sample" ? labels.sampleBody : labels.body}`}
+        closeLabel={labels.close}
+        onClose={() => setOpen(false)}
+      >
+        <InquiryForm key={kind} kind={kind} offerId={offerId} labels={labels} />
+      </ModalDialog>
     </>
   );
 }
 
-function InquiryActionForm({
+function InquiryForm({
   kind,
   offerId,
-  locale,
   labels,
-  onSuccess,
 }: {
   kind: "product" | "sample";
   offerId: string;
-  locale: "en" | "ar";
-  labels: {
-    message: string;
-    send: string;
-    sampleSend: string;
-  };
-  onSuccess: () => void;
+  labels: { message: string; send: string; sampleSend: string };
 }) {
+  const t = useTranslations("account.responses");
+  const requests = useTranslations("account.requests");
+  // React resets an uncontrolled field once a form action settles, which would
+  // throw away everything the customer typed the moment the server rejected
+  // one thing about it. The field therefore holds its own value.
+  const [message, setMessage] = useState("");
   const [state, action, pending] = useActionState(
     kind === "sample" ? createSampleRequestInquiry : createProductInquiry,
-    initialState,
+    idleActionState as ActionFormState<Created>,
   );
-  useEffect(() => {
-    if (state.status === "success") {
-      const timer = setTimeout(onSuccess, 2600);
-      return () => clearTimeout(timer);
-    }
-  }, [state.status, onSuccess]);
+
+  const outcome = settled(state);
+  const errors = fieldErrorsOf(state);
+  const copy = (key?: string) => (key ? t(key as Parameters<typeof t>[0]) : "");
+
+  // Both a success and a duplicate carry a request code the customer should be
+  // able to open, so the code and its link are rendered from either.
+  const requestCode =
+    (outcome?.ok ? outcome.data?.requestCode : undefined) ??
+    (outcome && !outcome.ok ? outcome.conflict?.requestCode : undefined);
+
   return (
-    <form action={action} className="mt-7 grid gap-5">
+    <form action={action} noValidate className="mt-7 grid gap-5">
       <input type="hidden" name="offerId" value={offerId} />
-      <input type="hidden" name="locale" value={locale} />
       <input
         name="website"
         tabIndex={-1}
@@ -187,41 +163,123 @@ function InquiryActionForm({
         aria-hidden="true"
         className="absolute -start-[9999px]"
       />
-      <label className="grid gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-        {labels.message}
-        <textarea
-          name="message"
-          required
-          minLength={10}
-          rows={5}
-          placeholder="Target profile, timing, sample needs…"
-          className="resize-none rounded-xl border border-input bg-background p-4 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-        />
-      </label>
-      {state.message && (
-        <p
-          role={state.status === "error" ? "alert" : "status"}
-          aria-live="polite"
-          className={`rounded-xl p-3 text-sm ${state.status === "success" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-gold/10 text-foreground"}`}
+
+      <div className="grid gap-2">
+        <label
+          htmlFor="inquiry-message"
+          className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
         >
-          {state.status === "success" && (
-            <CheckCircle2 className="me-2 inline size-4" />
-          )}
-          {state.message}
-          {state.requestCode ? ` (${state.requestCode})` : ""}
+          {labels.message}
+        </label>
+        <textarea
+          id="inquiry-message"
+          name="message"
+          rows={5}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          aria-invalid={Boolean(errors?.message?.length) || undefined}
+          aria-describedby={
+            errors?.message?.length ? "inquiry-message-error" : undefined
+          }
+          className={`resize-none rounded-xl border bg-background p-4 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:ring-2 focus:ring-gold/20 ${
+            errors?.message?.length
+              ? "border-destructive focus:border-destructive"
+              : "border-input focus:border-gold"
+          }`}
+        />
+        {errors?.message?.length ? (
+          <span
+            id="inquiry-message-error"
+            className="flex items-start gap-1.5 text-xs font-medium text-destructive"
+          >
+            <span aria-hidden="true">⚠</span>
+            {copy(errors.message[0])}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Missing profile data names the fields and points at the page that
+          fixes them, rather than only saying "incomplete". */}
+      {errors && (errors.phone || errors.address || errors.country) ? (
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {copy(outcome && !outcome.ok ? outcome.messageKey : undefined)}{" "}
+          <Link
+            href="/account/settings"
+            className="font-bold underline underline-offset-2"
+          >
+            {requests("completeProfile")}
+          </Link>
         </p>
+      ) : null}
+
+      {outcome && !outcome.ok && !errors ? (
+        <p
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {copy(outcome.messageKey)}
+          {requestCode ? (
+            <>
+              {" "}
+              <span dir="ltr" className="font-bold">
+                {requestCode}
+              </span>{" "}
+              <Link
+                href={`/account/requests/${requestCode}`}
+                className="font-bold underline underline-offset-2"
+              >
+                {requests("viewRequest")}
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
+      {outcome?.ok ? (
+        <p
+          role="status"
+          className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300"
+        >
+          <CheckCircle2 className="me-2 inline size-4" aria-hidden="true" />
+          {copy(outcome.messageKey)}
+          {requestCode ? (
+            <>
+              {" "}
+              {/* A request code is an identifier, so it stays LTR inside RTL. */}
+              <span dir="ltr" className="font-bold">
+                {requestCode}
+              </span>{" "}
+              <Link
+                href={`/account/requests/${requestCode}`}
+                className="font-bold underline underline-offset-2"
+              >
+                {requests("viewRequest")}
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+
+      {/* Hidden once it has succeeded: the confirmation and its code stay on
+          screen, and the same request cannot be submitted twice by mistake. */}
+      {outcome?.ok ? null : (
+        <button
+          type="submit"
+          disabled={pending}
+          aria-busy={pending}
+          className="flex h-12 min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+        >
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <ArrowRight className="size-4 rtl:rotate-180" aria-hidden="true" />
+          )}
+          {kind === "sample" ? labels.sampleSend : labels.send}
+        </button>
       )}
-      <button
-        disabled={pending}
-        className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-60"
-      >
-        {pending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <ArrowRight className="size-4 rtl:rotate-180" />
-        )}
-        {kind === "sample" ? labels.sampleSend : labels.send}
-      </button>
     </form>
   );
 }

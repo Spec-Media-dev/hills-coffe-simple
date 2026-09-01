@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
+import { getInquiryLabels } from "@/lib/inquiries/labels";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { requireVerifiedUser } from "@/lib/auth/session";
@@ -48,22 +49,7 @@ export default async function RequestDetailPage({
         })
       : "—";
 
-  // Explicit maps keep these localized labels type-safe against the
-  // inquiry_status / inquiry_type enums instead of relying on dynamic keys.
-  const statuses: Record<string, string> = {
-    NEW: t("statuses.NEW"),
-    RECEIVED: t("statuses.RECEIVED"),
-    CONTACTED: t("statuses.CONTACTED"),
-    CLOSED: t("statuses.CLOSED"),
-  };
-  const types: Record<string, string> = {
-    GENERAL: t("types.GENERAL"),
-    PRODUCT: t("types.PRODUCT"),
-    SAMPLE_REQUEST: t("types.SAMPLE_REQUEST"),
-  };
-  const statusLabel = (status: unknown) =>
-    statuses[String(status)] ?? String(status);
-  const typeLabel = (type: unknown) => types[String(type)] ?? String(type);
+  const { status: statusLabel, type: typeLabel } = await getInquiryLabels();
 
   const facts: Array<[string, string]> = [
     [t("code"), request.request_code],

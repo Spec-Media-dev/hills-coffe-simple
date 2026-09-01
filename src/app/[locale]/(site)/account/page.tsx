@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import { getInquiryLabels } from "@/lib/inquiries/labels";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -30,6 +31,7 @@ export default async function AccountPage({
     );
 
   const t = await getTranslations("account");
+  const labels = await getInquiryLabels();
   const db = await createSupabaseServerClient();
   const avatarUrl = await getOwnAvatarUrl();
 
@@ -200,7 +202,7 @@ export default async function AccountPage({
                           {row.request_code}
                         </span>
                         <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                          {t(`statuses.${row.status}`)}
+                          {labels.status(row.status)}
                         </span>
                       </Link>
                     </li>

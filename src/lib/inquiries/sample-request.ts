@@ -1,9 +1,30 @@
 import type { InquiryStatus } from "@/lib/supabase/types.generated";
 
+/**
+ * The statuses that make a sample request "active" for the duplicate rule.
+ *
+ * This list is not a policy decision made here — it mirrors, exactly, the
+ * predicate of the live partial unique index:
+ *
+ *   uq_inquiries_active_sample_user_coffee
+ *     ON inquiries (user_id, coffee_id)
+ *     WHERE type = 'SAMPLE_REQUEST'
+ *       AND status = ANY (ARRAY['NEW','RECEIVED','CONTACTED',
+ *                               'SAMPLE_SENT','DELIVERED'])
+ *
+ * i.e. everything except `CLOSED`. It previously stopped at `CONTACTED`, so a
+ * customer whose earlier request had already reached `SAMPLE_SENT` or
+ * `DELIVERED` slipped past the application pre-check and was stopped only by
+ * the database — surfacing as a generic failure instead of the duplicate
+ * message (finding N42). The database stays the authority; this exists so the
+ * common case is answered without provoking a constraint violation.
+ */
 export const ACTIVE_SAMPLE_STATUSES = [
   "NEW",
   "RECEIVED",
   "CONTACTED",
+  "SAMPLE_SENT",
+  "DELIVERED",
 ] as const satisfies readonly InquiryStatus[];
 
 export type SampleRequester = {
@@ -46,9 +67,14 @@ export type SampleRequestRepository = {
     userId: string,
     coffeeId: string,
   ) => Promise<ActiveSampleRequest | null>;
+  /**
+   * Returns the created code, or `"DUPLICATE"` when the database's partial
+   * unique index rejected the insert. The adapter owns recognising that
+   * specific violation; this module owns what it means.
+   */
   insertRequest: (
     input: SampleInsert,
-  ) => Promise<{ requestCode: string } | null>;
+  ) => Promise<{ requestCode: string } | "DUPLICATE" | null>;
 };
 
 export type SampleRequestResult =
@@ -114,6 +140,21 @@ export async function processSampleRequest(
     subject: input.subject?.trim() || null,
     message: input.message.trim(),
   });
+  // A concurrent request can win the race between the pre-check above and
+  // this insert. The database's unique index is what actually guarantees one
+  // active request, so a rejection here is a duplicate, not a failure: the
+  // surviving request is looked up so the caller can be pointed at it.
+  if (created === "DUPLICATE") {
+    const winner = await repository.findActiveRequest(
+      input.viewer.id,
+      offer.coffeeId,
+    );
+    return {
+      ok: false,
+      reason: "ACTIVE_SAMPLE_EXISTS",
+      requestCode: winner?.requestCode,
+    };
+  }
   return created
     ? { ok: true, requestCode: created.requestCode }
     : { ok: false, reason: "CREATE_FAILED" };

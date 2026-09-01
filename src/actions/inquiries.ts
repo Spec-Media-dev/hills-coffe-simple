@@ -2,8 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Locale } from "@/i18n/routing";
-import { getViewer } from "@/lib/auth/session";
+import {
+  fail,
+  ok,
+  type ActionFormState,
+  type ActionResult,
+} from "@/lib/actions";
+import { requireVerifiedUser } from "@/lib/auth/session";
 import {
   ACTIVE_SAMPLE_STATUSES,
   processSampleRequest,
@@ -11,112 +16,86 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const inquirySchema = z.object({
-  offerId: z.string().uuid(),
-  locale: z.enum(["en", "ar"]),
-  subject: z.string().trim().max(160).optional(),
-  message: z.string().trim().min(10).max(2000),
-  website: z.string().max(0).optional(),
-});
-export type InquiryState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  reason?:
-    | "AUTH_REQUIRED"
-    | "EMAIL_VERIFICATION_REQUIRED"
-    | "PROFILE_INCOMPLETE"
-    | "OFFER_UNAVAILABLE"
-    | "ACTIVE_SAMPLE_EXISTS"
-    | "CREATE_FAILED";
-  requestCode?: string;
-  fieldErrors?: string[];
-};
-const copy = (locale: Locale) =>
-  locale === "ar"
-    ? {
-        auth: "أكد بريدك الإلكتروني قبل إرسال الطلب.",
-        signin: "سجّل الدخول لإرسال الطلب.",
-        profile: "أكمل رقم الهاتف وعنوان التوصيل والدولة في ملفك الشخصي أولاً.",
-        invalid: "أضف تفاصيل طلب واضحة من 10 أحرف على الأقل.",
-        missing: "هذا العرض لم يعد متاحاً.",
-        config: "خدمة الطلبات غير متصلة بعد.",
-        failed: "تعذر حفظ الطلب. حاول مرة أخرى.",
-        sent: "تم إرسال طلبك وسيتابع معك فريق القهوة قريباً.",
-        sampleSent:
-          "تم إرسال طلب العينة للمراجعة اليدوية. لا يضمن الطلب إرسال عينة.",
-        activeSample: "لديك بالفعل طلب عينة نشط لهذه القهوة.",
-        duplicate:
-          "تم استلام طلب حديث بالفعل. انتظر قليلاً قبل الإرسال مرة أخرى.",
-      }
-    : {
-        auth: "Verify your email before sending a request.",
-        signin: "Sign in before sending a request.",
-        profile:
-          "Complete your phone, delivery address, and country in your profile first.",
-        invalid: "Add at least 10 characters describing your request.",
-        missing: "That offer is no longer available.",
-        config: "The request service is not connected yet.",
-        failed: "We could not save the request. Please try again.",
-        sent: "Your request was sent. Our coffee team will follow up shortly.",
-        sampleSent:
-          "Your sample request was submitted for manual review. Submission does not guarantee a physical sample.",
-        activeSample:
-          "You already have an active sample request for this coffee.",
-        duplicate:
-          "A recent request was already received. Please wait before sending again.",
-      };
+/**
+ * Customer request creation — `contracts/inquiry-actions.md`.
+ *
+ * Three properties this file exists to guarantee:
+ *
+ *  1. **One authorization model.** Both actions gate on
+ *     `requireVerifiedUser()`, which is authenticated AND email-confirmed AND
+ *     `role = 'USER'` AND not blocked. The previous implementation used a bare
+ *     `getViewer()` plus an `emailVerified` check, which let a **blocked**
+ *     customer and an **Administrator** through (finding N44).
+ *  2. **The client never names the coffee.** Only an `offerId` is accepted;
+ *     `hydrate_inquiry_context()` derives `coffee_id`, the snapshots and
+ *     `user_id` from `auth.uid()` server-side, so a forged coffee id cannot be
+ *     attached to a request.
+ *  3. **No prose crosses the wire.** Results carry a `messageKey` the client
+ *     resolves in the active locale, so there is no `locale === "ar"` branch
+ *     in action code and no provider text can reach the browser.
+ */
 
-export async function createProductInquiry(
-  _: InquiryState,
-  formData: FormData,
-): Promise<InquiryState> {
-  const locale = formData.get("locale") === "ar" ? "ar" : "en";
-  const text = copy(locale);
-  const viewer = await getViewer();
-  if (!viewer)
-    return { status: "error", reason: "AUTH_REQUIRED", message: text.signin };
-  if (!viewer.emailVerified)
-    return {
-      status: "error",
-      reason: "EMAIL_VERIFICATION_REQUIRED",
-      message: text.auth,
-    };
-  const parsed = inquirySchema.safeParse({
-    offerId: formData.get("offerId"),
-    locale,
-    subject: formData.get("subject") || undefined,
-    message: formData.get("message"),
-    website: formData.get("website") || "",
+/** Postgres unique-violation. */
+const UNIQUE_VIOLATION = "23505";
+
+const requestSchema = z.object({
+  offerId: z.string().trim().min(1, "required").uuid("invalidReference"),
+  subject: z.preprocess(
+    (value) => (value === "" || value === undefined ? null : value),
+    z.string().trim().max(160, "tooLong").nullable(),
+  ),
+  message: z.string().trim().min(10, "messageTooShort").max(2000, "tooLong"),
+  // Honeypot: a real person never fills this.
+  website: z.string().max(0, "invalidValue").optional(),
+});
+
+type CreatedRequest = { requestCode: string };
+
+function invalidFields(error: z.ZodError): ActionResult<CreatedRequest> {
+  const flattened = error.flatten().fieldErrors as Record<
+    string,
+    string[] | undefined
+  >;
+  const fieldErrors: Record<string, string[]> = {};
+  for (const [field, messages] of Object.entries(flattened))
+    if (messages?.length)
+      fieldErrors[field] = [
+        messages[0].includes(" ") ? "invalidValue" : messages[0],
+      ];
+  return fail("VALIDATION", "checkRequestFields", { fieldErrors });
+}
+
+/** Missing profile data is actionable, so it names the fields to complete. */
+const profileIncomplete = (
+  missing: ("phone" | "address" | "country")[],
+): ActionResult<CreatedRequest> =>
+  fail("VALIDATION", "completeProfileFirst", {
+    fieldErrors: Object.fromEntries(
+      missing.map((field) => [field, ["profileFieldRequired"]]),
+    ),
   });
-  if (!parsed.success) return { status: "error", message: text.invalid };
-  if (!viewer.phone?.trim())
-    return {
-      status: "error",
-      reason: "PROFILE_INCOMPLETE",
-      message: text.profile,
-      fieldErrors: ["phone"],
-    };
-  if (!isSupabaseConfigured()) return { status: "error", message: text.config };
-  const db = await createSupabaseServerClient();
+
+/**
+ * Resolves an offer the customer is actually allowed to reference.
+ *
+ * Visible, not archived, not soft-deleted, its coffee published, its warehouse
+ * active. A stale or hidden offer is indistinguishable from a non-existent
+ * one, so this cannot be used to probe the catalog.
+ */
+async function resolveVisibleOffer(
+  db: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  offerId: string,
+) {
   const { data: offer } = await db
     .from("coffee_offers")
-    .select("id,coffee_id,warehouse_id,reference_number")
-    .eq("id", parsed.data.offerId)
+    .select("id,coffee_id,warehouse_id")
+    .eq("id", offerId)
     .eq("is_visible", true)
     .neq("status", "INACTIVE")
     .is("deleted_at", null)
     .maybeSingle();
-  if (!offer) return { status: "error", message: text.missing };
-  const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
-  const { count: recentCount } = await db
-    .from("inquiries")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", viewer.id)
-    .eq("offer_id", offer.id)
-    .gte("created_at", oneMinuteAgo);
-  if ((recentCount ?? 0) > 0)
-    return { status: "error", message: text.duplicate };
-  const [coffeeQ, warehouseQ] = await Promise.all([
+  if (!offer) return null;
+  const [coffee, warehouse] = await Promise.all([
     db
       .from("coffees")
       .select("id")
@@ -131,88 +110,97 @@ export async function createProductInquiry(
       .eq("is_active", true)
       .maybeSingle(),
   ]);
-  if (!coffeeQ.data || !warehouseQ.data)
-    return { status: "error", message: text.missing };
-  const { data: created, error } = await db
+  return coffee.data && warehouse.data
+    ? { offerId: offer.id, coffeeId: String(offer.coffee_id) }
+    : null;
+}
+
+// ================================================== PRODUCT INQUIRY
+
+export async function createProductInquiry(
+  _state: ActionFormState<CreatedRequest>,
+  formData: FormData,
+): Promise<ActionResult<CreatedRequest>> {
+  const parsed = requestSchema.safeParse({
+    offerId: formData.get("offerId"),
+    subject: formData.get("subject"),
+    message: formData.get("message"),
+    website: formData.get("website") ?? "",
+  });
+  if (!parsed.success) return invalidFields(parsed.error);
+
+  const viewer = await requireVerifiedUser();
+  if (!viewer) return fail("VERIFICATION_REQUIRED", "verifiedCustomerOnly");
+  if (!isSupabaseConfigured()) return fail("CONFIGURATION", "notConnected");
+
+  const missing: ("phone" | "address" | "country")[] = [];
+  if (!viewer.phone?.trim()) missing.push("phone");
+  if (!viewer.address?.trim()) missing.push("address");
+  if (!viewer.countryCode?.trim()) missing.push("country");
+  if (missing.length) return profileIncomplete(missing);
+
+  const db = await createSupabaseServerClient();
+  const offer = await resolveVisibleOffer(db, parsed.data.offerId);
+  if (!offer) return fail("NOT_FOUND", "offerUnavailable");
+
+  const { data, error } = await db
     .from("inquiries")
     .insert({
       type: "PRODUCT",
-      offer_id: offer.id,
+      offer_id: offer.offerId,
       full_name: viewer.fullName,
       company_name: viewer.companyName,
       email: viewer.email,
-      phone: viewer.phone.trim(),
-      address: viewer.address,
-      country_code: viewer.countryCode,
-      subject: parsed.data.subject ?? null,
+      phone: viewer.phone!.trim(),
+      address: viewer.address!.trim(),
+      country_code: viewer.countryCode!.trim(),
+      subject: parsed.data.subject,
       message: parsed.data.message,
     })
     .select("request_code")
     .single();
-  if (error) return { status: "error", message: text.failed };
-  revalidatePath(`/${locale}/account`);
-  return {
-    status: "success",
-    message: text.sent,
-    requestCode: created.request_code,
-  };
+  if (error || !data) {
+    console.error(`[inquiries] product insert failed: ${error?.code}`);
+    return fail("UNEXPECTED", "requestNotSaved");
+  }
+
+  revalidatePath("/", "layout");
+  return ok<CreatedRequest>("productInquirySent", {
+    requestCode: String(data.request_code),
+  });
 }
 
-export async function createSampleRequestInquiry(
-  _: InquiryState,
-  formData: FormData,
-): Promise<InquiryState> {
-  const locale = formData.get("locale") === "ar" ? "ar" : "en";
-  const text = copy(locale);
-  const parsed = inquirySchema.safeParse({
-    offerId: formData.get("offerId"),
-    locale,
-    subject: formData.get("subject") || undefined,
-    message: formData.get("message"),
-    website: formData.get("website") || "",
-  });
-  if (!parsed.success) return { status: "error", message: text.invalid };
-  if (!isSupabaseConfigured()) return { status: "error", message: text.config };
+// ================================================== SAMPLE REQUEST
 
-  const viewer = await getViewer();
+export async function createSampleRequestInquiry(
+  _state: ActionFormState<CreatedRequest>,
+  formData: FormData,
+): Promise<ActionResult<CreatedRequest>> {
+  const parsed = requestSchema.safeParse({
+    offerId: formData.get("offerId"),
+    subject: formData.get("subject"),
+    message: formData.get("message"),
+    website: formData.get("website") ?? "",
+  });
+  if (!parsed.success) return invalidFields(parsed.error);
+
+  const viewer = await requireVerifiedUser();
+  if (!viewer) return fail("VERIFICATION_REQUIRED", "verifiedCustomerOnly");
+  if (!isSupabaseConfigured()) return fail("CONFIGURATION", "notConnected");
+
   const db = await createSupabaseServerClient();
   const result = await processSampleRequest(
     {
       viewer,
       offerId: parsed.data.offerId,
-      subject: parsed.data.subject,
+      subject: parsed.data.subject ?? undefined,
       message: parsed.data.message,
     },
     {
-      resolveVisibleOffer: async (offerId) => {
-        const { data: offer } = await db
-          .from("coffee_offers")
-          .select("id,coffee_id,warehouse_id")
-          .eq("id", offerId)
-          .eq("is_visible", true)
-          .neq("status", "INACTIVE")
-          .is("deleted_at", null)
-          .maybeSingle();
-        if (!offer) return null;
-        const [coffeeQ, warehouseQ] = await Promise.all([
-          db
-            .from("coffees")
-            .select("id")
-            .eq("id", offer.coffee_id)
-            .eq("status", "PUBLISHED")
-            .is("deleted_at", null)
-            .maybeSingle(),
-          db
-            .from("warehouses")
-            .select("id")
-            .eq("id", offer.warehouse_id)
-            .eq("is_active", true)
-            .maybeSingle(),
-        ]);
-        return coffeeQ.data && warehouseQ.data
-          ? { offerId: offer.id, coffeeId: offer.coffee_id }
-          : null;
-      },
+      resolveVisibleOffer: (offerId) => resolveVisibleOffer(db, offerId),
+
+      // Scoped by coffee, never by offer: choosing a different warehouse for
+      // the same coffee is exactly the bypass the rule exists to stop.
       findActiveRequest: async (userId, coffeeId) => {
         const { data } = await db
           .from("inquiries")
@@ -226,11 +214,12 @@ export async function createSampleRequestInquiry(
           .maybeSingle();
         return data
           ? {
-              requestCode: data.request_code,
+              requestCode: String(data.request_code),
               status: data.status as (typeof ACTIVE_SAMPLE_STATUSES)[number],
             }
           : null;
       },
+
       insertRequest: async (input) => {
         const { data, error } = await db
           .from("inquiries")
@@ -248,32 +237,38 @@ export async function createSampleRequestInquiry(
           })
           .select("request_code")
           .single();
-        return error || !data ? null : { requestCode: data.request_code };
+        if (error)
+          // The partial unique index is the concurrency-safe backstop. Its
+          // violation is a duplicate, not a failure — recognised here and
+          // named by the caller, never surfaced as constraint text.
+          return error.code === UNIQUE_VIOLATION ? "DUPLICATE" : null;
+        return data ? { requestCode: String(data.request_code) } : null;
       },
     },
   );
 
   if (result.ok) {
-    revalidatePath(`/${locale}/account`);
-    return {
-      status: "success",
-      message: text.sampleSent,
+    revalidatePath("/", "layout");
+    return ok<CreatedRequest>("sampleRequestSent", {
       requestCode: result.requestCode,
-    };
+    });
   }
-  const messages = {
-    AUTH_REQUIRED: text.signin,
-    EMAIL_VERIFICATION_REQUIRED: text.auth,
-    PROFILE_INCOMPLETE: text.profile,
-    OFFER_UNAVAILABLE: text.missing,
-    ACTIVE_SAMPLE_EXISTS: text.activeSample,
-    CREATE_FAILED: text.failed,
-  } as const;
-  return {
-    status: "error",
-    reason: result.reason,
-    message: messages[result.reason],
-    requestCode: result.requestCode,
-    fieldErrors: result.missingFields,
-  };
+
+  switch (result.reason) {
+    case "AUTH_REQUIRED":
+    case "EMAIL_VERIFICATION_REQUIRED":
+      return fail("VERIFICATION_REQUIRED", "verifiedCustomerOnly");
+    case "PROFILE_INCOMPLETE":
+      return profileIncomplete(result.missingFields ?? []);
+    case "OFFER_UNAVAILABLE":
+      return fail("NOT_FOUND", "offerUnavailable");
+    case "ACTIVE_SAMPLE_EXISTS":
+      // The surviving request's code travels with the error so the UI can
+      // offer to open it instead of leaving the customer stuck.
+      return fail("DUPLICATE_SAMPLE", "activeSampleExists", {
+        conflict: { requestCode: result.requestCode },
+      });
+    default:
+      return fail("UNEXPECTED", "requestNotSaved");
+  }
 }

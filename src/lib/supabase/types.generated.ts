@@ -24,7 +24,11 @@ export type OfferStatus =
   | "SOLD_OUT"
   | "INACTIVE";
 export type InquiryType = "GENERAL" | "PRODUCT" | "SAMPLE_REQUEST";
-export type InquiryStatus = "NEW" | "RECEIVED" | "CONTACTED" | "CLOSED";
+/** Live `inquiry_status` enum. `SAMPLE_SENT` and `DELIVERED` were missing from
+ *  this curated file although the database has had them all along, which made
+ *  the whole sample lifecycle untypeable (finding N43). */
+export type InquiryStatus =
+  "NEW" | "RECEIVED" | "CONTACTED" | "SAMPLE_SENT" | "DELIVERED" | "CLOSED";
 
 type Table<Row> = {
   Row: Row & Record<string, unknown>;
