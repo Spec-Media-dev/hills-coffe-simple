@@ -5,13 +5,24 @@ import { LocaleSwitcher } from "./locale-switcher";
 import { MobileMenu } from "./mobile-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { Link } from "@/i18n/navigation";
-import { getViewer } from "@/lib/auth/session";
+import { requireVerifiedUser } from "@/lib/auth/session";
+import { AccountMenu } from "./account-menu";
+import { avatarInitials, getOwnAvatarUrl } from "@/lib/data/avatar";
+import type { Locale } from "@/i18n/routing";
+import { getLocale } from "next-intl/server";
 
 export async function SiteHeader() {
   const t = await getTranslations("nav");
   const actions = await getTranslations("actions");
   const brand = await getTranslations("brand");
-  const viewer = await getViewer();
+  // Only a verified, unblocked customer gets the account affordance.
+  // requireVerifiedUser() rejects ADMIN and blocked sessions, so an
+  // Administrator is never rendered as a protected-pricing customer and a
+  // blocked customer's protected UI disappears (Constitution VI and VII).
+  const viewer = await requireVerifiedUser();
+  const locale = (await getLocale()) as Locale;
+  const avatarUrl = viewer ? await getOwnAvatarUrl() : null;
+  const account = await getTranslations("account");
   const items = [
     { href: "/", label: t("home") },
     { href: "/green-coffee-offer-list", label: t("products") },
@@ -127,13 +138,36 @@ export async function SiteHeader() {
           </Link>
           <ThemeToggle />
           <LocaleSwitcher />
-          <Link
-            href={viewer ? "/account" : "/sign-in"}
-            className="hidden h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition hover:bg-forest-light sm:flex"
-          >
-            <UserRound className="size-4" />
-            {viewer ? t("account") : actions("signin")}
-          </Link>
+          {viewer ? (
+            <AccountMenu
+              locale={locale}
+              name={viewer.fullName || viewer.email}
+              initials={avatarInitials(viewer.fullName, viewer.email)}
+              avatarUrl={avatarUrl}
+              links={[
+                { href: "/account", label: t("account") },
+                { href: "/account/settings", label: account("nav.settings") },
+                { href: "/account/favorites", label: account("nav.favorites") },
+                { href: "/account/requests", label: account("nav.requests") },
+              ]}
+              labels={{
+                open: account("menu.open"),
+                signOut: actions("signout"),
+                confirmTitle: account("signOut.title"),
+                confirmBody: account("signOut.body"),
+                confirmAction: actions("signout"),
+                cancel: actions("cancel"),
+              }}
+            />
+          ) : (
+            <Link
+              href="/sign-in"
+              className="hidden h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition hover:bg-forest-light sm:flex"
+            >
+              <UserRound className="size-4" />
+              {actions("signin")}
+            </Link>
+          )}
           <MobileMenu
             items={items}
             openLabel={t("menu")}

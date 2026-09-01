@@ -8,8 +8,13 @@ export default defineConfig({
   testIgnore: ["dev-runtime.spec.ts"],
   timeout: 30_000,
   expect: { timeout: 7_500 },
-  fullyParallel: true,
-  workers: 2,
+  // `auth-state-machine.spec.ts` drives real Supabase personas: it creates,
+  // blocks and deletes actual accounts. Those fixtures are shared backend
+  // state, so letting that file race other specs across workers produced
+  // intermittent, non-reproducible failures in unrelated tests. A single
+  // worker costs about a minute and makes the gate deterministic.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   use: { baseURL: "http://127.0.0.1:3000", trace: "retain-on-failure" },

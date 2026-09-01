@@ -4,30 +4,20 @@
 
 ## Current Phase
 
-**Phase 3 — Auth state machine and authorization policy — IMPLEMENTATION
-COMPLETE; gate awaiting one manual confirmation.**
+**Phase 4 — Customer account, avatar, and header identity — COMPLETE, GATE
+PASSED.**
 
-Phase 4 **has not been started**.
+Phase 5 **has not been started**.
 
-> ### ACTION REQUIRED BY THE OWNER — one manual step
+> ### Still outstanding from Phase 3 — one manual step
 >
-> Everything automatable is green. Both root causes of the original
-> "sign-in did not work" report are fixed: the implicit-flow fragment
-> callback, and the missing `profiles` row on the owner's own account (now
-> reconciled — **0 orphans**). The only unproven segment is Gmail delivery
-> plus a human click, so `P3-T06` stays open. To close it:
->
-> 1. `npm run dev`, then open <http://localhost:3000/sign-up>
-> 2. Register with a real inbox. **Leave Company Name blank** — it is optional
->    and this also proves omission is safe. Use the new eye icon to check the
->    password you typed.
-> 3. Open the confirmation email and click its link
-> 4. Expected: a brief "Completing sign-in…" screen, then **/account**
-> 5. Sign out, then sign in with the same credentials — expected: **/account**
->
-> Your existing Gmail account has been repaired and should now sign in
-> normally too. If no email arrives, the project's SMTP is rate-limited
-> (`429`) — wait rather than re-registering repeatedly.
+> `P3-T06` remains open pending a single manual Gmail confirmation. Phase 4
+> was executed on instruction and does not depend on it: it depends on the
+> Auth guards, which are proven by the 12/12 real-persona suite and the 50/50
+> Phase 1 security suite. To close P3-T06: sign up at
+> <http://localhost:3000/sign-up> with a real inbox (Company Name may be left
+> blank), click the confirmation link, expect **/account**, then sign out and
+> sign in again.
 
 ## Completed Task IDs
 
@@ -75,6 +65,24 @@ Evidence: `evidence/phase-3-auth-state-machine.md`
 - `role = USER` + unblocked, composing the live `hills_is_verified_user()` helper
   rather than duplicating it. A blocked customer loses capability on the next
   request even holding a valid session.
+
+### Phase 4 — COMPLETE, gate PASSED
+
+| Task                           | Status   | Notes                                                                                                   |
+| ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------- |
+| `P4-T01` avatar upload/delete  | **PASS** | signature-validated bytes, `auth.uid()`-derived path, safe replace ordering; no policy or schema change |
+| `P4-T02` header account menu   | **PASS** | header persona now resolved with `requireVerifiedUser()`; never shows an Admin link                     |
+| `P4-T03` sign-out confirmation | **PASS** | shared `ConfirmDialog`, reusable by Phase 5/7; wired into header menu and settings                      |
+| `P4-T04` account overview      | **PASS** | real favorites / active-sample / recent-activity queries                                                |
+| `P4-T05` favorites isolation   | **PASS** | cross-user read, insert and blocked-write all denied at RLS                                             |
+| `P4-T06` request history       | **PASS** | ownership enforced at the database layer, foreign codes return empty                                    |
+| `P4-T07` `account/settings`    | **PASS** | profile + security consolidated; old URLs permanently redirect                                          |
+| `P4-T08` **GATE**              | **PASS** | 43/43 browser assertions, 0 console errors                                                              |
+
+Evidence: `evidence/phase-4-account-avatar-header.md`
+
+**No database or storage change.** The `avatars` bucket stays private and
+every `avatars_owner_*` policy is untouched; Phase 1 re-ran green at 50/50.
 
 ## Current / Next Task
 

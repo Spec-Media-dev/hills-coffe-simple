@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { getViewer } from "@/lib/auth/session";
+import { requireVerifiedUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export default async function RequestDetailPage({
 }: PageProps<"/[locale]/account/requests/[code]">) {
   const { code } = (await params) as { locale: Locale; code: string };
   // The account layout already guarantees an authenticated viewer.
-  const viewer = await getViewer();
+  const viewer = await requireVerifiedUser();
   if (!viewer) return null;
 
   const db = await createSupabaseServerClient();

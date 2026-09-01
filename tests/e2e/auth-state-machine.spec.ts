@@ -149,7 +149,16 @@ test.describe("Phase 3 real Auth state machine", () => {
   }) => {
     await submitCredentials(page, "/sign-in", fixtures.verified);
     await expect(page).toHaveURL(/\/account$/);
-    await page.getByRole("button", { name: /sign out/i }).click();
+
+    // Phase 4 moved customer sign-out into the header account menu behind a
+    // confirmation dialog, so this drives the control a real customer uses —
+    // open the menu, choose sign out, then confirm.
+    await page.locator('header button[aria-haspopup="menu"]').first().click();
+    await page.locator('[role="menu"] button').last().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.locator('form button[type="submit"]').click();
+
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/account");
     await expect(page).toHaveURL(/\/sign-in\?next=/);

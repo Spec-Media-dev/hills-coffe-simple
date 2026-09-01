@@ -371,7 +371,25 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 4 — Customer account, avatar, and header identity
 
-- [ ] P4-T01 Implement `uploadAvatar`/`deleteAvatar` actions
+> **Status (2026-09-01): PHASE 4 COMPLETE — GATE PASS.**
+> Evidence: `evidence/phase-4-account-avatar-header.md`.
+>
+> P4-T01 … P4-T08 all PASS.
+>
+> Avatar upload/replace/delete implemented against the existing private
+> `avatars` bucket with **no policy or schema change**: bytes are validated by
+> signature (not the browser-reported type), the path is derived from
+> `auth.uid()`, and the owner-scoped storage policy remains the real boundary.
+> The header now resolves its persona with `requireVerifiedUser()`, so an
+> Administrator or blocked customer is never rendered as a protected-pricing
+> customer. `account/profile` and `account/security` consolidated into
+> `account/settings` behind permanent redirects.
+>
+> Runtime: **43/43** browser assertions with 0 console errors; unit 67/67;
+> integration 62/62; Phase 3 personas 12/12; production Playwright 146;
+> dev Playwright 73/73; build 56/56.
+
+- [X] P4-T01 Implement `uploadAvatar`/`deleteAvatar` actions
   - **Goal**: Deliver `contracts/account-avatar-actions.md`'s avatar upload/delete contract in full — server-side MIME/size/signature validation, owner-derived storage path, safe replace/orphan-cleanup ordering.
   - **Dependencies**: Phase 3 complete (requires `requireVerifiedUser()`).
   - **Files/modules**: `src/actions/account.ts`, a new avatar-resolving helper shared with Phase 5's Admin avatar view.
@@ -385,7 +403,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 2 acceptance scenarios 1–3 pass.
   - **Out of scope**: the Admin read-only avatar viewer (Phase 5); the project logo (Phase 8) — these never share storage location or actions with customer avatars (FR-022).
 
-- [ ] P4-T02 [P] Build the header avatar/account menu
+- [X] P4-T02 [P] Build the header avatar/account menu
   - **Goal**: Replace the anonymous sign-in CTA with a resolved avatar/default-icon menu for a signed-in verified customer, per the master plan's Header Auth State section.
   - **Dependencies**: P4-T01 (avatar resolver must exist).
   - **Files/modules**: `src/components/navigation/site-header.tsx`, `src/components/navigation/mobile-menu.tsx`.
@@ -399,7 +417,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: the avatar menu is stable across navigation/theme/locale changes (no flash of the wrong state).
   - **Out of scope**: the sign-out confirmation dialog itself (P4-T03).
 
-- [ ] P4-T03 [P] Build the sign-out confirmation dialog
+- [X] P4-T03 [P] Build the sign-out confirmation dialog
   - **Goal**: A localized, theme-aware confirmation dialog with Cancel/Sign Out; success clears the session, invalidates viewer caches, closes menus, and navigates home.
   - **Dependencies**: P4-T02 (menu must exist to trigger this dialog from).
   - **Files/modules**: a new shared confirmation-dialog component (reusable by Phase 5's Admin sign-out and Phase 7's destructive Admin actions), wired into the header menu and account/security page.
@@ -413,7 +431,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` Header Auth State sign-out behavior passes for both customer and (later, Phase 5) Admin contexts using the same shared component.
   - **Out of scope**: Admin-specific sign-out wiring (Phase 5 references this component, does not rebuild it).
 
-- [ ] P4-T04 [P] Finalize the account overview dashboard
+- [X] P4-T04 [P] Finalize the account overview dashboard
   - **Goal**: Real favorites count, real active-sample count (all non-`CLOSED` `SAMPLE_REQUEST` states), recent request activity, and quick links — with zero fabricated business metric (FR-016).
   - **Dependencies**: Phase 3 complete.
   - **Files/modules**: `src/app/[locale]/account/page.tsx`.
@@ -427,7 +445,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 2 acceptance scenario 5 passes.
   - **Out of scope**: the request list/detail pages themselves (P4-T06).
 
-- [ ] P4-T05 [P] Verify favorites cross-user isolation
+- [X] P4-T05 [P] Verify favorites cross-user isolation
   - **Goal**: Confirm `toggleFavorite`/list-favorites are scoped to `user_id = auth.uid()` with no possible cross-user read/write (FR-020, part of FR-021's spirit for favorites).
   - **Dependencies**: Phase 3 complete.
   - **Files/modules**: `src/actions/account.ts` (`toggleFavoriteAction`), `src/app/[locale]/account/favorites/page.tsx`.
@@ -441,7 +459,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: zero cross-user favorite access possible.
   - **Out of scope**: the catalog data those favorites reference (Phase 6).
 
-- [ ] P4-T06 Finalize request history list/detail/timeline
+- [X] P4-T06 Finalize request history list/detail/timeline
   - **Goal**: A verified customer can list and open their own request history with an immutable, chronological status timeline (FR-021).
   - **Dependencies**: Phase 3 complete.
   - **Note (not a dependency)**: this task uses whatever status labels exist today for `NEW`/`RECEIVED`/`CONTACTED`/`CLOSED`; it is not blocked on Phase 7, but is revisited without reopening by `P7-T04`, which adds the `SAMPLE_SENT`/`DELIVERED` labels this task's timeline component then also renders.
@@ -456,7 +474,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 2 acceptance scenario 5 (history) and the Requests contract in `contracts/account-avatar-actions.md` pass.
   - **Out of scope**: Admin's view of the same data (Phase 5/7).
 
-- [ ] P4-T07 Consolidate `account/profile` and `account/security` toward `account/settings`
+- [X] P4-T07 Consolidate `account/profile` and `account/security` toward `account/settings`
   - **Goal**: Converge on the master plan's target `account/settings` route per its Route Migration Map, keeping the old URLs alive as compatibility redirects rather than deleting them outright.
   - **Dependencies**: P4-T01 (avatar must be part of settings), P3-T05 (password-change semantics finalized).
   - **Files/modules**: new `src/app/[locale]/account/settings/page.tsx`; `profile/page.tsx` and `security/page.tsx` become redirect stubs once parity is confirmed.
@@ -470,7 +488,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: no bookmarked old URL breaks; `settings` is feature-complete relative to the two pages it replaces.
   - **Out of scope**: any new settings field not already present on `profile`/`security`.
 
-- [ ] P4-T08 **PHASE 4 ACCEPTANCE GATE**
+- [X] P4-T08 **PHASE 4 ACCEPTANCE GATE**
   - **Goal**: Confirm the customer account experience is complete and correctly isolated before Admin-side avatar viewing (Phase 5) or public redesign (Phase 9) depends on it.
   - **Dependencies**: P4-T01 through P4-T07.
   - **Runtime acceptance condition** (per `plan.md` Phase 4, `spec.md` SC-001): default/uploaded avatar stable across navigation/theme/locale; account counts and timeline are real; zero unauthorized account/avatar/favorite/request access by any tested means.

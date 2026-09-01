@@ -1,12 +1,25 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { useActionState, useEffect } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  idleLegacyActionResult,
-  type LegacyActionResult as ActionResult,
+  fieldErrorsOf,
+  idleActionState,
+  settled,
+  type ActionFormState,
+  type ActionResult,
 } from "@/lib/actions";
+
+/**
+ * Account forms resolve `messageKey` values against `account.responses` in the
+ * active locale. The server never sends prose, so an English page renders
+ * English and an Arabic page renders Arabic with no branching in action code.
+ */
+const useAccountCopy = () => useTranslations("account.responses");
+const translated = (t: ReturnType<typeof useAccountCopy>, key: string) =>
+  t(key as Parameters<typeof t>[0]);
 
 export function FormField({
   label,
@@ -31,30 +44,55 @@ export function FormField({
   maxLength?: number;
   hint?: string;
 }) {
+  const t = useAccountCopy();
   const id = `account-${name}`;
+  // Password inputs get the same visibility control as the Auth forms. Only
+  // the input's `type` changes, so the DOM keeps the typed value; it is never
+  // copied into state, a URL, storage, or a log.
+  const isPassword = type === "password";
+  const [revealed, setRevealed] = useState(false);
+  const inputType = isPassword && revealed ? "text" : type;
   const describedBy =
     [error?.length ? `${id}-error` : null, hint ? `${id}-hint` : null]
       .filter(Boolean)
       .join(" ") || undefined;
+
   return (
-    <label
-      htmlFor={id}
-      className="grid gap-2 text-sm font-bold text-foreground"
-    >
-      <span>{label}</span>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        autoComplete={autoComplete}
-        dir={dir}
-        required={required}
-        maxLength={maxLength}
-        aria-invalid={Boolean(error?.length)}
-        aria-describedby={describedBy}
-        className="h-12 rounded-xl border border-input bg-card px-4 text-base font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
-      />
+    <div className="grid gap-2 text-sm font-bold text-foreground">
+      <label htmlFor={id}>{label}</label>
+      <div className="relative">
+        <input
+          id={id}
+          name={name}
+          type={inputType}
+          defaultValue={defaultValue}
+          autoComplete={autoComplete}
+          dir={dir}
+          required={required}
+          maxLength={maxLength}
+          aria-invalid={Boolean(error?.length)}
+          aria-describedby={describedBy}
+          className={`h-12 w-full rounded-xl border border-input bg-card text-base font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20 ${
+            isPassword ? "ps-4 pe-12" : "px-4"
+          }`}
+        />
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setRevealed((value) => !value)}
+            aria-label={revealed ? t("hidePassword") : t("showPassword")}
+            aria-pressed={revealed}
+            aria-controls={id}
+            className="absolute inset-y-0 end-0 grid w-12 place-items-center rounded-e-xl text-muted-foreground outline-none transition hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            {revealed ? (
+              <EyeOff className="size-5" aria-hidden="true" />
+            ) : (
+              <Eye className="size-5" aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
+      </div>
       {hint ? (
         <span
           id={`${id}-hint`}
@@ -68,26 +106,28 @@ export function FormField({
           id={`${id}-error`}
           className="text-xs font-medium text-destructive"
         >
-          {error[0]}
+          {translated(t, error[0])}
         </span>
       ) : null}
-    </label>
+    </div>
   );
 }
 
-export function FormStatus({ state }: { state: ActionResult }) {
-  if (!state.message || (!state.ok && state.code === "idle")) return null;
+export function FormStatus({ state }: { state: ActionFormState }) {
+  const t = useAccountCopy();
+  const result = settled(state);
+  if (!result?.messageKey) return null;
   return (
     <p
-      role="status"
+      role={result.ok ? "status" : "alert"}
       aria-live="polite"
       className={`rounded-xl p-3 text-sm ${
-        state.ok
+        result.ok
           ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
           : "bg-destructive/10 text-destructive"
       }`}
     >
-      {state.message}
+      {translated(t, result.messageKey)}
     </p>
   );
 }
@@ -120,20 +160,24 @@ export function SubmitButton({
 
 /**
  * Wires a server action to React's form state and mirrors the result into a
- * Sonner toast so every mutation gives visible feedback.
+ * Sonner toast, resolving the returned key in the active locale.
  */
 export function useFormAction(
-  action: (state: ActionResult, data: FormData) => Promise<ActionResult>,
+  action: (state: ActionFormState, data: FormData) => Promise<ActionResult>,
 ) {
-  const result = useActionState(action, idleLegacyActionResult);
+  const result = useActionState(action, idleActionState);
   const [state] = result;
+  const t = useAccountCopy();
   useEffect(() => {
-    if (!state.message || (!state.ok && state.code === "idle")) return;
-    (state.ok ? toast.success : toast.error)(state.message);
-  }, [state]);
+    const outcome = settled(state);
+    if (!outcome?.messageKey) return;
+    (outcome.ok ? toast.success : toast.error)(
+      translated(t, outcome.messageKey),
+    );
+  }, [state, t]);
   return result;
 }
 
-export function fieldErrors(state: ActionResult) {
-  return state.ok ? undefined : state.fieldErrors;
+export function fieldErrors(state: ActionFormState) {
+  return fieldErrorsOf(state);
 }

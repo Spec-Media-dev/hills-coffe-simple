@@ -16,6 +16,7 @@ export type Viewer = {
   countryCode: string | null;
   role: AppRole;
   isBlocked: boolean;
+  avatarPath: string | null;
 };
 
 /**
@@ -37,7 +38,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id,full_name,phone,company_name,address,country_code,role,is_blocked",
+      "id,full_name,phone,company_name,address,country_code,role,is_blocked,avatar_path",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -55,6 +56,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     countryCode: profile.country_code,
     role: profile.role,
     isBlocked: Boolean(profile.is_blocked),
+    avatarPath: profile.avatar_path ?? null,
   };
 });
 

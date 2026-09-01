@@ -36,10 +36,9 @@ export default async function AccountLayout({
   const t = await getTranslations("account.nav");
   const links = [
     ["/account", t("overview")],
-    ["/account/profile", t("profile")],
     ["/account/favorites", t("favorites")],
     ["/account/requests", t("requests")],
-    ["/account/security", t("security")],
+    ["/account/settings", t("settings")],
   ] as const;
   return (
     <div className="bg-page">

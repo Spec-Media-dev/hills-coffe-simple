@@ -27,7 +27,8 @@
     "pricing": "Sign in to view pricing",
     "view": "View coffee",
     "clear": "Clear filters",
-    "learn": "Learn more"
+    "learn": "Learn more",
+    "cancel": "Cancel"
   },
   "home": {
     "eyebrow": "Independent green coffee partner",
@@ -225,7 +226,8 @@
       "profile": "Profile",
       "favorites": "Favourites",
       "requests": "Requests",
-      "security": "Security"
+      "security": "Security",
+      "settings": "Settings"
     },
     "name": "Name",
     "email": "Email",
@@ -316,6 +318,67 @@
       "emptyTitle": "No requests yet",
       "emptyBody": "When you send a product enquiry or request a sample, it will appear here so you can track its status.",
       "emptyCta": "Browse the offer list"
+    },
+    "responses": {
+      "sessionExpired": "Your session expired. Sign in again.",
+      "configuration": "Account service is not connected yet.",
+      "validation": "Review the highlighted fields and try again.",
+      "saveFailed": "We could not save your changes. Try again.",
+      "profileSaved": "Changes saved.",
+      "emailChangeSent": "We sent a confirmation link to your new email address.",
+      "sameEmail": "That is already your current email address.",
+      "passwordUpdated": "Password updated.",
+      "wrongPassword": "Your current password is incorrect.",
+      "invalidFullName": "Enter your full name.",
+      "invalidPhone": "Enter a valid phone number.",
+      "invalidCompanyName": "Company name must be 160 characters or fewer.",
+      "invalidAddress": "Address must be 300 characters or fewer.",
+      "invalidCountry": "Use a two-letter country code.",
+      "invalidPassword": "Use at least 10 characters with a letter and a number.",
+      "passwordMismatch": "The password confirmation does not match.",
+      "invalidEmail": "Enter a valid email address.",
+      "avatarUpdated": "Profile photo updated.",
+      "avatarRemoved": "Profile photo removed.",
+      "avatarEmpty": "Choose an image to upload.",
+      "avatarTooLarge": "That image is larger than 5 MB. Choose a smaller one.",
+      "avatarUnsupportedType": "Use a JPEG, PNG, or WebP image.",
+      "avatarSignatureMismatch": "That file is not a valid image. Choose a JPEG, PNG, or WebP.",
+      "avatarUploadFailed": "We could not upload that photo. Try again.",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "menu": {
+      "open": "Open account menu"
+    },
+    "signOut": {
+      "title": "Sign out of Hills Coffee?",
+      "body": "You will need to sign in again to reach your account, favorites, and requests."
+    },
+    "settings": {
+      "eyebrow": "Account",
+      "title": "Settings",
+      "intro": "Manage your profile photo, contact details, and sign-in credentials.",
+      "photoHeading": "Profile photo",
+      "photoHint": "JPEG, PNG, or WebP. Up to 5 MB.",
+      "photoChoose": "Choose image",
+      "photoUpload": "Upload photo",
+      "photoRemove": "Remove photo",
+      "photoCurrent": "Your current photo",
+      "photoNone": "No photo yet — your initials are shown instead."
+    },
+    "stats": {
+      "favorites": "Saved coffees",
+      "activeSamples": "Active requests",
+      "recent": "Recent activity",
+      "noActivity": "No requests yet. Browse the offer list to get started."
+    },
+    "statuses": {
+      "NEW": "New",
+      "RECEIVED": "Received",
+      "CONTACTED": "Contacted",
+      "CLOSED": "Closed",
+      "SAMPLE_SENT": "Sample sent",
+      "DELIVERED": "Delivered"
     }
   },
   "admin": {

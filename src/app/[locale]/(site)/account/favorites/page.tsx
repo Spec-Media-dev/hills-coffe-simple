@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { toggleFavoriteAction } from "@/actions/account";
 import { OfferCard } from "@/components/catalog/offer-card";
 import type { Locale } from "@/i18n/routing";
-import { getViewer } from "@/lib/auth/session";
+import { requireVerifiedUser } from "@/lib/auth/session";
 import { getOfferList } from "@/lib/data/catalog";
 import { Link } from "@/i18n/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -18,7 +18,7 @@ export default async function FavoritesPage({
   params,
 }: PageProps<"/[locale]/account/favorites">) {
   const { locale } = await params;
-  const viewer = await getViewer();
+  const viewer = await requireVerifiedUser();
   if (!viewer) return null;
   const db = await createSupabaseServerClient();
   const [{ data }, catalog] = await Promise.all([

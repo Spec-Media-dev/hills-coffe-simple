@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ArrowRight, ClipboardList } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getViewer } from "@/lib/auth/session";
+import { requireVerifiedUser } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function RequestsPage() {
   // The account layout already guarantees an authenticated viewer.
-  const viewer = await getViewer();
+  const viewer = await requireVerifiedUser();
   if (!viewer) return null;
   const db = await createSupabaseServerClient();
   const { data } = await db
