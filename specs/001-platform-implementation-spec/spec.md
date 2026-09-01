@@ -10,7 +10,7 @@
 
 **Authoritative sources**: `docs/CODEX_HILLS_MASTER_REBUILD_PLAN.md`, `docs/HILLS_SUPABASE_CURRENT_STATE.md`, `.specify/memory/constitution.md`, and the existing approved Hills implementation/SEO/brand documents under `docs/` and `src/support/`. Where the current Supabase snapshot differs from older snapshots, the current snapshot governs. This specification documents already-approved product decisions; it does not perform new product discovery, does not redesign scope, and does not modify code or the database.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Customer Authentication, Verification & Authorization State Machine (Priority: P1)
 
@@ -22,7 +22,7 @@ A prospective buyer registers an account, verifies their email, and reaches a se
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor with no session, **When** they submit valid sign-up details, **Then** an account is created in an unverified state, no role or company field was requested, and the visitor is shown a neutral "check your email" state without any protected capability granted.
+1. **Given** a visitor with no session, **When** they submit valid sign-up details with or without the optional company name, **Then** an account is created in an unverified state, no role or administrator-signup field was requested, and the visitor is shown a neutral "check your email" state without any protected capability granted.
 2. **Given** an unverified account, **When** the person attempts to view protected pricing, add a favorite, or submit a product/sample inquiry, **Then** every attempt is refused with a localized "verify your email" message and none of those actions leave a data trace.
 3. **Given** an unverified account, **When** the person opens the real confirmation link, **Then** the system re-checks the actual confirmed-email state (not merely that a callback was reached) before granting any protected capability.
 4. **Given** a confirmed, unblocked account with role USER, **When** they sign in, **Then** they land on their customer destination and protected actions succeed.
@@ -162,12 +162,12 @@ Every public, account, and admin surface behaves identically in substance across
 - What happens when a filter combination in the catalog does not correspond to an approved landing page? The page must remain reachable but marked non-indexable and canonicalized to the unfiltered collection, never treated as a security boundary substitute.
 - What happens when the production canonical hostname is not yet configured? The system must fail clearly during production startup rather than silently publishing an incorrect host.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements — Authentication & Authorization
 
 - **FR-001**: The system MUST recognize exactly these viewer states and evaluate every protected page, action, and data query against the current state on every request: anonymous, signup-pending, unverified, verification-waiting, verified-transitional, authenticated customer (role USER, confirmed, unblocked), authenticated administrator (role ADMIN, confirmed, unblocked), password-recovery, blocked, and signed-out.
-- **FR-002**: Public sign-up MUST collect only full name, email, phone, password, and password confirmation, MUST NOT expose a role or company selector, and MUST always create a customer (role USER) account.
+- **FR-002**: Public sign-up MUST require full name, email, phone, password, and password confirmation; MAY collect an optional company name; MUST NOT expose a role selector or administrator-signup path; and MUST always create a customer (role USER) account. When supplied, the optional company name MUST be persisted to the customer's profile without affecting authorization.
 - **FR-003**: The system MUST return an identical, neutral response to sign-up and password-recovery requests regardless of whether the email address already has an account, so account existence is never revealed.
 - **FR-004**: The system MUST NOT grant any protected capability (pricing, favorites, inquiry submission, account access) to a session whose email is not confirmed, regardless of how the request was made.
 - **FR-005**: After any authentication callback (email confirmation or password recovery), the system MUST re-check the actual resulting account state (confirmed-email status, and for recovery, a genuine recovery session) before proceeding — reaching the callback URL is never sufficient by itself.
@@ -259,7 +259,7 @@ Every public, account, and admin surface behaves identically in substance across
 - **FR-067**: The database and storage layer MUST independently deny a blocked customer's routine self-service mutations even when the customer holds a technically valid session, with no dependence on the application layer catching the attempt first: a blocked customer's normal profile self-update path MUST be denied, and all of upload, replace, delete, and read of their own avatar through the normal owner-scoped storage policy MUST be denied.
 - **FR-068**: Closing the gap in FR-067 MUST NOT reduce Administrator or service-role access to the same resources, and MUST NOT create any path — direct or indirect — by which a blocked customer can change their own blocked state or otherwise restore their own access.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **Customer/Administrator Profile**: Represents a person's application-level identity — name, contact details, role (customer or administrator), verification-relevant state, blocked state and its audit trail (when/by whom/optional internal reason), and a reference to an optional personal avatar image. Distinct from the underlying authentication credential record.
 - **Avatar Image**: A private, owner-scoped image associated with exactly one profile; independent of business/catalog media and of the project brand logo.
@@ -270,7 +270,7 @@ Every public, account, and admin surface behaves identically in substance across
 - **Media Item / Site Settings**: A managed image asset (business/editorial, CMS, or brand) with translation/alt text and reference tracking; site settings hold the organization's public-facing configuration including which media item is the active project logo.
 - **Audit Log Entry**: An administrator-readable record of a privileged action — what changed, who performed it, and when — used for accountability and never exposed to non-administrators.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

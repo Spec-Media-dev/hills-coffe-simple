@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { localizedPath } from "@/lib/auth/redirects";
 import { getViewer } from "@/lib/auth/session";
+import { hasRecoveryMarker } from "@/lib/auth/recovery";
 export default async function AccountLayout({
   children,
   params,
@@ -12,6 +13,8 @@ export default async function AccountLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = (await params) as { locale: Locale };
+  if (await hasRecoveryMarker())
+    redirect(localizedPath(locale, "/reset-password"));
   const viewer = await getViewer();
   if (!viewer)
     redirect(
@@ -20,6 +23,16 @@ export default async function AccountLayout({
         `/sign-in?next=${encodeURIComponent(localizedPath(locale, "/account"))}`,
       ),
     );
+  if (viewer.isBlocked)
+    redirect(`/auth/reject?reason=blocked&locale=${locale}`);
+  if (!viewer.emailVerified)
+    redirect(
+      localizedPath(
+        locale,
+        `/verify-email?email=${encodeURIComponent(viewer.email)}`,
+      ),
+    );
+  if (viewer.role !== "USER") redirect(localizedPath(locale, "/admin"));
   const t = await getTranslations("account.nav");
   const links = [
     ["/account", t("overview")],

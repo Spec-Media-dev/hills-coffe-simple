@@ -58,7 +58,9 @@ test.describe("anonymous routing and auth boundaries", () => {
     });
     expect(response?.status()).toBe(200);
     await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(
+      page.getByLabel(/password/i).and(page.locator("input")),
+    ).toBeVisible();
     // Admin sign-up must never be exposed.
     await expect(
       page.getByRole("link", { name: /create account/i }),

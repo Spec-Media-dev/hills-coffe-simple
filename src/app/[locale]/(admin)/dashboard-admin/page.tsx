@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { AdminSignInForm } from "@/components/forms/auth-forms";
 import type { Locale } from "@/i18n/routing";
 import { localizedPath } from "@/lib/auth/redirects";
-import { getViewer } from "@/lib/auth/session";
+import { getViewer, requireAdmin } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
@@ -16,8 +16,8 @@ export default async function DashboardAdminPage({
   params,
 }: PageProps<"/[locale]/dashboard-admin">) {
   const { locale } = (await params) as { locale: Locale };
-  const viewer = await getViewer();
-  if (viewer?.role === "ADMIN") redirect(localizedPath(locale, "/admin"));
+  const [viewer, admin] = await Promise.all([getViewer(), requireAdmin()]);
+  if (admin) redirect(localizedPath(locale, "/admin"));
   const t = await getTranslations("auth");
   const actions = await getTranslations("actions");
   return (

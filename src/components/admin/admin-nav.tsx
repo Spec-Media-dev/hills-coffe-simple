@@ -1,30 +1,17 @@
-import {
-  BadgeDollarSign,
-  Boxes,
-  Building2,
-  ClipboardList,
-  Coffee,
-  FileText,
-  ImageIcon,
-  LayoutDashboard,
-  Library,
-  Map,
-  MapPin,
-  Newspaper,
-  ScrollText,
-  Settings,
-  ShieldCheck,
-  Sprout,
-  Tags,
-  UsersRound,
-  type LucideIcon,
-} from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { AdminNavLink } from "@/components/admin/admin-nav-link";
+import {
+  AdminNavLink,
+  type AdminNavIcon,
+} from "@/components/admin/admin-nav-link";
 import { BrandMark } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
 
-type NavItem = { href: string; label: string; hint?: string; icon: LucideIcon };
+type NavItem = {
+  href: string;
+  label: string;
+  hint?: string;
+  icon: AdminNavIcon;
+};
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
 export async function AdminNav() {
@@ -38,19 +25,19 @@ export async function AdminNav() {
       id: "overview",
       label: groupLabels("overview"),
       items: [
-        { href: "/admin", label: nav("overview"), icon: LayoutDashboard },
+        { href: "/admin", label: nav("overview"), icon: "LayoutDashboard" },
       ],
     },
     {
       id: "catalog",
       label: groupLabels("catalog"),
       items: [
-        { href: "/admin/products", label: nav("products"), icon: Coffee },
-        { href: "/admin/offers", label: nav("offers"), icon: Boxes },
+        { href: "/admin/products", label: nav("products"), icon: "Coffee" },
+        { href: "/admin/offers", label: nav("offers"), icon: "Boxes" },
         {
           href: "/admin/pricing",
           label: nav("pricing"),
-          icon: BadgeDollarSign,
+          icon: "BadgeDollarSign",
         },
       ],
     },
@@ -58,19 +45,19 @@ export async function AdminNav() {
       id: "coffee-data",
       label: groupLabels("coffeeData"),
       items: [
-        { href: "/admin/origins", label: nav("origins"), icon: MapPin },
-        { href: "/admin/regions", label: nav("regions"), icon: Map },
-        { href: "/admin/varieties", label: nav("varieties"), icon: Sprout },
+        { href: "/admin/origins", label: nav("origins"), icon: "MapPin" },
+        { href: "/admin/regions", label: nav("regions"), icon: "Map" },
+        { href: "/admin/varieties", label: nav("varieties"), icon: "Sprout" },
         {
           href: "/admin/warehouses",
           label: nav("warehouses"),
-          icon: Building2,
+          icon: "Building2",
         },
         {
           href: "/admin/taxonomy",
           label: nav("taxonomy"),
           hint: nav("taxonomyHint"),
-          icon: Tags,
+          icon: "Tags",
         },
       ],
     },
@@ -81,19 +68,23 @@ export async function AdminNav() {
         {
           href: "/admin/content",
           label: nav("contentPages"),
-          icon: FileText,
+          icon: "FileText",
         },
-        { href: "/admin/articles", label: nav("articles"), icon: Newspaper },
+        {
+          href: "/admin/articles",
+          label: nav("articles"),
+          icon: "Newspaper",
+        },
         {
           href: "/admin/article-categories",
           label: nav("articleCategories"),
-          icon: Library,
+          icon: "Library",
         },
-        { href: "/admin/media", label: nav("media"), icon: ImageIcon },
+        { href: "/admin/media", label: nav("media"), icon: "ImageIcon" },
         {
           href: "/admin/settings",
           label: nav("siteSettings"),
-          icon: Settings,
+          icon: "Settings",
         },
       ],
     },
@@ -101,11 +92,11 @@ export async function AdminNav() {
       id: "customers",
       label: groupLabels("customers"),
       items: [
-        { href: "/admin/users", label: nav("users"), icon: UsersRound },
+        { href: "/admin/users", label: nav("users"), icon: "UsersRound" },
         {
           href: "/admin/inquiries",
           label: nav("inquiries"),
-          icon: ClipboardList,
+          icon: "ClipboardList",
         },
       ],
     },
@@ -113,8 +104,8 @@ export async function AdminNav() {
       id: "system",
       label: groupLabels("system"),
       items: [
-        { href: "/admin/audit", label: nav("audit"), icon: ScrollText },
-        { href: "/admin/account", label: nav("account"), icon: ShieldCheck },
+        { href: "/admin/audit", label: nav("audit"), icon: "ScrollText" },
+        { href: "/admin/account", label: nav("account"), icon: "ShieldCheck" },
       ],
     },
   ];

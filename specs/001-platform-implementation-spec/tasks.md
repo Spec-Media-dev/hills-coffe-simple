@@ -274,7 +274,24 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 3 — Auth state machine and authorization policy
 
-- [ ] P3-T01 [P] Adopt the `ActionResult` contract in `src/actions/auth.ts`
+> **Status (2026-09-01): implementation COMPLETE; gate awaiting one manual
+> confirmation.** Evidence: `evidence/phase-3-auth-state-machine.md`.
+>
+> P3-T01 PASS · P3-T02 PASS · P3-T03 PASS · P3-T04 PASS · P3-T05 PASS ·
+> P3-T06 pending the owner's real Gmail confirmation click.
+>
+> **Owner-observed blocker fixed.** A real Supabase confirmation link returned
+> the session in the URL **fragment** (implicit flow). A fragment never reaches
+> the server, so `/auth/callback` saw no `code`/`token_hash` and reported a
+> *successful* confirmation as `link_expired`, with no session. Now delegated to
+> a browser-side handler that hands the tokens to the Supabase client and
+> returns to the server for the same authoritative classification. Full journey
+> verified with a genuine Supabase-minted token in a real browser:
+> confirm -> `email_confirmed_at` SET -> session cookie -> `/account` ->
+> sign-in SUCCESS. **N1 (HIGH) closed**: the customer guard is now
+> authenticated + verified + `role = USER` + unblocked.
+
+- [X] P3-T01 [P] Adopt the `ActionResult` contract in `src/actions/auth.ts`
   - **Goal**: Bring every Auth action onto the single typed result shape in `contracts/action-result.md`, replacing any ad hoc result type.
   - **Dependencies**: Phase 2 complete (routes stable).
   - **Files/modules**: `src/actions/auth.ts`, `src/lib/actions.ts` (shared type), Auth-consuming form components.
@@ -288,7 +305,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `npm run typecheck` passes with the new shared type; no raw error string appears in any Auth action's output for any tested failure path.
   - **Out of scope**: changing sign-up/sign-in/reset business logic itself (that is P3-T02–T04).
 
-- [ ] P3-T02 Harden `signIn`/`adminSignIn` state-machine branches
+- [X] P3-T02 Harden `signIn`/`adminSignIn` state-machine branches
   - **Goal**: Verify and, where needed, correct the exact ordering `spec.md` FR-004/FR-008/FR-009/FR-014 require: unverified → `VERIFICATION_REQUIRED`; blocked → `BLOCKED` with session cleared and no reason disclosed; Admin via customer sign-in → `ADMIN_PORTAL_REQUIRED` with no customer session; customer via Admin sign-in → `FORBIDDEN`.
   - **Dependencies**: P3-T01; Phase 1 verification (P1-T01) that `hills_is_verified_user()`/`is_admin()` behave as documented.
   - **Files/modules**: `src/actions/auth.ts` (`signIn`, `adminSignIn`), `src/lib/auth/session.ts`.
@@ -302,7 +319,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every branch in `spec.md` User Story 1's acceptance scenarios 2, 5, 7 passes.
   - **Out of scope**: password recovery (P3-T04); the three-minute verification UX (P3-T03).
 
-- [ ] P3-T03 Verify the three-minute verification UX is presentational-only
+- [X] P3-T03 Verify the three-minute verification UX is presentational-only
   - **Goal**: Confirm (and correct if needed) that the post-signup waiting window is a UX convention, never treated as token expiry, and that resend is server-rate-limited rather than only client-timer-gated (FR-006, FR-007).
   - **Dependencies**: P3-T01.
   - **Files/modules**: `src/app/[locale]/(auth)/verify-email/page.tsx` (post-Phase-2 location), `src/components/forms/verify-email-form.tsx`, `src/actions/auth.ts` (`resendVerification`).
@@ -316,7 +333,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` Edge Cases row "customer never confirms within the three-minute window" passes.
   - **Out of scope**: the real email-click confirmation itself (P3-T04).
 
-- [ ] P3-T04 Harden `/auth/callback` real-state re-verification
+- [X] P3-T04 Harden `/auth/callback` real-state re-verification
   - **Goal**: Confirm the callback route re-reads the actual resulting user/session state (not just "callback was reached") before granting any protected destination, for both signup-confirmation and recovery purposes, and that a purpose-mismatched or expired/reused link is handled safely (FR-005).
   - **Dependencies**: P3-T01–T02.
   - **Files/modules**: `src/app/auth/callback/route.ts`.
@@ -330,7 +347,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every callback purpose-mixing/expiry case in `spec.md` Edge Cases passes; no protected destination is ever reached without a genuinely re-verified state.
   - **Out of scope**: the reset-password form itself (P3-T05).
 
-- [ ] P3-T05 [P] Harden forgot/reset password recovery-session enforcement
+- [X] P3-T05 [P] Harden forgot/reset password recovery-session enforcement
   - **Goal**: Confirm `requestPasswordReset` returns a neutral response regardless of account existence (FR-003) and that `resetPassword` refuses to operate outside a genuine, server-verified recovery session (FR-012), invalidating that recovery context after a successful update (FR-013).
   - **Dependencies**: P3-T01, P3-T04 (recovery arrives via the same callback route).
   - **Files/modules**: `src/actions/auth.ts` (`requestPasswordReset`, `resetPassword`), `src/app/[locale]/(auth)/forgot-password/page.tsx`, `reset-password/page.tsx`.
@@ -344,7 +361,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 1 acceptance scenario 6 passes in full.
   - **Out of scope**: the in-account (already-authenticated) password-change flow, which belongs to Phase 4's account/security work.
 
-- [ ] P3-T06 **PHASE 3 ACCEPTANCE GATE**
+- [~] P3-T06 **PHASE 3 ACCEPTANCE GATE**
   - **Goal**: Confirm the full authorization state machine is correct before any customer- or Admin-facing feature depends on it.
   - **Dependencies**: P3-T01 through P3-T05; P1-T05 (Phase 1 gate, including the FR-067/FR-068 RLS/storage hardening) already passed.
   - **Runtime acceptance condition** (per `plan.md` Phase 3, `spec.md` SC-001/SC-002): only verified, unblocked USER reaches customer capability; only verified, unblocked ADMIN through `/dashboard-admin` reaches Admin capability; a blocked or recovery-context session cannot leak either capability at the application layer — and, per `P1-T05`, not at the database/storage layer either; the full sign-in/verify/recover persona matrix passes.

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AppRole } from "@/lib/supabase/types.generated";
+import { hasRecoveryMarker } from "@/lib/auth/recovery";
 
 export type Viewer = {
   id: string;
@@ -14,8 +15,18 @@ export type Viewer = {
   address: string | null;
   countryCode: string | null;
   role: AppRole;
+  isBlocked: boolean;
 };
 
+/**
+ * `public.profiles.role` is the sole authorization authority (Constitution
+ * Principle IV). Auth user metadata is never consulted for role, because it is
+ * client-writable.
+ *
+ * `is_blocked` is selected here so every application-layer guard can see it —
+ * before Phase 3 it was not read at all, which left `requireVerifiedUser()`
+ * unable to honor Principle VII (finding N1).
+ */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!isSupabaseConfigured()) return null;
   const supabase = await createSupabaseServerClient();
@@ -25,9 +36,13 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!user) return null;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id,full_name,phone,company_name,address,country_code,role")
+    .select(
+      "id,full_name,phone,company_name,address,country_code,role,is_blocked",
+    )
     .eq("id", user.id)
     .maybeSingle();
+  // No profile row means the account is not provisioned for this application,
+  // so it is treated as unauthenticated rather than partially trusted.
   if (!profile) return null;
   return {
     id: user.id,
@@ -39,17 +54,76 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     address: profile.address,
     countryCode: profile.country_code,
     role: profile.role,
+    isBlocked: Boolean(profile.is_blocked),
   };
 });
 
 export async function requireUser() {
   return getViewer();
 }
+
+/**
+ * The protected-customer gate (Constitution Principles V, VI and VII):
+ *
+ *   authenticated AND email-confirmed AND role = USER AND NOT blocked
+ *
+ * All four conditions are required. In particular:
+ *  - an ADMIN never passes, so an Administrator cannot inherit customer
+ *    protected-price entitlement merely by having a confirmed email
+ *    (Principle VI);
+ *  - a blocked customer never passes, even holding a previously-issued
+ *    session, so a block takes effect at the application layer and not only
+ *    in RLS (Principle VII).
+ *
+ * This mirrors the database's `hills_is_verified_user()` exactly, by design:
+ * the two are independent enforcement layers of one rule, not a replacement
+ * for one another.
+ */
 export async function requireVerifiedUser() {
+  if (await hasRecoveryMarker()) return null;
   const viewer = await getViewer();
-  return viewer?.emailVerified ? viewer : null;
+  if (!viewer) return null;
+  if (!viewer.emailVerified) return null;
+  if (viewer.isBlocked) {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut({ scope: "local" });
+    return null;
+  }
+  if (viewer.role !== "USER") return null;
+
+  // Compose the live database helper instead of letting this application
+  // check become a parallel definition that can drift from RLS.
+  const supabase = await createSupabaseServerClient();
+  const { data: entitled, error } = await supabase.rpc(
+    "hills_is_verified_user",
+  );
+  return !error && entitled === true ? viewer : null;
 }
+
+/**
+ * Administrator gate. `is_blocked` is checked defensively: the database
+ * refuses to block a non-USER row (`only_user_accounts_can_be_blocked`), so
+ * this should be unreachable, but an Administrator flagged by any future path
+ * must not retain Admin capability.
+ */
 export async function requireAdmin() {
+  if (await hasRecoveryMarker()) return null;
   const viewer = await getViewer();
-  return viewer?.role === "ADMIN" ? viewer : null;
+  if (!viewer) return null;
+  if (viewer.role !== "ADMIN") return null;
+  if (viewer.isBlocked) {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut({ scope: "local" });
+    return null;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: entitled, error } = await supabase.rpc("is_admin");
+  return !error && entitled === true ? viewer : null;
+}
+
+/** True when a signed-in customer exists but has not confirmed their email. */
+export async function isAwaitingVerification() {
+  const viewer = await getViewer();
+  return Boolean(viewer && !viewer.emailVerified);
 }

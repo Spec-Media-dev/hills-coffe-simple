@@ -3,7 +3,10 @@
 import { Loader2 } from "lucide-react";
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
-import { idleActionResult, type ActionResult } from "@/lib/actions";
+import {
+  idleLegacyActionResult,
+  type LegacyActionResult as ActionResult,
+} from "@/lib/actions";
 
 export function FormField({
   label,
@@ -122,7 +125,7 @@ export function SubmitButton({
 export function useFormAction(
   action: (state: ActionResult, data: FormData) => Promise<ActionResult>,
 ) {
-  const result = useActionState(action, idleActionResult);
+  const result = useActionState(action, idleLegacyActionResult);
   const [state] = result;
   useEffect(() => {
     if (!state.message || (!state.ok && state.code === "idle")) return;

@@ -275,7 +275,14 @@ test.describe("locale route architecture", () => {
     // Reachable globally, and never rewritten under a locale segment.
     const global = await rawResponse(page, "/auth/callback");
     expect(global.status()).toBeLessThan(500);
-    expect([200, 307, 308]).toContain(global.status());
+    // 303 was added in Phase 3: a callback carrying nothing the server can
+    // exchange is an implicit-flow confirmation whose session sits in the URL
+    // fragment, so the handler delegates to a browser page that can read it.
+    expect([200, 303, 307, 308]).toContain(global.status());
+    // Whatever it answers, it must never bounce into a locale-prefixed copy
+    // of itself.
+    const location = global.headers().location ?? "";
+    expect(location).not.toMatch(/\/(en|ar)\/auth\/callback/);
 
     // The locale-prefixed variant must NOT exist.
     const localized = await rawResponse(page, "/ar/auth/callback");

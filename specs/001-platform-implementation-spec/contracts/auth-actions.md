@@ -3,11 +3,12 @@
 All results use the `ActionResult` shape from `action-result.md`. All
 actions are server-only. None accept a client-supplied role or block state.
 
-## `signUp(fullName, email, phone, password, confirmPassword)`
+## `signUp(fullName, email, phone, companyName?, password, confirmPassword)`
 
 - **Requires**: no session, or an existing anonymous request.
 - **Effect**: creates a Supabase Auth user (unconfirmed) and a `profiles`
-  row with `role = 'USER'`. Never accepts a role or company field (FR-002).
+  row with `role = 'USER'`; persists `companyName` when supplied. Never accepts
+  a role or offers an administrator-signup path (FR-002).
 - **Returns**: `OK` with a neutral "check your email" outcome regardless of
   whether the address was already registered (FR-003). Never `VALIDATION`
   distinguishing "email taken" from "invalid email" in a way that leaks

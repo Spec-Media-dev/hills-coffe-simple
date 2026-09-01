@@ -4,21 +4,30 @@
 
 ## Current Phase
 
-**Phase 2 — Route architecture, proxy, and locale stabilization — COMPLETE,
-GATE RECONFIRMED PASS after residual runtime remediation (2026-09-01).**
+**Phase 3 — Auth state machine and authorization policy — IMPLEMENTATION
+COMPLETE; gate awaiting one manual confirmation.**
 
-Phase 3 (Auth state machine) is next and **has not been started**.
+Phase 4 **has not been started**.
 
-> **Residual remediation outcome.** The owner reproduced the script-tag error in
-> a browser served by a stale Turbopack runtime. A controlled A/B on a fresh
-> server proved causation: the pre-fix switcher reproduces it, the shipped fix
-> does not. **No application source changed.** The genuine defect was in the
-> tests — `playwright.config.ts` runs `npm run start`, and the script-tag
-> message is a React _development_ warning that a production build never emits,
-> so the suite could not have caught it. Closed by
-> `playwright.dev.config.ts` + `tests/e2e/dev-runtime.spec.ts`
-> (`npm run test:e2e:dev`), demonstrated to fail when the defect is
-> reintroduced. See finding **N12**.
+> ### ACTION REQUIRED BY THE OWNER — one manual step
+>
+> Everything automatable is green. Both root causes of the original
+> "sign-in did not work" report are fixed: the implicit-flow fragment
+> callback, and the missing `profiles` row on the owner's own account (now
+> reconciled — **0 orphans**). The only unproven segment is Gmail delivery
+> plus a human click, so `P3-T06` stays open. To close it:
+>
+> 1. `npm run dev`, then open <http://localhost:3000/sign-up>
+> 2. Register with a real inbox. **Leave Company Name blank** — it is optional
+>    and this also proves omission is safe. Use the new eye icon to check the
+>    password you typed.
+> 3. Open the confirmation email and click its link
+> 4. Expected: a brief "Completing sign-in…" screen, then **/account**
+> 5. Sign out, then sign in with the same credentials — expected: **/account**
+>
+> Your existing Gmail account has been repaired and should now sign in
+> normally too. If no email arrives, the project's SMTP is rate-limited
+> (`429`) — wait rather than re-registering repeatedly.
 
 ## Completed Task IDs
 
@@ -47,6 +56,25 @@ database. C1 / FR-067 / FR-068 closed.
 
 Evidence: `evidence/phase-2-route-locale-architecture.md`
 Regression guard: `tests/e2e/locale-switch.spec.ts` (44/44).
+
+### Phase 3 — implementation complete, gate pending manual confirmation
+
+| Task                              | Status      | Notes                                                                                     |
+| --------------------------------- | ----------- | ----------------------------------------------------------------------------------------- |
+| `P3-T01` ActionResult contract    | **PASS**    | closed domain-code set; actions return `messageKey`, never localized or raw provider text |
+| `P3-T02` sign-in state machine    | **PASS**    | ordering in `src/lib/auth/policy.ts`; 12/12 real personas                                 |
+| `P3-T03` three-minute UX          | **PASS**    | presentational only; resend rate-limited server-side                                      |
+| `P3-T04` callback re-verification | **PASS**    | re-reads user _and_ session; implicit-fragment path fixed this pass                       |
+| `P3-T05` recovery enforcement     | **PASS**    | signed flow token; single-use server-set recovery marker                                  |
+| `P3-T06` **GATE**                 | **PENDING** | one manual Gmail confirmation click                                                       |
+
+Evidence: `evidence/phase-3-auth-state-machine.md`
+
+**N1 (HIGH) is closed.** The customer guard is now authenticated + email-confirmed
+
+- `role = USER` + unblocked, composing the live `hills_is_verified_user()` helper
+  rather than duplicating it. A blocked customer loses capability on the next
+  request even holding a valid session.
 
 ## Current / Next Task
 

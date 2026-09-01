@@ -17,6 +17,17 @@ export default async function SignInPage({
   const query = await searchParams;
   const t = await getTranslations("auth");
   const actions = await getTranslations("actions");
+  const responses = await getTranslations("auth.responses");
+  const notice =
+    query.reset === "success"
+      ? responses("passwordUpdated")
+      : query.error === "blocked"
+        ? responses("blocked")
+        : query.error === "link_expired"
+          ? responses("linkExpired")
+          : query.error === "access_denied"
+            ? responses("customerAccessDenied")
+            : null;
   return (
     <AuthShell
       eyebrow={actions("signin")}
@@ -25,6 +36,14 @@ export default async function SignInPage({
       asideTitle={t("verifyTitle")}
       asideBody={t("verifyBody")}
     >
+      {notice ? (
+        <p
+          role="status"
+          className="mb-5 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium"
+        >
+          {notice}
+        </p>
+      ) : null}
       <SignInForm
         locale={locale}
         next={typeof query.next === "string" ? query.next : undefined}

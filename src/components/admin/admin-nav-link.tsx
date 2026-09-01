@@ -1,19 +1,62 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import {
+  BadgeDollarSign,
+  Boxes,
+  Building2,
+  ClipboardList,
+  Coffee,
+  FileText,
+  ImageIcon,
+  LayoutDashboard,
+  Library,
+  Map,
+  MapPin,
+  Newspaper,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Sprout,
+  Tags,
+  UsersRound,
+} from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
+
+const icons = {
+  BadgeDollarSign,
+  Boxes,
+  Building2,
+  ClipboardList,
+  Coffee,
+  FileText,
+  ImageIcon,
+  LayoutDashboard,
+  Library,
+  Map,
+  MapPin,
+  Newspaper,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Sprout,
+  Tags,
+  UsersRound,
+} as const;
+
+export type AdminNavIcon = keyof typeof icons;
 
 export function AdminNavLink({
   href,
   label,
   hint,
-  icon: Icon,
+  icon,
 }: {
   href: string;
   label: string;
   hint?: string;
-  icon: LucideIcon;
+  icon: AdminNavIcon;
 }) {
+  const Icon = icons[icon];
   const pathname = usePathname();
   // "/admin" must only match exactly, otherwise every child route looks active.
   const active =

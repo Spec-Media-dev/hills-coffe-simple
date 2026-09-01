@@ -1,7 +1,8 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { useActionState, useEffect } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   adminSignInAction,
@@ -11,25 +12,63 @@ import {
   signUpAction,
   updatePasswordAction,
 } from "@/actions/auth";
+import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { idleActionResult, type ActionResult } from "@/lib/actions";
+import {
+  fieldErrorsOf,
+  idleActionState,
+  isIdle,
+  settled,
+  type ActionFormState,
+  type ActionResult,
+} from "@/lib/actions";
 
 type Labels = Record<string, string>;
-function StateMessage({ state }: { state: ActionResult }) {
-  if (!state.message) return null;
+type AuthAction = (
+  state: ActionFormState,
+  data: FormData,
+) => Promise<ActionResult>;
+
+const translated = (
+  t: ReturnType<typeof useTranslations<"auth.responses">>,
+  key: string,
+) => t(key as Parameters<typeof t>[0]);
+
+function StateMessage({
+  state,
+  locale,
+}: {
+  state: ActionFormState;
+  locale: Locale;
+}) {
+  const t = useTranslations("auth.responses");
+  const result = settled(state);
+  if (!result?.messageKey) return null;
   return (
-    <p
-      role="alert"
-      className={`rounded-xl p-3 text-sm ${state.ok ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"}`}
+    <div
+      role={result.ok ? "status" : "alert"}
+      className={`rounded-xl p-3 text-sm ${result.ok ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"}`}
     >
-      {state.message}
-    </p>
+      <p>{translated(t, result.messageKey)}</p>
+      {!result.ok && result.code === "ADMIN_PORTAL_REQUIRED" ? (
+        <Link
+          href="/dashboard-admin"
+          locale={locale}
+          className="mt-2 inline-flex min-h-11 items-center font-bold underline underline-offset-4"
+        >
+          {t("adminPortalLink")}
+        </Link>
+      ) : null}
+    </div>
   );
 }
+
 function Submit({ label, pending }: { label: string; pending: boolean }) {
   return (
     <button
+      type="submit"
       disabled={pending}
+      aria-busy={pending}
       className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-bold text-primary-foreground transition hover:bg-forest-light disabled:opacity-60"
     >
       {pending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -37,6 +76,7 @@ function Submit({ label, pending }: { label: string; pending: boolean }) {
     </button>
   );
 }
+
 function Field({
   label,
   name,
@@ -45,6 +85,7 @@ function Field({
   error,
   dir,
   defaultValue,
+  required = true,
 }: {
   label: string;
   name: string;
@@ -53,45 +94,78 @@ function Field({
   error?: string[];
   dir?: string;
   defaultValue?: string;
+  required?: boolean;
 }) {
+  const t = useTranslations("auth.responses");
   const id = `auth-${name}`;
+  // Password fields get a visibility toggle. Only the input's `type` changes,
+  // so the typed value is preserved by the DOM across toggles; the value is
+  // never copied into state, a URL, storage, or a log.
+  const isPassword = type === "password";
+  const [revealed, setRevealed] = useState(false);
+  const inputType = isPassword && revealed ? "text" : type;
+
+  // The toggle deliberately sits outside the <label> element: a <button>
+  // inside a label re-dispatches the click to the labelled control in some
+  // browsers.
   return (
-    <label
-      htmlFor={id}
-      className="grid gap-2 text-sm font-bold text-foreground"
-    >
-      <span>{label}</span>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        autoComplete={autoComplete}
-        dir={dir}
-        aria-invalid={Boolean(error?.length)}
-        aria-describedby={error?.length ? `${id}-error` : undefined}
-        className="h-12 rounded-xl border border-input bg-card px-4 text-base font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
-      />
+    <div className="grid gap-2 text-sm font-bold text-foreground">
+      <label htmlFor={id}>{label}</label>
+      <div className="relative">
+        <input
+          id={id}
+          name={name}
+          type={inputType}
+          required={required}
+          defaultValue={defaultValue}
+          autoComplete={autoComplete}
+          dir={dir}
+          aria-invalid={Boolean(error?.length)}
+          aria-describedby={error?.length ? `${id}-error` : undefined}
+          className={`h-12 w-full rounded-xl border border-input bg-card text-base font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20 ${
+            isPassword ? "ps-4 pe-12" : "px-4"
+          }`}
+        />
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setRevealed((value) => !value)}
+            aria-label={revealed ? t("hidePassword") : t("showPassword")}
+            aria-pressed={revealed}
+            aria-controls={id}
+            className="absolute inset-y-0 end-0 grid w-12 place-items-center rounded-e-xl text-muted-foreground outline-none transition hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            {revealed ? (
+              <EyeOff className="size-5" aria-hidden="true" />
+            ) : (
+              <Eye className="size-5" aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
+      </div>
       {error?.length ? (
         <span
           id={`${id}-error`}
           className="text-xs font-medium text-destructive"
         >
-          {error[0]}
+          {translated(t, error[0])}
         </span>
       ) : null}
-    </label>
+    </div>
   );
 }
-function useAuthAction(
-  action: (_: ActionResult, data: FormData) => Promise<ActionResult>,
-) {
-  const result = useActionState(action, idleActionResult);
+
+function useAuthAction(action: AuthAction) {
+  const result = useActionState(action, idleActionState);
   const [state] = result;
+  const t = useTranslations("auth.responses");
   useEffect(() => {
-    if (state.message && (state.ok || state.code !== "idle"))
-      (state.ok ? toast.success : toast.error)(state.message);
-  }, [state]);
+    const outcome = settled(state);
+    if (!outcome?.messageKey) return;
+    (outcome.ok ? toast.success : toast.error)(
+      translated(t, outcome.messageKey),
+    );
+  }, [state, t]);
   return result;
 }
 
@@ -104,9 +178,10 @@ function SignInFormBase({
   locale: Locale;
   labels: Labels;
   next?: string;
-  actionHandler: typeof signInAction;
+  actionHandler: AuthAction;
 }) {
   const [state, action, pending] = useAuthAction(actionHandler);
+  const errors = fieldErrorsOf(state);
   return (
     <form action={action} className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
@@ -116,20 +191,21 @@ function SignInFormBase({
         name="email"
         type="email"
         autoComplete="email"
-        error={state.ok ? undefined : state.fieldErrors?.email}
+        error={errors?.email}
       />
       <Field
         label={labels.password}
         name="password"
         type="password"
         autoComplete="current-password"
-        error={state.ok ? undefined : state.fieldErrors?.password}
+        error={errors?.password}
       />
-      <StateMessage state={state} />
+      <StateMessage state={state} locale={locale} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
 }
+
 export function SignInForm(props: {
   locale: Locale;
   labels: Labels;
@@ -137,9 +213,11 @@ export function SignInForm(props: {
 }) {
   return <SignInFormBase {...props} actionHandler={signInAction} />;
 }
+
 export function AdminSignInForm(props: { locale: Locale; labels: Labels }) {
   return <SignInFormBase {...props} actionHandler={adminSignInAction} />;
 }
+
 export function SignUpForm({
   locale,
   labels,
@@ -148,7 +226,7 @@ export function SignUpForm({
   labels: Labels;
 }) {
   const [state, action, pending] = useAuthAction(signUpAction);
-  const errors = state.ok ? undefined : state.fieldErrors;
+  const errors = fieldErrorsOf(state);
   return (
     <form action={action} className="grid gap-4">
       <input type="hidden" name="locale" value={locale} />
@@ -181,6 +259,13 @@ export function SignUpForm({
         error={errors?.phone}
       />
       <Field
+        label={labels.companyName}
+        name="companyName"
+        autoComplete="organization"
+        error={errors?.companyName}
+        required={false}
+      />
+      <Field
         label={labels.password}
         name="password"
         type="password"
@@ -194,11 +279,12 @@ export function SignUpForm({
         autoComplete="new-password"
         error={errors?.confirmPassword}
       />
-      <StateMessage state={state} />
+      <StateMessage state={state} locale={locale} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
 }
+
 export function EmailActionForm({
   locale,
   labels,
@@ -213,6 +299,7 @@ export function EmailActionForm({
   const [state, action, pending] = useAuthAction(
     mode === "forgot" ? forgotPasswordAction : resendVerificationAction,
   );
+  const errors = fieldErrorsOf(state);
   return (
     <form action={action} className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
@@ -222,13 +309,14 @@ export function EmailActionForm({
         type="email"
         defaultValue={email}
         autoComplete="email"
-        error={state.ok ? undefined : state.fieldErrors?.email}
+        error={errors?.email}
       />
-      <StateMessage state={state} />
+      <StateMessage state={state} locale={locale} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
 }
+
 export function ResetPasswordForm({
   locale,
   labels,
@@ -237,7 +325,7 @@ export function ResetPasswordForm({
   labels: Labels;
 }) {
   const [state, action, pending] = useAuthAction(updatePasswordAction);
-  const errors = state.ok ? undefined : state.fieldErrors;
+  const errors = fieldErrorsOf(state);
   return (
     <form action={action} className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
@@ -255,8 +343,12 @@ export function ResetPasswordForm({
         autoComplete="new-password"
         error={errors?.confirmPassword}
       />
-      <StateMessage state={state} />
+      <StateMessage state={state} locale={locale} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
+}
+
+export function isInitialAuthState(state: ActionFormState) {
+  return isIdle(state);
 }

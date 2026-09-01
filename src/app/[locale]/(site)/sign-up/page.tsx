@@ -29,6 +29,7 @@ export default async function SignUpPage({
           fullName: t("name"),
           email: t("email"),
           phone: t("phone"),
+          companyName: t("companyOptional"),
           password: t("password"),
           confirmPassword: t("confirmPassword"),
           submit: t("create"),

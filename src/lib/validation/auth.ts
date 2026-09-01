@@ -9,6 +9,7 @@ export const passwordSchema = z
   .min(10)
   .regex(/[A-Za-z]/)
   .regex(/[0-9]/);
+export const companyNameSchema = z.string().trim().min(1).max(160).optional();
 export const signInSchema = z.object({
   email: z.email().trim().toLowerCase(),
   password: z.string().min(1),
@@ -20,6 +21,7 @@ export const signUpSchema = z
     fullName: z.string().trim().min(2).max(200),
     email: z.email().trim().toLowerCase(),
     phone: phoneSchema,
+    companyName: companyNameSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
     locale: localeSchema,

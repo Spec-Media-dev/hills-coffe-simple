@@ -31,6 +31,9 @@ export default async function VerifyEmailPage({
   const query = await searchParams;
   const viewer = await getViewer();
 
+  if (viewer?.isBlocked)
+    redirect(`/auth/reject?reason=blocked&locale=${locale}`);
+
   // An already-verified visitor should never see a fake waiting state.
   if (viewer?.emailVerified)
     redirect(

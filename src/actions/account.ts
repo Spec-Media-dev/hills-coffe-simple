@@ -2,9 +2,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { Locale } from "@/i18n/routing";
-import type { ActionResult } from "@/lib/actions";
+import type { LegacyActionResult as ActionResult } from "@/lib/actions";
 import { localizedPath } from "@/lib/auth/redirects";
-import { requireUser, requireVerifiedUser } from "@/lib/auth/session";
+import { requireVerifiedUser } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -56,7 +56,7 @@ export async function updateProfileAction(
 ): Promise<ActionResult> {
   const locale = localeFrom(formData.get("locale"));
   const text = copy(locale);
-  const viewer = await requireUser();
+  const viewer = await requireVerifiedUser();
   if (!viewer)
     return { ok: false, code: "session_missing", message: text.session };
   const parsed = profileSchema.safeParse({
@@ -89,7 +89,7 @@ export async function changeEmailAction(
 ): Promise<ActionResult> {
   const locale = localeFrom(formData.get("locale"));
   const text = copy(locale);
-  const viewer = await requireUser();
+  const viewer = await requireVerifiedUser();
   if (!viewer)
     return { ok: false, code: "session_missing", message: text.session };
   if (!isSupabaseConfigured())
@@ -132,7 +132,7 @@ export async function changePasswordAction(
 ): Promise<ActionResult> {
   const locale = localeFrom(formData.get("locale"));
   const text = copy(locale);
-  const viewer = await requireUser();
+  const viewer = await requireVerifiedUser();
   if (!viewer)
     return { ok: false, code: "session_missing", message: text.session };
   if (!isSupabaseConfigured())
