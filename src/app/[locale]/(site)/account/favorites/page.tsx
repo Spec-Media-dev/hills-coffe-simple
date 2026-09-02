@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Heart } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { toggleFavoriteAction } from "@/actions/account";
+import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { OfferCard } from "@/components/catalog/offer-card";
 import type { Locale } from "@/i18n/routing";
 import { requireVerifiedUser } from "@/lib/auth/session";
@@ -51,17 +51,14 @@ export default async function FavoritesPage({
           {offers.map((item) => (
             <div key={item.coffeeId}>
               <OfferCard item={item} labels={labels} />
-              <form action={toggleFavoriteAction} className="mt-2">
-                <input type="hidden" name="coffeeId" value={item.coffeeId} />
-                <input
-                  type="hidden"
-                  name="returnTo"
-                  value={`/${locale}/account/favorites`}
+              <div className="mt-2">
+                <FavoriteButton
+                  coffeeId={item.coffeeId}
+                  returnTo={`/${locale}/account/favorites`}
+                  favorite
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-border py-2 text-xs font-bold disabled:opacity-60"
                 />
-                <button className="w-full rounded-full border border-border py-2 text-xs font-bold">
-                  {labels.remove}
-                </button>
-              </form>
+              </div>
             </div>
           ))}
         </div>

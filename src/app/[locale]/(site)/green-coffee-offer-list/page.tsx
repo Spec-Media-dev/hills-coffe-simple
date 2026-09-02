@@ -33,10 +33,7 @@ export async function generateMetadata({
     locale: locale as Locale,
     path: "/green-coffee-offer-list",
     title: meta("offerListTitle"),
-    description:
-      locale === "ar"
-        ? "تصفح عروض القهوة الخضراء المتاحة من هيلز كوفي."
-        : "Browse green coffee offers available from Hills Coffee.",
+    description: meta("offerListDescription"),
   });
 }
 

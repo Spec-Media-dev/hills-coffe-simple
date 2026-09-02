@@ -18,10 +18,7 @@ export async function generateMetadata({
     locale: locale as Locale,
     path: "/knowledge",
     title: meta("knowledgeTitle"),
-    description:
-      locale === "ar"
-        ? "اقرأ مقالات هيلز كوفي المنشورة عن القهوة الخضراء."
-        : "Read published Hills Coffee articles about green coffee.",
+    description: meta("knowledgeDescription"),
   });
 }
 
@@ -31,24 +28,13 @@ export default async function KnowledgePage({
   const { locale } = await params;
   setRequestLocale(locale);
   const articles = await getArticles(locale as Locale);
-  const text =
-    locale === "ar"
-      ? {
-          eyebrow: "المعرفة",
-          title: "ملاحظات عملية للقهوة الخضراء.",
-          empty: "لا توجد مقالات منشورة حالياً.",
-        }
-      : {
-          eyebrow: "Knowledge",
-          title: "Practical thinking for green coffee.",
-          empty: "No articles are published yet.",
-        };
+  const text = await getTranslations("knowledge");
   return (
     <>
       <section className="section-space bg-primary text-primary-foreground">
         <SectionReveal className="site-container">
-          <p className="eyebrow !text-gold-contrast">{text.eyebrow}</p>
-          <h1 className="display-xl mt-6 max-w-5xl">{text.title}</h1>
+          <p className="eyebrow !text-gold-contrast">{text("eyebrow")}</p>
+          <h1 className="display-xl mt-6 max-w-5xl">{text("title")}</h1>
         </SectionReveal>
       </section>
       <section className="section-space">
@@ -75,7 +61,7 @@ export default async function KnowledgePage({
                   )}
                 </ImageReveal>
                 <SectionReveal className="flex min-h-[24rem] flex-col justify-center p-8 md:p-12">
-                  <p className="eyebrow !text-[#3b260f]">{text.eyebrow}</p>
+                  <p className="eyebrow !text-[#3b260f]">{text("eyebrow")}</p>
                   <h2
                     lang={articles[0].lang}
                     className="mt-6 font-heading text-4xl font-bold leading-tight md:text-5xl"
@@ -126,7 +112,7 @@ export default async function KnowledgePage({
             </>
           ) : (
             <p className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
-              {text.empty}
+              {text("empty")}
             </p>
           )}
         </div>

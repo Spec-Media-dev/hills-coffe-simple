@@ -40,10 +40,7 @@ export async function generateMetadata({
     locale: locale as Locale,
     path: "/",
     title: meta("homeTitle"),
-    description:
-      locale === "ar"
-        ? "اكتشف القهوة الخضراء المتاحة عبر مستودعات هيلز كوفي."
-        : "Explore green coffee available through Hills Coffee warehouses.",
+    description: meta("homeDescription"),
   });
 }
 
@@ -69,37 +66,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     siteUrl,
     settings,
   });
-  const copy =
-    locale === "ar"
-      ? {
-          featuredEmpty: "لا توجد محاصيل مميزة منشورة حالياً.",
-          originsTitle: "من الحقل إلى قرار الشراء.",
-          originsBody: "تعرّف على الأماكن والسياقات التي تشكل كل محصول منشور.",
-          originsEmpty: "لا توجد مناشئ منشورة حالياً.",
-          qualityEyebrow: "الجودة في سياقها",
-          warehouseEmpty: "لا توجد مستودعات منشورة حالياً.",
-          accountEyebrow: "حساب هيلز كوفي",
-          accountTitle: "احفظ اختياراتك وتابع طلباتك.",
-          accountBody:
-            "الحساب المؤكد يفتح الأسعار المحمية والمفضلة والطلبات المتابعة.",
-          knowledgeTitle: "أحدث المعرفة",
-          knowledgeEmpty: "لا توجد مقالات منشورة حالياً.",
-        }
-      : {
-          featuredEmpty: "No featured coffees are published right now.",
-          originsTitle: "From place to buying decision.",
-          originsBody:
-            "Explore the places and contexts behind every published coffee.",
-          originsEmpty: "No origins are published right now.",
-          qualityEyebrow: "Quality in context",
-          warehouseEmpty: "No warehouse locations are published right now.",
-          accountEyebrow: "Your Hills Coffee account",
-          accountTitle: "Save coffees. Follow every request.",
-          accountBody:
-            "A verified account unlocks protected pricing, favourites, and tracked requests.",
-          knowledgeTitle: "Latest knowledge",
-          knowledgeEmpty: "No articles are published right now.",
-        };
 
   return (
     <>
@@ -189,7 +155,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         offers={catalog.offers}
         title={t("featured")}
         intro={t("featuredBody")}
-        empty={copy.featuredEmpty}
+        empty={t("featuredEmpty")}
         bagsLabel={catalogT("bags")}
       />
 
@@ -198,10 +164,10 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           <SectionReveal className="grid gap-8 md:grid-cols-[1fr_.7fr] md:items-end">
             <div>
               <p className="eyebrow">{nav("origins")}</p>
-              <h2 className="display-lg mt-5 max-w-4xl">{copy.originsTitle}</h2>
+              <h2 className="display-lg mt-5 max-w-4xl">{t("originsTitle")}</h2>
             </div>
             <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-              {copy.originsBody}
+              {t("originsBody")}
             </p>
           </SectionReveal>
           {origins.length ? (
@@ -238,7 +204,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               ))}
             </div>
           ) : (
-            <p className="empty-state mt-12">{copy.originsEmpty}</p>
+            <p className="empty-state mt-12">{t("originsEmpty")}</p>
           )}
         </div>
       </section>
@@ -255,7 +221,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             />
           </ImageReveal>
           <SectionReveal className="flex min-h-[32rem] flex-col justify-center py-16 lg:px-16">
-            <p className="eyebrow !text-gold-contrast">{copy.qualityEyebrow}</p>
+            <p className="eyebrow !text-gold-contrast">{t("qualityEyebrow")}</p>
             <h2 className="display-lg mt-6">{t("sustain")}</h2>
             <p className="mt-7 max-w-xl text-lg leading-8 text-white/68">
               {t("sustainBody")}
@@ -268,16 +234,16 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         warehouses={warehouses}
         title={t("network")}
         intro={t("networkBody")}
-        empty={copy.warehouseEmpty}
+        empty={t("warehouseEmpty")}
       />
 
       <section className="section-space bg-gold text-[#17251c]">
         <SectionReveal className="site-container grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
           <div>
-            <p className="eyebrow !text-[#3b260f]">{copy.accountEyebrow}</p>
-            <h2 className="display-lg mt-5 max-w-4xl">{copy.accountTitle}</h2>
+            <p className="eyebrow !text-[#3b260f]">{t("accountEyebrow")}</p>
+            <h2 className="display-lg mt-5 max-w-4xl">{t("accountTitle")}</h2>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[#1b3027]">
-              {copy.accountBody}
+              {t("accountBody")}
             </p>
           </div>
           <Link
@@ -298,7 +264,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           <SectionReveal className="flex items-end justify-between gap-6">
             <div>
               <p className="eyebrow">{nav("knowledge")}</p>
-              <h2 className="display-lg mt-5">{copy.knowledgeTitle}</h2>
+              <h2 className="display-lg mt-5">{t("knowledgeTitle")}</h2>
             </div>
             <Link
               href="/knowledge"
@@ -345,7 +311,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               ))}
             </div>
           ) : (
-            <p className="empty-state mt-12">{copy.knowledgeEmpty}</p>
+            <p className="empty-state mt-12">{t("knowledgeEmpty")}</p>
           )}
         </div>
       </section>

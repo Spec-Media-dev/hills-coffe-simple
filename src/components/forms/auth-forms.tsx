@@ -105,6 +105,18 @@ function Field({
   const [revealed, setRevealed] = useState(false);
   const inputType = isPassword && revealed ? "text" : type;
 
+  // React resets a <form> once its action settles, so an uncontrolled input
+  // reverted to `defaultValue` and discarded what was typed the moment the
+  // server rejected it — a mistyped password used to clear the email address
+  // as well. The password itself stays out of state, as the comment above
+  // says, and losing it on a failed attempt is the expected behaviour.
+  const [value, setValue] = useState(defaultValue ?? "");
+  const [seenDefault, setSeenDefault] = useState(defaultValue);
+  if (defaultValue !== seenDefault) {
+    setSeenDefault(defaultValue);
+    setValue(defaultValue ?? "");
+  }
+
   // The toggle deliberately sits outside the <label> element: a <button>
   // inside a label re-dispatches the click to the labelled control in some
   // browsers.
@@ -117,7 +129,13 @@ function Field({
           name={name}
           type={inputType}
           required={required}
-          defaultValue={defaultValue}
+          {...(isPassword
+            ? { defaultValue }
+            : {
+                value,
+                onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                  setValue(event.target.value),
+              })}
           autoComplete={autoComplete}
           dir={dir}
           aria-invalid={Boolean(error?.length)}
@@ -183,7 +201,7 @@ function SignInFormBase({
   const [state, action, pending] = useAuthAction(actionHandler);
   const errors = fieldErrorsOf(state);
   return (
-    <form action={action} className="grid gap-5">
+    <form action={action} noValidate className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="next" value={next ?? ""} />
       <Field
@@ -228,7 +246,7 @@ export function SignUpForm({
   const [state, action, pending] = useAuthAction(signUpAction);
   const errors = fieldErrorsOf(state);
   return (
-    <form action={action} className="grid gap-4">
+    <form action={action} noValidate className="grid gap-4">
       <input type="hidden" name="locale" value={locale} />
       <input
         tabIndex={-1}
@@ -301,7 +319,7 @@ export function EmailActionForm({
   );
   const errors = fieldErrorsOf(state);
   return (
-    <form action={action} className="grid gap-5">
+    <form action={action} noValidate className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
       <Field
         label={labels.email}
@@ -327,7 +345,7 @@ export function ResetPasswordForm({
   const [state, action, pending] = useAuthAction(updatePasswordAction);
   const errors = fieldErrorsOf(state);
   return (
-    <form action={action} className="grid gap-5">
+    <form action={action} noValidate className="grid gap-5">
       <input type="hidden" name="locale" value={locale} />
       <Field
         label={labels.password}

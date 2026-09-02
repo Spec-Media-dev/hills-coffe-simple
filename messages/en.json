@@ -54,7 +54,18 @@
     "sustain": "Progress should travel through the whole chain.",
     "sustainBody": "Our approach values long-term partnerships, responsible decisions, and coffees that create durable value.",
     "cta": "Let’s find your next coffee.",
-    "ctaBody": "Tell us what you roast, the profile you need, and where you need it."
+    "ctaBody": "Tell us what you roast, the profile you need, and where you need it.",
+    "featuredEmpty": "No featured coffees are published right now.",
+    "originsTitle": "From place to buying decision.",
+    "originsBody": "Explore the places and contexts behind every published coffee.",
+    "originsEmpty": "No origins are published right now.",
+    "qualityEyebrow": "Quality in context",
+    "warehouseEmpty": "No warehouse locations are published right now.",
+    "accountEyebrow": "Your Hills Coffee account",
+    "accountTitle": "Save coffees. Follow every request.",
+    "accountBody": "A verified account unlocks protected pricing, favourites, and tracked requests.",
+    "knowledgeTitle": "Latest knowledge",
+    "knowledgeEmpty": "No articles are published right now."
   },
   "footer": {
     "statement": "Green coffee selected globally, supported locally.",
@@ -113,7 +124,9 @@
     "statusInStore": "In store",
     "statusDiscount": "Discount",
     "statusSoldOut": "Sold out",
-    "statusInactive": "Unavailable"
+    "statusInactive": "Unavailable",
+    "saveFavourite": "Save to favourites",
+    "removeFavourite": "Remove from favourites"
   },
   "about": {
     "eyebrow": "About Hills Coffee",
@@ -137,7 +150,7 @@
     "location": "Preferred warehouse",
     "message": "What are you looking for?",
     "send": "Send inquiry",
-    "note": "Inquiries require a connected Supabase project before they can be saved.",
+    "note": "Inquiries cannot be saved right now. Please try again shortly.",
     "details": "Contact details",
     "detailsEmpty": "Published contact details are not available yet.",
     "warehousesEmpty": "No warehouse locations are published yet.",
@@ -165,7 +178,7 @@
     "sendLink": "Send recovery link",
     "newPassword": "New password",
     "updatePassword": "Update password",
-    "config": "Authentication will be available when Supabase environment variables are connected.",
+    "config": "Signing in is temporarily unavailable. Please try again shortly.",
     "verifyTitle": "Verify your email",
     "verifyBody": "Use the link in your inbox to activate protected pricing, favourites, and tracked requests.",
     "resend": "Resend verification email",
@@ -336,6 +349,8 @@
       "completeProfileFirst": "Complete your account information before submitting this request.",
       "configuration": "Account service is not connected yet.",
       "emailChangeSent": "We sent a confirmation link to your new email address.",
+      "favoriteRemoved": "Removed from your favourites.",
+      "favoriteSaved": "Saved to your favourites.",
       "hidePassword": "Hide password",
       "invalidAddress": "Address must be 300 characters or fewer.",
       "invalidCompanyName": "Company name must be 160 characters or fewer.",
@@ -1127,13 +1142,25 @@
     "originsTitle": "Coffee origins",
     "knowledgeTitle": "Coffee knowledge",
     "offerListTitle": "Green coffee offer list",
-    "homeTitle": "Hills Coffee"
+    "homeTitle": "Hills Coffee",
+    "homeDescription": "Explore green coffee available through Hills Coffee warehouses.",
+    "originsDescription": "Explore the cultivation, processing, and sourcing context of published coffee origins.",
+    "knowledgeDescription": "Read published Hills Coffee articles about green coffee.",
+    "offerListDescription": "Browse green coffee offers available from Hills Coffee."
   },
   "origins": {
     "availableCoffees": "Available coffees",
     "coffeeCount": "{count} published coffees",
     "regions": "Regions",
-    "sourcingStory": "Sourcing story"
+    "sourcingStory": "Sourcing story",
+    "eyebrow": "Coffee origins",
+    "title": "Places that shape the cup.",
+    "intro": "Explore the cultivation, processing, and sourcing context behind each origin.",
+    "empty": "No origins are published yet.",
+    "bags": "bags",
+    "pricingSignIn": "Sign in to view pricing",
+    "viewCoffee": "View coffee",
+    "cultivationProcessing": "Cultivation and processing"
   },
   "inquiryStatus": {
     "NEW": "Submitted",
@@ -1160,5 +1187,19 @@
     "sampleSend": "Submit sample request",
     "verify": "Verify email to continue",
     "close": "Close"
+  },
+  "knowledge": {
+    "eyebrow": "Knowledge",
+    "title": "Practical thinking for green coffee.",
+    "empty": "No articles are published yet."
+  },
+  "errors": {
+    "eyebrow": "Error",
+    "title": "We could not load this page.",
+    "retry": "Try again",
+    "notFoundEyebrow": "404",
+    "notFoundTitle": "This page is not available.",
+    "notFoundBody": "The page you requested may have moved or is no longer published.",
+    "returnHome": "Return home"
   }
 }

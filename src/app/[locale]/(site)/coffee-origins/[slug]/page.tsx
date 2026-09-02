@@ -49,14 +49,13 @@ export default async function OriginPage({
   const heroMedia =
     media.find((item) => item.role === "HERO") ?? media[0] ?? null;
   const gallery = media.filter((item) => item.id !== heroMedia?.id);
-  const labels =
-    locale === "ar"
-      ? { bags: "كيس", pricing: "سجّل الدخول لعرض السعر", view: "عرض المحصول" }
-      : {
-          bags: "bags",
-          pricing: "Sign in to view pricing",
-          view: "View coffee",
-        };
+  // CatalogCard takes its wording from the caller; the strings themselves
+  // now live in the message catalogue like every other piece of public copy.
+  const labels = {
+    bags: originsT("bags"),
+    pricing: originsT("pricingSignIn"),
+    view: originsT("viewCoffee"),
+  };
   return (
     <>
       <section className="overflow-hidden bg-gold text-[#17251c]">
@@ -119,9 +118,7 @@ export default async function OriginPage({
           {origin.cultivation ? (
             <div>
               <h2 className="text-4xl">
-                {locale === "ar"
-                  ? "الزراعة والمعالجة"
-                  : "Cultivation and processing"}
+                {originsT("cultivationProcessing")}
               </h2>
               <SafeMarkdown className="prose-hills mt-6">
                 {origin.cultivation}

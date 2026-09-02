@@ -55,22 +55,47 @@ export function SectionReveal({
   );
 }
 
+/**
+ * Wipes an image into view from the top down.
+ *
+ * The clip lives on an inner element, and the element that gets observed is
+ * the outer one, which is never clipped. That separation is the whole point:
+ * Chromium subtracts `clip-path` when it computes an intersection rectangle,
+ * so an element whose resting state is `inset(0 0 100%)` reports a ratio of
+ * exactly 0 no matter where it sits on screen. Observing that same element
+ * deadlocks — it can never be seen, so it is never revealed, and the image
+ * stays clipped away while its layout box, its network request and its
+ * decoded bitmap all look perfectly healthy. Firefox reports a ratio of 1 for
+ * the same element, which is why this only ever showed up in one engine.
+ *
+ * The outer element keeps the caller's className, so the positioning context
+ * and the height every caller relies on are unchanged; the inner one fills it.
+ */
 export function ImageReveal({ children, className, delay = 0 }: WrapperProps) {
   const reduced = useMotionMode();
   return (
     <motion.div
       data-motion="image"
-      className={cn("overflow-hidden", className)}
-      initial={reduced ? false : { clipPath: "inset(0 0 100% 0)" }}
-      whileInView={reduced ? undefined : { clipPath: "inset(0 0 0% 0)" }}
+      className={cn("relative overflow-hidden", className)}
+      initial={reduced ? false : "clipped"}
+      whileInView={reduced ? undefined : "revealed"}
       viewport={{ once: true, amount: 0.18 }}
-      transition={{
-        duration: reduced ? 0 : 0.82,
-        delay: reduced ? 0 : delay,
-        ease,
-      }}
     >
-      {children}
+      <motion.div
+        data-motion="image-clip"
+        className="absolute inset-0"
+        variants={{
+          clipped: { clipPath: "inset(0 0 100% 0)" },
+          revealed: { clipPath: "inset(0 0 0% 0)" },
+        }}
+        transition={{
+          duration: reduced ? 0 : 0.82,
+          delay: reduced ? 0 : delay,
+          ease,
+        }}
+      >
+        {children}
+      </motion.div>
     </motion.div>
   );
 }

@@ -127,7 +127,7 @@ export async function AdminNav() {
       >
         {groups.map((group) => (
           <div key={group.id} className="contents lg:block">
-            <p className="hidden px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white/35 lg:block">
+            <p className="hidden px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-white/60 lg:block">
               {group.label}
             </p>
             <div className="contents lg:grid lg:gap-1">
@@ -140,7 +140,7 @@ export async function AdminNav() {
       </nav>
 
       <div className="hidden shrink-0 border-t border-white/10 px-6 py-5 lg:block">
-        <p className="text-xs leading-5 text-white/40">{t("protected")}</p>
+        <p className="text-xs leading-5 text-white/60">{t("protected")}</p>
       </div>
     </aside>
   );

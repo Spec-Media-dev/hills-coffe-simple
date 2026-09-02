@@ -2,8 +2,7 @@
 
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useActionState, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useActionState, useState } from "react";
 import {
   fieldErrorsOf,
   idleActionState,
@@ -52,6 +51,19 @@ export function FormField({
   const isPassword = type === "password";
   const [revealed, setRevealed] = useState(false);
   const inputType = isPassword && revealed ? "text" : type;
+
+  // React resets a <form> once its action settles, so an uncontrolled input
+  // snapped back to `defaultValue` and threw away everything the person had
+  // typed the moment the server rejected it. Holding the value in state keeps
+  // it across that reset. A password is deliberately excluded: it stays in the
+  // DOM only, exactly as the comment above says.
+  const [value, setValue] = useState(defaultValue ?? "");
+  const [seenDefault, setSeenDefault] = useState(defaultValue);
+  if (defaultValue !== seenDefault) {
+    // A saved profile re-renders with new defaults; adopt them.
+    setSeenDefault(defaultValue);
+    setValue(defaultValue ?? "");
+  }
   const describedBy =
     [error?.length ? `${id}-error` : null, hint ? `${id}-hint` : null]
       .filter(Boolean)
@@ -65,7 +77,13 @@ export function FormField({
           id={id}
           name={name}
           type={inputType}
-          defaultValue={defaultValue}
+          {...(isPassword
+            ? { defaultValue }
+            : {
+                value,
+                onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                  setValue(event.target.value),
+              })}
           autoComplete={autoComplete}
           dir={dir}
           required={required}
@@ -159,23 +177,19 @@ export function SubmitButton({
 }
 
 /**
- * Wires a server action to React's form state and mirrors the result into a
- * Sonner toast, resolving the returned key in the active locale.
+ * Wires a server action to React's form state.
+ *
+ * This used to also raise a Sonner toast carrying the same message that
+ * `FormStatus` already renders. Sonner publishes its toasts through a live
+ * region of its own, so every success and every failure was announced twice.
+ * The inline status is the one kept: it sits with the form that produced it,
+ * it stays on screen instead of dismissing itself, and it is what a field
+ * error is read alongside.
  */
 export function useFormAction(
   action: (state: ActionFormState, data: FormData) => Promise<ActionResult>,
 ) {
-  const result = useActionState(action, idleActionState);
-  const [state] = result;
-  const t = useAccountCopy();
-  useEffect(() => {
-    const outcome = settled(state);
-    if (!outcome?.messageKey) return;
-    (outcome.ok ? toast.success : toast.error)(
-      translated(t, outcome.messageKey),
-    );
-  }, [state, t]);
-  return result;
+  return useActionState(action, idleActionState);
 }
 
 export function fieldErrors(state: ActionFormState) {

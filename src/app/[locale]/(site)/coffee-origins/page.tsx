@@ -17,10 +17,7 @@ export async function generateMetadata({
     locale: locale as Locale,
     path: "/coffee-origins",
     title: meta("originsTitle"),
-    description:
-      locale === "ar"
-        ? "استكشف سياق الزراعة والمعالجة والتوريد لمناشئ القهوة المنشورة."
-        : "Explore the cultivation, processing, and sourcing context of published coffee origins.",
+    description: meta("originsDescription"),
   });
 }
 
@@ -31,29 +28,14 @@ export default async function OriginsPage({
   setRequestLocale(locale);
   const originsT = await getTranslations("origins");
   const origins = await getOrigins(locale as Locale);
-  const text =
-    locale === "ar"
-      ? {
-          eyebrow: "مناشئ القهوة",
-          title: "أماكن تشكل طعم القهوة.",
-          intro: "استكشف سياق الزراعة والمعالجة والتوريد لكل منشأ.",
-          empty: "لا توجد مناشئ منشورة حالياً.",
-        }
-      : {
-          eyebrow: "Coffee origins",
-          title: "Places that shape the cup.",
-          intro:
-            "Explore the cultivation, processing, and sourcing context behind each origin.",
-          empty: "No origins are published yet.",
-        };
   return (
     <>
       <section className="section-space overflow-hidden bg-page">
         <SectionReveal className="site-container text-center">
-          <p className="eyebrow">{text.eyebrow}</p>
-          <h1 className="display-hero mx-auto mt-7 max-w-6xl">{text.title}</h1>
+          <p className="eyebrow">{originsT("eyebrow")}</p>
+          <h1 className="display-hero mx-auto mt-7 max-w-6xl">{originsT("title")}</h1>
           <p className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground">
-            {text.intro}
+            {originsT("intro")}
           </p>
           <div
             aria-hidden="true"
@@ -94,7 +76,7 @@ export default async function OriginsPage({
             </div>
           ) : (
             <p className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
-              {text.empty}
+              {originsT("empty")}
             </p>
           )}
         </div>

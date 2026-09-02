@@ -58,7 +58,13 @@ export function collectPageProblems(page: Page) {
           !error.includes("favicon") &&
           !error.includes("/_next/hmr") &&
           !error.includes("firebase-messaging") &&
-          !error.includes("Download the React DevTools"),
+          !error.includes("Download the React DevTools") &&
+          // Storage responses come back through Cloudflare, which sets a
+          // `__cf_bm` bot-management cookie on its own domain. Firefox reports
+          // rejecting it as a console error; Chromium says nothing. It is the
+          // CDN's cookie on the CDN's response — no application code is
+          // involved and nothing here can change it.
+          !error.includes("__cf_bm"),
       ),
     appFailedResponses: () =>
       failedResponses.filter(

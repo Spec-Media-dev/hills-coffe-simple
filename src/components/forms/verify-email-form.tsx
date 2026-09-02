@@ -63,7 +63,7 @@ export function VerifyEmailForm({
   const minutes = Math.floor(waiting / 60);
   const seconds = String(waiting % 60).padStart(2, "0");
   return (
-    <form action={action} className="grid max-w-md gap-5">
+    <form action={action} noValidate className="grid max-w-md gap-5">
       <input type="hidden" name="locale" value={locale} />
       <label className="grid gap-2 text-sm font-bold text-foreground">
         <span>{t("emailLabel")}</span>
@@ -84,13 +84,17 @@ export function VerifyEmailForm({
         ) : null}
       </label>
 
-      <div
-        className="rounded-xl border border-border bg-page p-4"
-        aria-live="polite"
-      >
+      {/* The live region covers the heading only. It used to wrap the whole
+          box, digits included, so every tick of the countdown re-announced the
+          entire panel once a second. The heading changes exactly once — when
+          the wait elapses — which is the only part worth interrupting for. The
+          digits stay readable on demand, just not announced. */}
+      <div className="rounded-xl border border-border bg-page p-4">
+        <p className="text-sm font-bold" aria-live="polite">
+          {waiting > 0 ? t("waitingTitle") : t("stillWaitingTitle")}
+        </p>
         {waiting > 0 ? (
           <>
-            <p className="text-sm font-bold">{t("waitingTitle")}</p>
             <p className="mt-1 font-mono text-2xl" dir="ltr">
               {minutes}:{seconds}
             </p>
@@ -99,12 +103,9 @@ export function VerifyEmailForm({
             </p>
           </>
         ) : (
-          <>
-            <p className="text-sm font-bold">{t("stillWaitingTitle")}</p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t("stillWaitingBody")}
-            </p>
-          </>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("stillWaitingBody")}
+          </p>
         )}
       </div>
 

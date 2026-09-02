@@ -78,7 +78,7 @@ export function AdminNavLink({
       <span className="min-w-0">
         <span className="block truncate">{label}</span>
         {hint ? (
-          <span className="hidden truncate text-[11px] font-normal leading-4 text-white/35 lg:block">
+          <span className="hidden truncate text-[11px] font-normal leading-4 text-white/60 lg:block">
             {hint}
           </span>
         ) : null}

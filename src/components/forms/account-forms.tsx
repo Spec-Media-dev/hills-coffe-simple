@@ -34,7 +34,7 @@ export function ProfileForm({
   const [state, action, pending] = useFormAction(updateProfileAction);
   const errors = fieldErrors(state);
   return (
-    <form action={action} className="grid max-w-xl gap-5">
+    <form action={action} noValidate className="grid max-w-xl gap-5">
       <input type="hidden" name="locale" value={locale} />
       <FormField
         label={labels.name}
@@ -97,7 +97,7 @@ export function ChangeEmailForm({
   const [state, action, pending] = useFormAction(changeEmailAction);
   const errors = fieldErrors(state);
   return (
-    <form action={action} className="grid max-w-xl gap-5">
+    <form action={action} noValidate className="grid max-w-xl gap-5">
       <input type="hidden" name="locale" value={locale} />
       <FormField
         label={labels.newEmail}
@@ -131,7 +131,7 @@ export function ChangePasswordForm({
   const [state, action, pending] = useFormAction(changePasswordAction);
   const errors = fieldErrors(state);
   return (
-    <form action={action} className="grid max-w-xl gap-5">
+    <form action={action} noValidate className="grid max-w-xl gap-5">
       <input type="hidden" name="locale" value={locale} />
       <FormField
         label={labels.currentPassword}

@@ -76,24 +76,3 @@ export const fail = (
   messageKey: string,
   extra?: { fieldErrors?: FieldErrors; conflict?: { requestCode?: string } },
 ): ActionResult => ({ ok: false, code, messageKey, ...extra });
-
-/**
- * Temporary compatibility shape for non-Auth actions that are scheduled for
- * the Phase 11 domain-result migration. Phase 3 must not silently expand into
- * account/admin/inquiry result refactors, but those existing actions still
- * need to typecheck while Auth moves to the approved contract.
- */
-export type LegacyActionResult<T = undefined> =
-  | { ok: true; data?: T; message: string }
-  | {
-      ok: false;
-      code: string;
-      message: string;
-      fieldErrors?: FieldErrors;
-    };
-
-export const idleLegacyActionResult: LegacyActionResult = {
-  ok: false,
-  code: "idle",
-  message: "",
-};

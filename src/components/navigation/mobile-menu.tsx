@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { BrandMark, type BrandLogo } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
 import { DrawerReveal } from "@/components/motion/primitives";
@@ -93,64 +94,74 @@ export function MobileMenu({
           <Menu className="size-5" aria-hidden="true" />
         )}
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-50 xl:hidden">
-          <button
-            type="button"
-            aria-label={closeLabel}
-            className="absolute inset-0 cursor-default bg-primary/35 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <DrawerReveal
-            ref={dialogRef}
-            id={dialogId}
-            role="dialog"
-            aria-modal="true"
-            aria-label={openLabel}
-            className="absolute inset-y-0 start-0 flex w-[min(92vw,28rem)] flex-col overflow-y-auto overscroll-contain border-e border-border bg-background px-5 pb-8 pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl [--drawer-enter-x:-28px] rtl:[--drawer-enter-x:28px]"
-          >
-            <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-border pb-4">
-              <Link
-                href="/"
-                onClick={() => setOpen(false)}
-                className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <BrandMark height={36} label={brandLabel} logo={logo} />
-              </Link>
+      {/* Portalled to <body>. The site header carries a `view-transition-name`,
+          which makes it the containing block for any fixed descendant: left
+          inside it, this drawer resolved `inset-0` against the 80px header box
+          instead of the viewport, so on a scrolled page it opened off-screen
+          and the footer took the taps meant for it. */}
+      {open
+        ? createPortal(
+            <div className="fixed inset-0 z-50 xl:hidden">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="grid size-11 touch-manipulation place-items-center rounded-full border border-border transition-colors hover:border-gold hover:text-gold focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={closeLabel}
-              >
-                <X className="size-5" aria-hidden="true" />
-              </button>
-            </div>
-            <nav className="flex flex-col pt-6" aria-label={openLabel}>
-              {items.map((item, index) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="flex min-h-14 touch-manipulation items-center justify-between border-b border-border py-4 text-xl font-semibold transition-colors hover:text-highlight focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span>{item.label}</span>
-                  <span className="text-xs text-highlight">0{index + 1}</span>
-                </Link>
-              ))}
-            </nav>
-            <div className="mt-auto pt-10">
-              <Link
-                href={actionHref}
+                className="absolute inset-0 cursor-default bg-primary/35 backdrop-blur-sm"
                 onClick={() => setOpen(false)}
-                className="flex min-h-12 items-center justify-center bg-primary px-6 py-3 text-sm font-bold text-primary-foreground"
+              />
+              <DrawerReveal
+                ref={dialogRef}
+                id={dialogId}
+                role="dialog"
+                aria-modal="true"
+                aria-label={openLabel}
+                className="absolute inset-y-0 start-0 flex w-[min(92vw,28rem)] flex-col overflow-y-auto overscroll-contain border-e border-border bg-background px-5 pb-8 pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl [--drawer-enter-x:-28px] rtl:[--drawer-enter-x:28px]"
               >
-                {actionLabel}
-              </Link>
-            </div>
-          </DrawerReveal>
-        </div>
-      ) : null}
+                <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-border pb-4">
+                  <Link
+                    href="/"
+                    onClick={() => setOpen(false)}
+                    className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <BrandMark height={36} label={brandLabel} logo={logo} />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="grid size-11 touch-manipulation place-items-center rounded-full border border-border transition-colors hover:border-gold hover:text-gold focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={closeLabel}
+                  >
+                    <X className="size-5" aria-hidden="true" />
+                  </button>
+                </div>
+                <nav className="flex flex-col pt-6" aria-label={openLabel}>
+                  {items.map((item, index) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-14 touch-manipulation items-center justify-between border-b border-border py-4 text-xl font-semibold transition-colors hover:text-highlight focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span>{item.label}</span>
+                      <span className="text-xs text-highlight">
+                        0{index + 1}
+                      </span>
+                    </Link>
+                  ))}
+                </nav>
+                <div className="mt-auto pt-10">
+                  <Link
+                    href={actionHref}
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-12 items-center justify-center bg-primary px-6 py-3 text-sm font-bold text-primary-foreground"
+                  >
+                    {actionLabel}
+                  </Link>
+                </div>
+              </DrawerReveal>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

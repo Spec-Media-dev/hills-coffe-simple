@@ -292,9 +292,23 @@ export async function changePasswordAction(
   return ok("passwordUpdated");
 }
 
-export async function toggleFavoriteAction(formData: FormData) {
+/**
+ * Adds or removes one coffee from the caller's own favourites.
+ *
+ * This action used to return nothing at all: an expired session, a malformed
+ * id and a rejected write were all indistinguishable from success, because
+ * every failure path was a bare `return`. It now answers on the approved
+ * contract like every other action, so the button can say what happened
+ * instead of appearing to do nothing.
+ */
+type FavoriteState = { favorite: boolean };
+
+export async function toggleFavoriteAction(
+  _state: ActionFormState<FavoriteState>,
+  formData: FormData,
+): Promise<ActionResult<FavoriteState>> {
   const viewer = await requireVerifiedUser();
-  if (!viewer) return;
+  if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
   const parsed = z
     .object({
       coffeeId: z.string().uuid(),
@@ -304,30 +318,44 @@ export async function toggleFavoriteAction(formData: FormData) {
       coffeeId: formData.get("coffeeId"),
       returnTo: formData.get("returnTo") || "/account/favorites",
     });
-  if (!parsed.success) return;
+  if (!parsed.success) return fail("VALIDATION", "validation");
 
   // Every statement is scoped to the caller's own id; RLS is the backstop.
   const db = await createSupabaseServerClient();
-  const { data } = await db
+  const { data, error: readFailed } = await db
     .from("favorites")
     .select("coffee_id")
     .eq("user_id", viewer.id)
     .eq("coffee_id", parsed.data.coffeeId)
     .maybeSingle();
-  if (data)
-    await db
-      .from("favorites")
-      .delete()
-      .eq("user_id", viewer.id)
-      .eq("coffee_id", parsed.data.coffeeId);
-  else
-    await db.from("favorites").insert({
-      user_id: viewer.id,
-      coffee_id: parsed.data.coffeeId,
-      created_at: new Date().toISOString(),
-    });
+  if (readFailed) return favoriteFailed(readFailed);
+
+  const { error: writeFailed } = data
+    ? await db
+        .from("favorites")
+        .delete()
+        .eq("user_id", viewer.id)
+        .eq("coffee_id", parsed.data.coffeeId)
+    : await db.from("favorites").insert({
+        user_id: viewer.id,
+        coffee_id: parsed.data.coffeeId,
+        created_at: new Date().toISOString(),
+      });
+  if (writeFailed) return favoriteFailed(writeFailed);
+
   revalidatePath(parsed.data.returnTo);
   revalidatePath("/account/favorites");
+  // `favorite` is the state the coffee is now in, so the button can relabel
+  // itself without waiting for the revalidated page to arrive.
+  return ok(data ? "favoriteRemoved" : "favoriteSaved", {
+    favorite: !data,
+  });
+}
+
+/** The code identifies the fault; the row data that may sit in the message does not. */
+function favoriteFailed(error: { code?: string }): ActionResult<never> {
+  console.error(`[account] favorite toggle failed: ${error.code ?? "upstream"}`);
+  return fail("UNEXPECTED", "saveFailed");
 }
 
 /** Exposed for the settings UI so limits stay in one place. */

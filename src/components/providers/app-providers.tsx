@@ -3,7 +3,7 @@
 import { ThemeProvider } from "next-themes";
 import { MotionConfig } from "motion/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "sonner";
+import { AppToaster } from "@/components/providers/app-toaster";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -16,7 +16,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <MotionConfig reducedMotion="user">
         <TooltipProvider>
           {children}
-          <Toaster richColors closeButton position="bottom-right" />
+          <AppToaster />
         </TooltipProvider>
       </MotionConfig>
     </ThemeProvider>

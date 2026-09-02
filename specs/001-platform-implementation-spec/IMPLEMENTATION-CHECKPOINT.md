@@ -4,11 +4,11 @@
 
 ## Current Phase
 
-**Phase 10 — Admin interaction, responsive redesign, and final Admin flow
+**Phase 11 — Cross-cutting accessibility, i18n, theme and domain-error
 closure — COMPLETE, GATE PASSED.**
 
-Phase 9 remains COMPLETE / GATE PASSED and was not reverted. Phase 11 **has not
-been started**.
+Phases 9 and 10 remain COMPLETE / GATE PASSED and were not reverted. Phase 12
+**has not been started**.
 
 > ### Still outstanding from Phase 3 — one manual step
 >
@@ -266,10 +266,37 @@ scrollbars stop being forced dark in the light theme.
 returns hardcoded English prose, so Admin feedback is localized in both
 locales.
 
+### Phase 11 — COMPLETE, gate PASSED
+
+| Task                          | Status   | Notes                                                                                                                    |
+| ----------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `P11-T01` ActionResult + leaks| **PASS** | 51 actions across 12 modules audited; 1 straggler migrated; dead legacy result shape deleted; 0 raw leaks at runtime     |
+| `P11-T02` locale copy + parity| **PASS** | 44 inline EN/AR copy pairs moved into the catalogues; 3 error boundaries localized; parity green, 0 missing keys         |
+| `P11-T03` primitive audit     | **PASS** | 10 primitives audited; mobile drawer stacking, a per-second announcement and a duplicated one fixed                      |
+| `P11-T04` cross-persona a11y  | **PASS** | all five personas exercised with real fixtures; authenticated axe coverage replaces the old placeholder skip             |
+| `P11-T05` **PHASE 11 GATE**   | **PASS** | 593 passing checks, 0 failing; typecheck, lint and build clean; QA data removed and storage reconciled                   |
+
+Evidence: `evidence/phase-11-cross-cutting-quality.md`.
+
+No schema change, no migration, and no change to RLS, Auth semantics, roles,
+blocking, protected pricing, inquiry/sample rules, CMS schema or Media schema.
+
+Four defects in earlier phases' work were found by this phase's audit and
+fixed in place rather than by reverting: the mobile navigation drawer opened
+off-screen on any scrolled page (Phase 9 gave the header a
+`view-transition-name`, making it a containing block for the fixed drawer);
+the public and account forms fell back to native browser validation popups and
+discarded typed values on rejection; the toast surface ignored dark mode and
+failed contrast; and three Admin sidebar labels failed AA at 11-12px.
+
+**Known suite limitation**: `phase8-ui-sweep.spec.ts` is a serial block whose
+later tests consume media the earlier ones upload, so it is not shard-safe.
+Run that file whole, or split its fixtures per test, before sharding in CI.
+
 ## Current / Next Task
 
-**Next**: `P11-T01` — first task of Phase 11. Not started; do not begin it
-without instruction.
+**Next**: `P12-T01` — first task of Phase 12 (staging provisioning and
+authenticated E2E). Not started; do not begin it without instruction.
 
 Two items need an owner decision before a later phase leans on them:
 
@@ -349,8 +376,8 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
 
 ## Last Safe Checkpoint
 
-- **Branch**: `main`; Phases 0–9 committed (`8811dae finish phase 9`). Phase 10
-  is uncommitted, per the owner's instruction not to commit.
+- **Branch**: `main`; Phases 0–10 committed (`eb65559 finish phase 10`). Phase
+  11 is uncommitted, per the owner's instruction not to commit.
 - **Database**: unchanged by Phases 6, 7 and 8 — no migration, no function, RLS,
   storage policy or bucket change. Owner-approved QA/demo **rows** were
   inserted in Phase 6 and are inventoried in

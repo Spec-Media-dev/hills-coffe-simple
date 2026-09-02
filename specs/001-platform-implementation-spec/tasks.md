@@ -972,7 +972,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 11 — Cross-cutting accessibility, i18n, theme, and domain errors
 
-- [ ] P11-T01 [P] Finish `ActionResult` adoption and eliminate raw-error leaks
+- [x] P11-T01 [P] Finish `ActionResult` adoption and eliminate raw-error leaks
   - **Goal**: Every remaining server action across the codebase (not just Auth from Phase 3) returns the `ActionResult` shape from `contracts/action-result.md`; a repo-wide scan finds zero raw Postgres/Supabase error strings reaching any user-facing field.
   - **Dependencies**: Phases 3–10 complete (all major action surfaces exist by now).
   - **Files/modules**: any remaining action file not yet migrated (`src/actions/account.ts`, `admin-operations.ts`, `inquiries.ts` — confirm each, migrate any stragglers).
@@ -986,7 +986,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` FR-060 holds with a passing scan, not just a manual review.
   - **Out of scope**: server-side logging detail (which intentionally stays detailed for operators).
 
-- [ ] P11-T02 [P] Remove remaining hardcoded locale ternaries and extend parity coverage
+- [x] P11-T02 [P] Remove remaining hardcoded locale ternaries and extend parity coverage
   - **Goal**: Close out any `locale === "ar" ? ... : ...` inline ternary introduced by Phases 2–10's new code (the prior completion pass already removed 29 of these — this task catches any new ones), and extend `src/i18n/messages.test.ts` to cover every message key added since.
   - **Dependencies**: Phases 2–10 complete.
   - **Files/modules**: `src/i18n/messages.test.ts`, `messages/en.json`, `messages/ar.json`, any file the parity test or a repo grep flags.
@@ -1000,7 +1000,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` SC-003 holds — zero missing or mismatched translation keys.
   - **Out of scope**: authoring genuinely new copy beyond what earlier phases already required.
 
-- [ ] P11-T03 [P] Audit remaining dialogs/menus/live-regions for accessible-primitive compliance
+- [x] P11-T03 [P] Audit remaining dialogs/menus/live-regions for accessible-primitive compliance
   - **Goal**: Confirm every dialog/menu/drawer built or touched across Phases 2–10 (beyond the ones already explicitly hardened — mobile menu, header avatar menu, sign-out confirmation, inquiry dialog, block/unblock confirmation) uses correct focus trap/restore, Escape handling, and non-duplicative live-region announcements.
   - **Dependencies**: Phases 2–10 complete.
   - **Files/modules**: any remaining custom dialog/menu component found by the audit.
@@ -1014,7 +1014,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 7 acceptance scenario 5 holds across every interactive primitive in the product, not only the ones explicitly named in earlier phases.
   - **Out of scope**: introducing a new dialog/menu pattern not already used elsewhere in the product.
 
-- [ ] P11-T04 Run the full WCAG 2.2 AA cross-persona accessibility pass
+- [x] P11-T04 Run the full WCAG 2.2 AA cross-persona accessibility pass
   - **Goal**: Produce the axe + manual-keyboard evidence for every core journey across all five personas, closing SC-007.
   - **Dependencies**: P11-T01 through P11-T03.
   - **Files/modules**: `tests/e2e/**`.
@@ -1028,7 +1028,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: WCAG 2.2 AA target met for all core journeys (SC-007); zero raw backend error reachable by any tested action; every action state is localized and theme-safe.
   - **Out of scope**: any business-outcome or authorization-distinction change.
 
-- [ ] P11-T05 **PHASE 11 ACCEPTANCE GATE**
+- [x] P11-T05 **PHASE 11 ACCEPTANCE GATE**
   - **Goal**: Confirm cross-cutting quality is closed out before authenticated staging proof (Phase 12) begins.
   - **Dependencies**: P11-T01 through P11-T04.
   - **Runtime acceptance condition** (per `plan.md` Phase 11): all conditions in P11-T04 hold with recorded evidence.

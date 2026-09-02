@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Package, Sprout } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
+import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { InquiryPanel } from "@/components/inquiries/inquiry-panel";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import type { Locale } from "@/i18n/routing";
@@ -11,7 +12,6 @@ import { getViewer } from "@/lib/auth/session";
 import { getCoffeeBySlug, getPublicCoffeeMedia } from "@/lib/data/catalog";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
-import { toggleFavoriteAction } from "@/actions/account";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 import { publicOfferStatusKey } from "@/lib/public-labels";
@@ -141,27 +141,14 @@ export default async function CoffeePage({
                 ))}
               </div>
               {viewer ? (
-                <form action={toggleFavoriteAction} className="mt-7">
-                  <input
-                    type="hidden"
-                    name="coffeeId"
-                    value={coffee.coffeeId}
+                <div className="mt-7">
+                  <FavoriteButton
+                    coffeeId={coffee.coffeeId}
+                    returnTo={`/${locale}/green-coffee-offer-list/${slug}`}
+                    favorite={Boolean(favorite)}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-bold disabled:opacity-60"
                   />
-                  <input
-                    type="hidden"
-                    name="returnTo"
-                    value={`/${locale}/green-coffee-offer-list/${slug}`}
-                  />
-                  <button className="rounded-full border border-border bg-card px-5 py-3 text-sm font-bold">
-                    {favorite
-                      ? locale === "ar"
-                        ? "إزالة من المفضلة"
-                        : "Remove from favourites"
-                      : locale === "ar"
-                        ? "حفظ في المفضلة"
-                        : "Save to favourites"}
-                  </button>
-                </form>
+                </div>
               ) : null}
             </SectionReveal>
             <ImageReveal className="relative min-h-[30rem] bg-primary text-primary-foreground">

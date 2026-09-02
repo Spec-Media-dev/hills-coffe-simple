@@ -92,6 +92,8 @@ test("accessibility: arabic homepage with the mobile menu open", async ({
   await runAxe(page, testInfo, "arabic-mobile-menu-open");
 });
 
-// Authenticated shells (account, admin workspace) require approved staging
-// credentials. Sessions are never fabricated, so these stay visibly blocked.
-test.skip("accessibility: BLOCKED — STAGING CREDENTIALS REQUIRED (account shell, admin shell)", () => {});
+// The authenticated shells (account, admin workspace) are covered in
+// `phase11-cross-cutting.spec.ts`, which signs in as each real persona from
+// the Auth fixture set and runs the same axe configuration against them. No
+// session is fabricated there either — the personas are created through the
+// service role and cleaned up afterwards.
