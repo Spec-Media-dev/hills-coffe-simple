@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { Modal } from "@/components/motion/primitives";
 
 /**
  * Shared confirmation dialog.
@@ -97,7 +98,7 @@ export function ConfirmDialog({
         onClick={onCancel}
         className="absolute inset-0 cursor-default bg-forest-deep/60 backdrop-blur-sm"
       />
-      <div
+      <Modal
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -127,7 +128,7 @@ export function ConfirmDialog({
           </div>
         </div>
         <span className="sr-only">{confirmLabel}</span>
-      </div>
+      </Modal>
     </div>
   );
 }

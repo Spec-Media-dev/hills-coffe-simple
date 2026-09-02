@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { BrandMark } from "@/components/brand/mark";
 import { LocaleSwitcher } from "./locale-switcher";
 import { MobileMenu } from "./mobile-menu";
+import { CatalogMegaMenu } from "./catalog-mega-menu";
+import { NavUnderline } from "@/components/motion/primitives";
 import { ThemeToggle } from "./theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { requireVerifiedUser } from "@/lib/auth/session";
@@ -27,6 +29,7 @@ export async function SiteHeader() {
   // client component and cannot read it itself.
   const logo = await getSiteLogo(locale);
   const account = await getTranslations("account");
+  const catalog = await getTranslations("catalog");
   const items = [
     { href: "/", label: t("home") },
     { href: "/green-coffee-offer-list", label: t("products") },
@@ -37,115 +40,60 @@ export async function SiteHeader() {
   ];
 
   return (
-    <header className="site-header sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-xl">
-      <div className="site-container flex h-[72px] items-center justify-between gap-5">
+    <header className="site-header sticky top-0 z-40 border-b border-border/75 bg-background/92 backdrop-blur-xl">
+      <div className="site-container flex h-20 items-center justify-between gap-5">
         <Link
           href="/"
           className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <BrandMark
-            height={40}
+            height={38}
             priority
             label={brand("logoAlt")}
             logo={logo}
           />
         </Link>
         <nav
-          className="hidden items-center gap-8 lg:flex"
-          aria-label="Primary navigation"
+          className="hidden items-center gap-7 xl:flex"
+          aria-label={t("primary")}
         >
-          <Link
-            href="/"
-            className="text-sm font-semibold transition hover:text-gold"
-          >
-            {t("home")}
+          <Link href="/" className="text-sm font-semibold">
+            <NavUnderline>{t("home")}</NavUnderline>
           </Link>
-          <div className="group relative flex h-[72px] items-center focus-within:text-gold">
-            <Link
-              href="/green-coffee-offer-list"
-              className="text-sm font-semibold transition hover:text-gold"
-            >
-              {t("products")}
-            </Link>
-            <div className="invisible absolute top-[68px] start-1/2 w-[590px] -translate-x-1/2 translate-y-2 rounded-2xl border border-border bg-card p-3 opacity-0 shadow-[var(--shadow-soft)] transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
-              <div className="grid grid-cols-[1.25fr_1fr] gap-2">
-                <div className="rounded-xl bg-primary p-5 text-primary-foreground">
-                  <p className="eyebrow !text-gold-contrast">{t("catalog")}</p>
-                  <p className="mt-8 max-w-xs font-heading text-2xl leading-tight">
-                    {t("all")}
-                  </p>
-                  <div className="mt-5 flex gap-2 text-xs">
-                    <span className="rounded-full border border-white/20 px-3 py-1">
-                      {t("specialty")}
-                    </span>
-                    <span className="rounded-full border border-white/20 px-3 py-1">
-                      {t("commercial")}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid gap-1 p-2 text-sm">
-                  <Link
-                    href="/green-coffee-offer-list?location=Egypt"
-                    className="rounded-lg px-3 py-2.5 hover:bg-muted"
-                  >
-                    {t("egypt")}
-                  </Link>
-                  <Link
-                    href="/green-coffee-offer-list?location=Dubai"
-                    className="rounded-lg px-3 py-2.5 hover:bg-muted"
-                  >
-                    {t("dubai")}
-                  </Link>
-                  <Link
-                    href="/green-coffee-offer-list?certified=true"
-                    className="rounded-lg px-3 py-2.5 hover:bg-muted"
-                  >
-                    {t("certifications")}
-                  </Link>
-                  <Link
-                    href="/green-coffee-offer-list"
-                    className="mt-2 rounded-lg bg-gold px-3 py-2.5 font-bold text-[#17251c]"
-                  >
-                    {t("all")} →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-          <Link
-            href="/coffee-origins"
-            className="text-sm font-semibold transition hover:text-gold"
-          >
-            {t("origins")}
+          <CatalogMegaMenu
+            labels={{
+              trigger: t("products"),
+              all: t("all"),
+              specialty: t("specialty"),
+              commercial: t("commercial"),
+              origins: t("origins"),
+              egypt: t("egypt"),
+              dubai: t("dubai"),
+              pricing: actions("pricing"),
+            }}
+          />
+          <Link href="/coffee-origins" className="text-sm font-semibold">
+            <NavUnderline>{t("origins")}</NavUnderline>
           </Link>
-          <Link
-            href="/knowledge"
-            className="text-sm font-semibold transition hover:text-gold"
-          >
-            {t("knowledge")}
+          <Link href="/knowledge" className="text-sm font-semibold">
+            <NavUnderline>{t("knowledge")}</NavUnderline>
           </Link>
-          <Link
-            href="/about"
-            className="text-sm font-semibold transition hover:text-gold"
-          >
-            {t("about")}
+          <Link href="/about" className="text-sm font-semibold">
+            <NavUnderline>{t("about")}</NavUnderline>
           </Link>
-          <Link
-            href="/contact"
-            className="text-sm font-semibold transition hover:text-gold"
-          >
-            {t("contact")}
+          <Link href="/contact" className="text-sm font-semibold">
+            <NavUnderline>{t("contact")}</NavUnderline>
           </Link>
         </nav>
         <div className="flex items-center gap-2">
           <Link
             href="/green-coffee-offer-list"
             className="hidden size-11 place-items-center rounded-full border border-border transition hover:border-gold hover:text-gold sm:grid"
-            aria-label="Search"
+            aria-label={catalog("search")}
           >
             <Search className="size-4" />
           </Link>
-          <ThemeToggle />
+          <ThemeToggle label={t("theme")} />
           <LocaleSwitcher />
           {viewer ? (
             <AccountMenu
@@ -183,6 +131,8 @@ export async function SiteHeader() {
             closeLabel={t("close")}
             brandLabel={brand("logoAlt")}
             logo={logo}
+            actionHref={viewer ? "/account" : "/sign-in"}
+            actionLabel={viewer ? t("account") : actions("signin")}
           />
         </div>
       </div>

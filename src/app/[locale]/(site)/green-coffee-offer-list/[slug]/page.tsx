@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { ArrowLeft, MapPin, Package, Sprout } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -7,11 +8,13 @@ import { InquiryPanel } from "@/components/inquiries/inquiry-panel";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/auth/session";
-import { getCoffeeBySlug } from "@/lib/data/catalog";
+import { getCoffeeBySlug, getPublicCoffeeMedia } from "@/lib/data/catalog";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import { toggleFavoriteAction } from "@/actions/account";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
+import { publicOfferStatusKey } from "@/lib/public-labels";
 
 export async function generateMetadata({
   params,
@@ -38,6 +41,12 @@ export default async function CoffeePage({
   setRequestLocale(locale);
   const coffee = await getCoffeeBySlug(slug, locale as Locale);
   if (!coffee) notFound();
+  const coffeeMedia = await getPublicCoffeeMedia(
+    coffee.coffeeId,
+    locale as Locale,
+  );
+  const mainMedia =
+    coffeeMedia.find((item) => item.role === "MAIN") ?? coffeeMedia[0] ?? null;
   const t = await getTranslations("product");
   const actions = await getTranslations("actions");
   const catalog = await getTranslations("catalog");
@@ -108,8 +117,8 @@ export default async function CoffeePage({
             <ArrowLeft className="size-4 rtl:rotate-180" />
             {t("back")}
           </Link>
-          <div className="mt-14 grid gap-10 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
-            <div>
+          <div className="mt-14 grid gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-stretch">
+            <SectionReveal className="flex flex-col justify-end py-4">
               <p className="eyebrow">
                 {coffee.origin} · {coffee.type}
               </p>
@@ -154,43 +163,59 @@ export default async function CoffeePage({
                   </button>
                 </form>
               ) : null}
-            </div>
-            <div className="rounded-[2rem] bg-primary p-8 text-primary-foreground">
-              <p className="eyebrow !text-gold-contrast">{t("identity")}</p>
-              <dl className="mt-8 grid gap-5 sm:grid-cols-2">
-                <Detail
-                  icon={MapPin}
-                  label={t("origin")}
-                  value={coffee.origin}
+            </SectionReveal>
+            <ImageReveal className="relative min-h-[30rem] bg-primary text-primary-foreground">
+              {mainMedia ? (
+                <Image
+                  src={mainMedia.url}
+                  alt={mainMedia.alt}
+                  fill
+                  priority
+                  unoptimized
+                  sizes="(min-width:1024px) 46vw, 100vw"
+                  className="object-cover opacity-72"
                 />
-                <Detail
-                  icon={Sprout}
-                  label={t("process")}
-                  value={coffee.process}
-                />
-                <Detail
-                  icon={Package}
-                  label={t("score")}
-                  value={coffee.cupScore}
-                />
-                <Detail
-                  icon={Package}
-                  label={t("sensory")}
-                  value={coffee.certifications.join(", ") || "—"}
-                />
-              </dl>
-            </div>
+              ) : null}
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(23,60,50,.06),rgba(23,60,50,.88))]" />
+              <div className="relative flex min-h-[30rem] items-end p-8 md:p-10">
+                <div>
+                  <p className="eyebrow !text-gold-contrast">{t("identity")}</p>
+                  <dl className="mt-8 grid gap-5 sm:grid-cols-2">
+                    <Detail
+                      icon={MapPin}
+                      label={t("origin")}
+                      value={coffee.origin}
+                    />
+                    <Detail
+                      icon={Sprout}
+                      label={t("process")}
+                      value={coffee.process}
+                    />
+                    <Detail
+                      icon={Package}
+                      label={t("score")}
+                      value={coffee.cupScore}
+                    />
+                    <Detail
+                      icon={Package}
+                      label={t("sensory")}
+                      value={coffee.certifications.join(", ") || "—"}
+                    />
+                  </dl>
+                </div>
+              </div>
+            </ImageReveal>
           </div>
         </div>
       </section>
       <section className="section-space">
-        <div className="site-container">
+        <SectionReveal className="site-container">
           <p className="eyebrow">{t("offers")}</p>
           <h2 className="display-lg mt-5">{t("offers")}</h2>
           <p className="mt-5 max-w-2xl text-muted-foreground">
             {t("offersBody")}
           </p>
-          <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="mt-10 overflow-hidden border border-border bg-card">
             {coffee.offers.map((offer) => (
               <article
                 key={offer.id}
@@ -206,7 +231,8 @@ export default async function CoffeePage({
                   {offer.bagWeightKg} kg · {offer.packaging}
                 </p>
                 <p className="text-sm">
-                  {offer.bags} {catalog("bags")} · {offer.status}
+                  {offer.bags} {catalog("bags")} ·{" "}
+                  {t(publicOfferStatusKey(offer.status))}
                 </p>
                 <div>
                   {prices.get(offer.id)?.length ? (
@@ -235,7 +261,7 @@ export default async function CoffeePage({
               </article>
             ))}
           </div>
-        </div>
+        </SectionReveal>
       </section>
     </>
   );

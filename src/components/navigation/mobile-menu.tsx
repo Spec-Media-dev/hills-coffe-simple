@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { BrandMark, type BrandLogo } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
+import { DrawerReveal } from "@/components/motion/primitives";
 
 type Item = { href: string; label: string };
 
@@ -13,6 +14,8 @@ export function MobileMenu({
   closeLabel,
   brandLabel = "Hills Coffee",
   logo = null,
+  actionHref,
+  actionLabel,
 }: {
   items: Item[];
   openLabel: string;
@@ -20,6 +23,8 @@ export function MobileMenu({
   brandLabel?: string;
   /** Resolved by the server header; this component never reads the database. */
   logo?: BrandLogo | null;
+  actionHref: string;
+  actionLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   const dialogId = useId();
@@ -71,7 +76,7 @@ export function MobileMenu({
   }, [open]);
 
   return (
-    <div className="lg:hidden">
+    <div className="xl:hidden">
       <button
         ref={triggerRef}
         type="button"
@@ -89,20 +94,20 @@ export function MobileMenu({
         )}
       </button>
       {open ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 xl:hidden">
           <button
             type="button"
             aria-label={closeLabel}
             className="absolute inset-0 cursor-default bg-primary/35 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <section
+          <DrawerReveal
             ref={dialogRef}
             id={dialogId}
             role="dialog"
             aria-modal="true"
             aria-label={openLabel}
-            className="absolute inset-x-0 top-0 max-h-[100dvh] overflow-y-auto overscroll-contain border-b border-border bg-background px-5 pb-8 pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl"
+            className="absolute inset-y-0 start-0 flex w-[min(92vw,28rem)] flex-col overflow-y-auto overscroll-contain border-e border-border bg-background px-5 pb-8 pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl [--drawer-enter-x:-28px] rtl:[--drawer-enter-x:28px]"
           >
             <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-border pb-4">
               <Link
@@ -121,23 +126,29 @@ export function MobileMenu({
                 <X className="size-5" aria-hidden="true" />
               </button>
             </div>
-            <nav
-              className="mx-auto flex max-w-3xl flex-col pt-3"
-              aria-label={openLabel}
-            >
+            <nav className="flex flex-col pt-6" aria-label={openLabel}>
               {items.map((item, index) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="flex min-h-11 touch-manipulation items-center justify-between border-b border-border py-4 text-xl font-medium transition-colors hover:text-gold focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex min-h-14 touch-manipulation items-center justify-between border-b border-border py-4 text-xl font-semibold transition-colors hover:text-highlight focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span>{item.label}</span>
                   <span className="text-xs text-highlight">0{index + 1}</span>
                 </Link>
               ))}
             </nav>
-          </section>
+            <div className="mt-auto pt-10">
+              <Link
+                href={actionHref}
+                onClick={() => setOpen(false)}
+                className="flex min-h-12 items-center justify-center bg-primary px-6 py-3 text-sm font-bold text-primary-foreground"
+              >
+                {actionLabel}
+              </Link>
+            </div>
+          </DrawerReveal>
         </div>
       ) : null}
     </div>

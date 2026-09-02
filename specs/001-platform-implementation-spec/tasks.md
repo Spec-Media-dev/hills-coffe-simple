@@ -818,7 +818,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 9 — Public design and motion rebuild
 
-- [ ] P9-T01 [P] Expand the motion primitive set with reduced-motion equivalence
+- [x] P9-T01 [P] Expand the motion primitive set with reduced-motion equivalence
   - **Goal**: Implement the master plan's full Motion System table (`PageReveal`, `SectionReveal`, `ImageReveal`, `HoverLift`, `NavUnderline`, `MegaMenuReveal`, `DrawerReveal`, `AccordionExpand`, `FilterTransition`, `Toast`, `Modal`, `Status`) with their specified durations/easings, each with a reduced-motion equivalent that preserves full functional access.
   - **Dependencies**: Phase 2 complete (script-tag fix must already be in place before any JSON-LD-adjacent page gets new motion wrappers, so motion is never placed around a server script element, per `research.md` §1's explicit rule).
   - **Files/modules**: `src/components/motion/**` (currently only `reveal.tsx` with `Reveal`/`Stagger`).
@@ -832,7 +832,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 7 acceptance scenario 6 passes for every new primitive.
   - **Out of scope**: any primitive not in the approved table.
 
-- [ ] P9-T02 Compose the homepage section sequence
+- [x] P9-T02 Compose the homepage section sequence
   - **Goal**: Implement the master plan's Homepage Plan order (hero → sourcing proposition → featured coffees → origin discovery → quality story → Egypt/Dubai warehouse sections → account CTA → latest knowledge → footer) with honest empty states wherever data is absent.
   - **Dependencies**: P8 complete (CMS/media/logo), P6 complete (catalog/origin data), P9-T01 (motion primitives).
   - **Files/modules**: `src/app/[locale]/(marketing)/page.tsx` (post-Phase-2 location).
@@ -846,7 +846,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 4 acceptance scenario 6 (honest empty state) passes at the homepage level; FR-034 and Constitution "no fake business data" hold across every section.
   - **Out of scope**: any statistic, establishment date, or business claim not sourced from real data or approved static copy.
 
-- [ ] P9-T03 [P] Finalize header and footer per the approved plans
+- [x] P9-T03 [P] Finalize header and footer per the approved plans
   - **Goal**: Implement the master plan's Header Auth State and Footer Plan sections in full — sticky header hierarchy, avatar-aware CTA (built in Phase 4, verified here in the public shell), and the footer's Brand/Explore/Account/Contact/Legal structure sourced from real `site_settings`/pages only.
   - **Dependencies**: P4-T02 (header avatar menu), P8-T02 (logo resolution).
   - **Files/modules**: `src/components/navigation/site-header.tsx`, `site-footer.tsx`.
@@ -860,7 +860,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 7 acceptance scenario 1 (functional parity) passes for header/footer specifically.
   - **Out of scope**: newsletter functionality (explicitly deferred until a consent/provider/privacy flow is separately approved).
 
-- [ ] P9-T04 [P] Implement only the approved Sucafina-inspired interaction patterns
+- [x] P9-T04 [P] Implement only the approved Sucafina-inspired interaction patterns
   - **Goal**: Apply the specific, already-approved interaction-pattern rows from the master plan's Sucafina Live UX Study table (sticky header behavior, accessible mega-menu semantics, filter-drawer mechanics, card hover restraint) — citing the exact table row implemented, with zero copied content, imagery, or brand identity.
   - **Dependencies**: P9-T01–T03.
   - **Files/modules**: whichever header/menu/filter/card components the cited rows apply to.
@@ -874,7 +874,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: Constitution Principle XVII and `research.md` §9 are satisfied — no further Sucafina research occurred, only implementation of what was already approved.
   - **Out of scope**: any new comparative research against Sucafina; any global region selector (explicitly rejected by the master plan's study — Egypt/Dubai remain a warehouse-availability dimension, not a site-region selector).
 
-- [ ] P9-T05 Run the public visual-regression, accessibility, and performance matrix
+- [x] P9-T05 Run the public visual-regression, accessibility, and performance matrix
   - **Goal**: Produce evidence across the master plan's Visual Regression Matrix (screen × theme × locale × viewport), an axe accessibility pass, and Core Web Vitals baseline for the redesigned public surface.
   - **Dependencies**: P9-T01 through P9-T04.
   - **Files/modules**: `tests/e2e/**` (Playwright `toHaveScreenshot`, axe integration).
@@ -888,11 +888,19 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a visually distinctive Hills system with real content, no Sucafina copy/asset, usable from 375px through 1440px+ in both themes and both locales, restrained and reduced-motion-safe — all with attached evidence; LCP/CLS recorded, not assumed.
   - **Out of scope**: any data/Auth/DB policy change, any public URL change, any protected-price behavior change.
 
-- [ ] P9-T06 **PHASE 9 ACCEPTANCE GATE**
+- [x] P9-T06 **PHASE 9 ACCEPTANCE GATE**
   - **Goal**: Confirm the public redesign is complete and evidenced before Admin redesign (Phase 10) and cross-cutting polish (Phase 11) proceed.
   - **Dependencies**: P9-T01 through P9-T05.
   - **Runtime acceptance condition** (per `plan.md` Phase 9): all conditions in P9-T05 hold with recorded evidence.
   - **Out of scope**: any Phase 10/11 task beginning before this gate passes.
+
+> **Status: COMPLETE (2026-09-02) — PHASE 9 GATE: PASS.** Evidence:
+> `evidence/phase-9-public-design-motion.md` and the paired
+> `evidence/phase-9/{baseline,final}/` screenshots. The production Phase 9
+> suite passed 5/5, including the 72-screen public matrix; axe passed 36/36
+> executable desktop/mobile screens (4 credential-only skips); production
+> LCP was 496 ms mobile / 388 ms desktop and CLS was 0.0000 for both. No
+> database, Auth, pricing, URL, or Sucafina asset/content change occurred.
 
 ---
 

@@ -65,7 +65,7 @@
   --gold-contrast: #f1bf7c;
   /* Brand gold is decorative only: at small text sizes it fails WCAG AA on
      cream/white, so gold text uses this darker on-brand variant. */
-  --gold-text: #8f5a15;
+  --gold-text: #75450d;
   --forest-light: #245548;
   --radius: 0.75rem;
   --font-body: var(--font-manrope), Arial, sans-serif;
@@ -151,7 +151,7 @@
     margin-inline: auto;
   }
   .section-space {
-    padding-block: clamp(4.5rem, 9vw, 8rem);
+    padding-block: clamp(5rem, 9vw, 9rem);
   }
   .eyebrow {
     font-size: 0.72rem;
@@ -173,12 +173,30 @@
   [data-surface="dark"] {
     --gold-text: var(--gold-bright);
   }
+  .bg-primary .text-muted-foreground {
+    color: rgb(255 255 255 / 0.74);
+  }
+  .bg-gold .text-muted-foreground {
+    color: #3b260f;
+  }
   .display-xl {
     font-family: var(--font-display);
     font-size: clamp(3rem, 8vw, 7.2rem);
     line-height: 0.94;
     letter-spacing: -0.06em;
     font-weight: 800;
+  }
+  .display-hero {
+    font-family: var(--font-display);
+    font-size: clamp(4rem, 10.5vw, 9.5rem);
+    line-height: 0.84;
+    letter-spacing: -0.075em;
+    font-weight: 800;
+  }
+  [dir="rtl"] .display-hero {
+    font-size: clamp(3.5rem, 9vw, 8rem);
+    line-height: 1.03;
+    letter-spacing: -0.04em;
   }
   [dir="rtl"] .display-xl {
     letter-spacing: -0.035em;
@@ -226,6 +244,86 @@
     color: var(--highlight);
     text-decoration: underline;
     text-underline-offset: 0.2em;
+  }
+  .empty-state {
+    border: 1px dashed var(--border);
+    padding: clamp(2.5rem, 6vw, 5rem);
+    text-align: center;
+    color: var(--muted-foreground);
+    background: color-mix(in srgb, var(--card) 55%, transparent);
+  }
+  .footer-links a {
+    width: fit-content;
+    text-decoration-line: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 0.35em;
+    transition:
+      color 180ms ease,
+      text-decoration-color 180ms ease;
+  }
+  .footer-links a:hover,
+  .footer-links a:focus-visible {
+    color: var(--gold-bright);
+    text-decoration-color: currentColor;
+  }
+  .origin-map-field {
+    background-color: color-mix(in srgb, var(--primary) 4%, transparent);
+    background-image:
+      radial-gradient(
+        ellipse at 24% 44%,
+        transparent 0 18%,
+        color-mix(in srgb, var(--foreground) 16%, transparent) 18.3% 18.8%,
+        transparent 19.1%
+      ),
+      radial-gradient(
+        ellipse at 58% 38%,
+        transparent 0 23%,
+        color-mix(in srgb, var(--foreground) 14%, transparent) 23.3% 23.8%,
+        transparent 24.1%
+      ),
+      radial-gradient(
+        ellipse at 76% 62%,
+        transparent 0 12%,
+        color-mix(in srgb, var(--foreground) 13%, transparent) 12.3% 12.8%,
+        transparent 13.1%
+      ),
+      linear-gradient(
+        color-mix(in srgb, var(--border) 40%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--border) 40%, transparent) 1px,
+        transparent 1px
+      );
+    background-size:
+      auto,
+      auto,
+      auto,
+      5rem 5rem,
+      5rem 5rem;
+  }
+  .bg-primary .origin-map-field {
+    --foreground: #eee4d1;
+    --border: rgb(238 228 209 / 0.3);
+  }
+  .article-prose {
+    font-size: clamp(1rem, 1.2vw, 1.125rem);
+    line-height: 1.9;
+  }
+  .article-prose h2,
+  .article-prose h3 {
+    margin-top: 2.75em;
+    color: var(--foreground);
+  }
+  .article-prose blockquote {
+    margin-block: 2.5rem;
+    border-inline-start: 3px solid var(--gold);
+    padding-inline-start: 1.5rem;
+    color: var(--foreground);
+    font-family: var(--font-display);
+    font-size: 1.35em;
+    line-height: 1.55;
   }
 }
 
@@ -304,5 +402,10 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+  [data-motion] {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
   }
 }

@@ -1,13 +1,12 @@
 # Implementation Resume Checkpoint
 
-**Last updated**: 2026-09-01
+**Last updated**: 2026-09-02
 
 ## Current Phase
 
-**Phase 6 — Catalog, Admin data entry, protected pricing, and origins —
-COMPLETE, GATE PASSED.**
+**Phase 9 — Public design and motion rebuild — COMPLETE, GATE PASSED.**
 
-Phase 7 **has not been started**.
+Phase 10 **has not been started**.
 
 > ### Still outstanding from Phase 3 — one manual step
 >
@@ -216,10 +215,29 @@ row alone, unlike the coffee flow where the image belongs to the coffee.
 No migration, no schema change, no second upload path. Proven by 10 live-database
 tests and 7 browser tests; coffee MAIN/GALLERY re-verified at 18/18.
 
+### Phase 9 — COMPLETE, gate PASSED
+
+| Task                        | Status   | Notes                                                                                                                             |
+| --------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `P9-T01` motion vocabulary  | **PASS** | all 12 approved primitives, logical RTL drawer direction, reduced-motion equivalence, persistent content visible from first paint |
+| `P9-T02` homepage sequence  | **PASS** | approved nine-beat order, live readers, and honest empty states                                                                   |
+| `P9-T03` public shell       | **PASS** | sticky header, accessible navigation, real-data footer, no Admin or invented legal/newsletter link                                |
+| `P9-T04` reference patterns | **PASS** | mega menu, mobile drawer, filters, editorial cards; Hills-only content and assets                                                 |
+| `P9-T05` quality matrix     | **PASS** | 72 route/theme/locale/viewport screens, 36 axe screens, LCP/CLS, paired screenshots                                               |
+| `P9-T06` **PHASE 9 GATE**   | **PASS** | production build and full Phase 9 acceptance suite green                                                                          |
+
+Evidence: `evidence/phase-9-public-design-motion.md` and
+`evidence/phase-9/{baseline,final}/`.
+
+No database, RLS, storage, Auth, protected-price, public URL, or business-rule
+change. The live Sucafina site was used only as a visual/interaction reference
+under the owner's explicit Phase 9 instruction; no reference copy, media,
+brand device, code, or business claim appears in the application.
+
 ## Current / Next Task
 
-**Next**: `P9-T01` — first task of Phase 9 (public design and motion rebuild).
-Not started; do not begin it without instruction.
+**Next**: `P10-T01` — first task of Phase 10 (Admin interaction and responsive
+redesign). Not started; do not begin it without instruction.
 
 Two items need an owner decision before a later phase leans on them:
 
@@ -299,7 +317,7 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
 
 ## Last Safe Checkpoint
 
-- **Branch**: `main`; Phases 0–7 committed (`6899f98 finish phase 7`). Phase 8
+- **Branch**: `main`; Phases 0–8 committed (`27648ca finish phase 8`). Phase 9
   is uncommitted.
 - **Database**: unchanged by Phases 6, 7 and 8 — no migration, no function, RLS,
   storage policy or bucket change. Owner-approved QA/demo **rows** were
@@ -373,3 +391,23 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
     knowledge list and article pages, `messages/{en,ar}.json`
 - **Phase 8 rollback**: delete the new files above and revert the modified ones.
   No schema state and no data to undo.
+
+- **Phase 9 additions**:
+  - new motion: `src/components/motion/{primitives,animated-details}.tsx`,
+    plus the reduced-motion contract test
+  - new interaction components:
+    `src/components/navigation/catalog-mega-menu.tsx` and
+    `src/components/catalog/filter-panel.tsx`
+  - new public presentation reader:
+    `src/lib/public-labels.ts`; additive public media readers in
+    `src/lib/data/{catalog,editorial}.ts`
+  - redesigned public routes: home, About, Contact, catalog list/detail,
+    origins list/detail, knowledge list/detail, request-a-quote, CMS pages,
+    header, mobile drawer, footer, cards, and modal presentation
+  - evidence/tests:
+    `evidence/phase-9-public-design-motion.md`,
+    `evidence/phase-9/{baseline,final}/`,
+    `src/lib/motion-contract.test.ts`, and
+    `tests/e2e/phase9-public-design.spec.ts`
+- **Phase 9 rollback**: delete the new Phase 9 files above and revert the
+  modified public presentation files. No schema or data state to undo.

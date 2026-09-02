@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
+import { Modal } from "@/components/motion/primitives";
 
 /**
  * The project's accessible modal shell.
@@ -113,7 +114,7 @@ export function ModalDialog({
         onClick={onClose}
         className="absolute inset-0 cursor-default bg-forest-deep/60 backdrop-blur-sm"
       />
-      <div
+      <Modal
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -146,7 +147,7 @@ export function ModalDialog({
           </button>
         </div>
         {children}
-      </div>
+      </Modal>
     </div>
   );
 }

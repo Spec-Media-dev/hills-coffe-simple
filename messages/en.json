@@ -16,7 +16,10 @@
     "menu": "Open menu",
     "close": "Close menu",
     "breadcrumb": "Breadcrumb",
-    "catalog": "Catalog"
+    "catalog": "Catalog",
+    "primary": "Primary navigation",
+    "skip": "Skip to content",
+    "theme": "Toggle color theme"
   },
   "actions": {
     "cancel": "Cancel",
@@ -104,7 +107,13 @@
     "price": "Price",
     "editorial": "In the cup",
     "story": "About this coffee",
-    "related": "You may also like"
+    "related": "You may also like",
+    "statusArrivingSoon": "Arriving soon",
+    "statusNewArrival": "New arrival",
+    "statusInStore": "In store",
+    "statusDiscount": "Discount",
+    "statusSoldOut": "Sold out",
+    "statusInactive": "Unavailable"
   },
   "about": {
     "eyebrow": "About Hills Coffee",
@@ -130,6 +139,8 @@
     "send": "Send inquiry",
     "note": "Inquiries require a connected Supabase project before they can be saved.",
     "details": "Contact details",
+    "detailsEmpty": "Published contact details are not available yet.",
+    "warehousesEmpty": "No warehouse locations are published yet.",
     "hours": "Sunday–Thursday · 9:00–17:00",
     "metaTitle": "Contact Hills Coffee",
     "metaDescription": "Contact the Hills Coffee team or find our published warehouse locations."

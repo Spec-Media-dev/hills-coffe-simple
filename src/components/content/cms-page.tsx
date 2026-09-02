@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
+import { ImageReveal } from "@/components/motion/primitives";
+import { AnimatedDetails } from "@/components/motion/animated-details";
 import { Link } from "@/i18n/navigation";
 import { parseCards, parseFaq, parseStats } from "@/lib/cms/sections";
 import type { CmsPage, CmsSection } from "@/lib/data/site-content";
@@ -75,7 +77,7 @@ function Band({
 }) {
   return (
     <section
-      className={`section-space ${index % 2 ? "bg-page" : "bg-background"} ${className}`}
+      className={`section-space border-t border-border ${index % 2 ? "bg-page" : "bg-background"} ${className}`}
     >
       <div className="site-container">{children}</div>
     </section>
@@ -86,14 +88,17 @@ function HeroSection({ section }: { section: CmsSection }) {
   return (
     <section className="relative min-h-[min(78svh,760px)] overflow-hidden bg-primary text-primary-foreground">
       {section.media ? (
-        <Image
-          src={section.media.url}
-          alt={section.media.alt}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover opacity-55"
-        />
+        <ImageReveal className="absolute inset-0">
+          <Image
+            src={section.media.url}
+            alt={section.media.alt}
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            className="object-cover opacity-55"
+          />
+        </ImageReveal>
       ) : null}
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(23,60,50,.94)_0%,rgba(23,60,50,.5)_58%,rgba(23,60,50,.18)_100%)] rtl:scale-x-[-1]" />
       <div className="site-container relative flex min-h-[min(78svh,760px)] items-end py-16 md:py-24">
@@ -138,12 +143,13 @@ function MediaSplitSection({
         {section.media ? (
           <Reveal
             delay={0.08}
-            className="relative aspect-[4/3] overflow-hidden rounded-[2rem] border border-border"
+            className="relative aspect-[4/3] overflow-hidden border border-border"
           >
             <Image
               src={section.media.url}
               alt={section.media.alt}
               fill
+              unoptimized
               sizes="(min-width:1024px) 42vw, 100vw"
               className="object-cover"
             />
@@ -172,7 +178,7 @@ function CardGridSection({
           <Reveal
             key={`${card.title}-${cardIndex}`}
             delay={0.04 * cardIndex}
-            className="rounded-[1.5rem] border border-border bg-card p-7"
+            className="border-t border-border bg-card p-7"
           >
             <h3 className="text-xl" lang={section.lang}>
               {card.title}
@@ -218,7 +224,7 @@ function StatRowSection({
             // One copy of each string: duplicating the label as `sr-only`
             // plus an `aria-hidden` twin hid the readable text from assistive
             // technology and the announced text from everyone else.
-            className="flex flex-col-reverse rounded-[1.5rem] border border-border bg-card p-7"
+            className="flex flex-col-reverse border-t border-border bg-card p-7"
           >
             <dt
               className="mt-2 text-sm text-muted-foreground"
@@ -247,19 +253,17 @@ function FaqSection({
       <Reveal>
         <SectionCopy section={section} withBody={false} />
       </Reveal>
-      <div className="mt-10 grid max-w-3xl gap-3">
+      <div className="mt-10 max-w-4xl border-t border-border">
         {entries.map((entry, entryIndex) => (
-          <details
+          <AnimatedDetails
             key={`${entry.question}-${entryIndex}`}
-            className="group rounded-[1.25rem] border border-border bg-card px-6 py-5"
+            summary={entry.question}
+            lang={section.lang}
           >
-            <summary className="cursor-pointer list-none text-lg font-bold marker:content-none">
-              <span lang={section.lang}>{entry.question}</span>
-            </summary>
             <SafeMarkdown className="prose-hills mt-3 text-sm">
               {entry.answer}
             </SafeMarkdown>
-          </details>
+          </AnimatedDetails>
         ))}
       </div>
     </Band>

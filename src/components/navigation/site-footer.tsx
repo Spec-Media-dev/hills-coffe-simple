@@ -3,36 +3,87 @@ import { BrandMark } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getSiteLogo } from "@/lib/data/site-logo";
+import { getSitePage, getSiteSettings } from "@/lib/data/site-content";
+import { requireVerifiedUser } from "@/lib/auth/session";
 
 export async function SiteFooter() {
   const t = await getTranslations("footer");
   const nav = await getTranslations("nav");
   const brand = await getTranslations("brand");
-  const logo = await getSiteLogo((await getLocale()) as Locale);
+  const actions = await getTranslations("actions");
+  const account = await getTranslations("account");
+  const locale = (await getLocale()) as Locale;
+  const [logo, settings, viewer, privacyPage, termsPage] = await Promise.all([
+    getSiteLogo(locale),
+    getSiteSettings(locale),
+    requireVerifiedUser(),
+    getSitePage("privacy", locale),
+    getSitePage("terms", locale),
+  ]);
+  const legalPages = [
+    privacyPage ? { href: "/privacy", label: privacyPage.title } : null,
+    termsPage ? { href: "/terms", label: termsPage.title } : null,
+  ].filter((item): item is { href: string; label: string } => Boolean(item));
   return (
-    <footer className="site-footer border-t border-white/10 bg-[#13241b] text-[#eee8dc]">
-      <div className="site-container grid gap-12 py-16 md:grid-cols-[1.5fr_1fr_1fr]">
-        <div>
+    <footer className="site-footer bg-[#13241b] text-[#eee8dc]">
+      <div className="h-2 bg-gold" aria-hidden="true" />
+      <div className="site-container grid gap-x-8 gap-y-12 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)] lg:py-20">
+        <div className="md:col-span-2 lg:col-span-1">
           <BrandMark height={46} label={brand("logoAlt")} logo={logo} />
-          <p className="mt-6 max-w-sm text-2xl font-medium leading-snug text-[#c8bfb0]">
+          <p className="mt-7 max-w-sm font-heading text-3xl font-semibold leading-tight text-[#eee4d1]">
             {t("statement")}
           </p>
         </div>
         <div>
           <p className="eyebrow">{t("explore")}</p>
-          <div className="mt-6 grid gap-3 text-sm text-[#c8bfb0]">
+          <div className="footer-links mt-6 grid gap-3 text-sm text-[#c8bfb0]">
             <Link href="/green-coffee-offer-list">{nav("products")}</Link>
             <Link href="/coffee-origins">{nav("origins")}</Link>
             <Link href="/knowledge">{nav("knowledge")}</Link>
             <Link href="/about">{nav("about")}</Link>
+          </div>
+        </div>
+        <div>
+          <p className="eyebrow">{nav("account")}</p>
+          <div className="footer-links mt-6 grid gap-3 text-sm text-[#c8bfb0]">
+            {viewer ? (
+              <>
+                <Link href="/account">{nav("account")}</Link>
+                <Link href="/account/favorites">
+                  {account("nav.favorites")}
+                </Link>
+                <Link href="/account/requests">{account("nav.requests")}</Link>
+              </>
+            ) : (
+              <Link href="/sign-in">{actions("signin")}</Link>
+            )}
+          </div>
+        </div>
+        <div>
+          <p className="eyebrow">{nav("contact")}</p>
+          <div className="mt-6 grid gap-3 text-sm text-[#c8bfb0]">
+            {settings?.org_email ? (
+              <a href={`mailto:${settings.org_email}`}>{settings.org_email}</a>
+            ) : null}
+            {settings?.org_phone ? (
+              <a href={`tel:${settings.org_phone}`}>{settings.org_phone}</a>
+            ) : null}
+            {settings?.address ? <span>{settings.address}</span> : null}
             <Link href="/contact">{nav("contact")}</Link>
           </div>
         </div>
         <div>
-          <p className="eyebrow">{t("locations")}</p>
-          <div className="mt-6 grid gap-3 text-sm text-[#c8bfb0]">
-            <span>{nav("egypt")}</span>
-            <span>{nav("dubai")}</span>
+          <p className="eyebrow">{t("legal")}</p>
+          <div className="footer-links mt-6 grid gap-3 text-sm text-[#c8bfb0]">
+            {legalPages.length ? (
+              legalPages.map((page) => (
+                <Link key={page.href} href={page.href}>
+                  {page.label}
+                </Link>
+              ))
+            ) : (
+              <span className="text-[#8fa095]">—</span>
+            )}
           </div>
         </div>
       </div>
@@ -41,9 +92,10 @@ export async function SiteFooter() {
           <span>
             © {new Date().getFullYear()} {t("rights")}
           </span>
-          <span className="flex gap-5">
-            <span>{t("privacy")}</span>
-            <span>{t("terms")}</span>
+          <span>
+            {settings?.displayName ||
+              settings?.org_brand_name ||
+              brand("logoAlt")}
           </span>
         </div>
       </div>

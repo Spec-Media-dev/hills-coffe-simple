@@ -16,7 +16,10 @@
     "menu": "فتح القائمة",
     "close": "إغلاق القائمة",
     "breadcrumb": "مسار التنقل",
-    "catalog": "الكتالوج"
+    "catalog": "الكتالوج",
+    "primary": "التنقل الرئيسي",
+    "skip": "انتقل إلى المحتوى",
+    "theme": "تبديل نسق الألوان"
   },
   "actions": {
     "cancel": "إلغاء",
@@ -104,7 +107,13 @@
     "price": "السعر",
     "editorial": "في الكوب",
     "story": "عن هذا المحصول",
-    "related": "قد يعجبك أيضاً"
+    "related": "قد يعجبك أيضاً",
+    "statusArrivingSoon": "قادم قريباً",
+    "statusNewArrival": "وصول جديد",
+    "statusInStore": "متوفر في المخزن",
+    "statusDiscount": "خصم",
+    "statusSoldOut": "نفد",
+    "statusInactive": "غير متاح"
   },
   "about": {
     "eyebrow": "عن هيلز كوفي",
@@ -130,6 +139,8 @@
     "send": "إرسال الطلب",
     "note": "يتطلب حفظ الطلبات ربط مشروع Supabase.",
     "details": "بيانات التواصل",
+    "detailsEmpty": "بيانات التواصل المنشورة غير متاحة حالياً.",
+    "warehousesEmpty": "لا توجد مواقع مستودعات منشورة حالياً.",
     "hours": "الأحد–الخميس · 9:00–17:00",
     "metaTitle": "تواصل معنا",
     "metaDescription": "تواصل مع فريق هيلز كوفي أو اعثر على مستودعاتنا المنشورة."

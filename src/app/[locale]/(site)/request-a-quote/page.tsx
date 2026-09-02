@@ -8,6 +8,7 @@ import { requireVerifiedUser } from "@/lib/auth/session";
 import { getOfferList } from "@/lib/data/catalog";
 import { getSitePage } from "@/lib/data/site-content";
 import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
+import { SectionReveal } from "@/components/motion/primitives";
 
 export async function generateMetadata({
   params,
@@ -60,7 +61,7 @@ export default async function RequestQuotePage({
         </section>
       )}
       <section className="section-space">
-        <div className="site-container max-w-3xl">
+        <SectionReveal className="site-container max-w-3xl">
           {viewer && offers.length ? (
             <RequestQuoteForm offers={offers} />
           ) : viewer ? (
@@ -68,7 +69,7 @@ export default async function RequestQuotePage({
               {text.empty}
             </p>
           ) : (
-            <div className="rounded-2xl border border-border bg-card p-10 text-center">
+            <div className="border border-border bg-card p-10 text-center shadow-[var(--shadow-soft)]">
               <p>{text.intro}</p>
               <Link
                 href="/sign-in?next=/request-a-quote"
@@ -78,7 +79,7 @@ export default async function RequestQuotePage({
               </Link>
             </div>
           )}
-        </div>
+        </SectionReveal>
       </section>
     </>
   );

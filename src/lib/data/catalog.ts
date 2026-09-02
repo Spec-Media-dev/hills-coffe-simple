@@ -1,9 +1,9 @@
 import "server-only";
 import type { Locale } from "@/i18n/routing";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { OfferStatus } from "@/lib/supabase/types.generated";
-import { groupBy, pickTranslation } from "./shared";
+import { groupBy, pickTranslation, storagePublicUrl } from "./shared";
 
 export type OfferListItem = {
   id: string;
@@ -307,4 +307,54 @@ export async function getCoffeeBySlug(slug: string, locale: Locale) {
   const data = await getOfferList(locale);
   const offers = data.offers.filter((item) => item.slug === slug);
   return offers.length ? { ...offers[0], offers } : null;
+}
+
+export async function getPublicCoffeeMedia(coffeeId: string, locale: Locale) {
+  if (!isSupabaseConfigured()) return [];
+  const db = await createSupabaseServerClient();
+  const linksQ = await db
+    .from("coffee_media")
+    .select("media_id,role,sort_order")
+    .eq("coffee_id", coffeeId)
+    .order("sort_order");
+  const ids = (linksQ.data ?? []).map((link) => String(link.media_id));
+  if (!ids.length) return [];
+  const [mediaQ, translationsQ] = await Promise.all([
+    db
+      .from("media")
+      .select("id,storage_bucket,storage_path,width,height")
+      .in("id", ids)
+      .is("deleted_at", null),
+    db
+      .from("media_translations")
+      .select("media_id,locale,alt_text")
+      .in("media_id", ids),
+  ]);
+  if (linksQ.error || mediaQ.error || translationsQ.error) return [];
+  const { url } = getSupabaseConfig();
+  const media = new Map(
+    (mediaQ.data ?? []).map((item) => [String(item.id), item]),
+  );
+  return (linksQ.data ?? []).flatMap((link) => {
+    const item = media.get(String(link.media_id));
+    if (!item?.width || !item.height) return [];
+    const translations = (translationsQ.data ?? []).filter(
+      (entry) => String(entry.media_id) === String(link.media_id),
+    );
+    const alt =
+      translations.find((entry) => entry.locale === locale)?.alt_text ??
+      translations.find((entry) => entry.locale === "en")?.alt_text ??
+      "";
+    return [
+      {
+        id: String(item.id),
+        role: link.role,
+        sortOrder: link.sort_order,
+        url: storagePublicUrl(url, item.storage_bucket, item.storage_path),
+        width: Number(item.width),
+        height: Number(item.height),
+        alt: String(alt),
+      },
+    ];
+  });
 }

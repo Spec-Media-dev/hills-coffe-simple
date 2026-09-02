@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/content/cms-page";
@@ -11,6 +12,7 @@ import {
   getWarehouses,
 } from "@/lib/data/site-content";
 import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
+import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 
 export async function generateMetadata({
   params,
@@ -44,21 +46,28 @@ export default async function ContactPage({
       {page ? (
         <CmsPageView page={page} />
       ) : (
-        <section className="section-space">
-          <div className="site-container">
-            <p className="eyebrow">{t("eyebrow")}</p>
-            <h1 className="display-xl mt-6 max-w-5xl">{t("title")}</h1>
+        <section className="section-space bg-page">
+          <SectionReveal className="site-container grid gap-8 md:grid-cols-[1fr_.55fr] md:items-end">
+            <div>
+              <p className="eyebrow">{t("eyebrow")}</p>
+              <h1 className="display-xl mt-6 max-w-5xl">{t("title")}</h1>
+            </div>
             <p className="mt-7 max-w-2xl text-lg text-muted-foreground">
               {t("intro")}
             </p>
-          </div>
+          </SectionReveal>
         </section>
       )}
       <section className="pb-24">
-        <div className="site-container grid gap-6 lg:grid-cols-[1fr_.8fr]">
-          <div className="rounded-[1.75rem] border border-border bg-card p-7 md:p-10">
+        <div className="site-container grid gap-px overflow-hidden bg-border lg:grid-cols-[1fr_.8fr_.8fr]">
+          <SectionReveal className="bg-card p-7 md:p-10">
             <h2 className="text-3xl">{t("details")}</h2>
             <div className="mt-7 grid gap-5 text-sm">
+              {!settings?.org_email &&
+              !settings?.org_phone &&
+              !settings?.address ? (
+                <p className="text-muted-foreground">{t("detailsEmpty")}</p>
+              ) : null}
               {settings?.org_email ? (
                 <a
                   className="flex items-center gap-3"
@@ -84,8 +93,8 @@ export default async function ContactPage({
                 </p>
               ) : null}
             </div>
-          </div>
-          <div className="rounded-[1.75rem] bg-primary p-7 text-primary-foreground md:p-10">
+          </SectionReveal>
+          <SectionReveal className="bg-primary p-7 text-primary-foreground md:p-10">
             <p className="text-xl leading-8">{t("intro")}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -101,13 +110,23 @@ export default async function ContactPage({
                 {actions("inquire")}
               </Link>
             </div>
-          </div>
+          </SectionReveal>
+          <ImageReveal className="relative min-h-[22rem] bg-muted">
+            <Image
+              src="/images/warehouse-bags.jpg"
+              alt=""
+              fill
+              sizes="(min-width:1024px) 30vw, 100vw"
+              className="object-cover"
+            />
+          </ImageReveal>
         </div>
       </section>
       <WarehouseSection
         warehouses={warehouses}
         title={t("details")}
         intro={t("eyebrow")}
+        empty={t("warehousesEmpty")}
       />
     </>
   );

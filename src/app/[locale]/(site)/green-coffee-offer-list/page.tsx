@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogCard } from "@/components/catalog/catalog-card";
+import { FilterPanel } from "@/components/catalog/filter-panel";
+import {
+  FilterTransition,
+  SectionReveal,
+} from "@/components/motion/primitives";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -72,6 +77,13 @@ export default async function OfferListPage({
     pricing: actions("pricing"),
     view: actions("view"),
   };
+  const activeFilterCount = [
+    filters.q,
+    filters.origin,
+    filters.process,
+    filters.location,
+    filters.type,
+  ].filter(Boolean).length;
 
   // Structured data describes only what this page shows, and never a price.
   const jsonLd = {
@@ -111,81 +123,89 @@ export default async function OfferListPage({
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <section className="border-b border-border bg-primary py-16 text-primary-foreground md:py-24">
-        <div className="site-container">
-          <Breadcrumbs
-            locale={locale as Locale}
-            items={[{ label: t("title") }]}
-            inverted
-          />
-          <p className="eyebrow !text-gold-contrast">{t("eyebrow")}</p>
-          <h1 className="display-lg mt-5 max-w-4xl">{t("title")}</h1>
-          <p className="mt-6 max-w-2xl text-white/70">{t("intro")}</p>
-        </div>
+      <section className="border-b border-border bg-primary py-14 text-primary-foreground md:py-20">
+        <SectionReveal className="site-container grid gap-10 lg:grid-cols-[1fr_.45fr] lg:items-end">
+          <div>
+            <Breadcrumbs
+              locale={locale as Locale}
+              items={[{ label: t("title") }]}
+              inverted
+            />
+            <p className="eyebrow !text-gold-contrast">{t("eyebrow")}</p>
+            <h1 className="display-lg mt-5 max-w-4xl">{t("title")}</h1>
+            <p className="mt-6 max-w-2xl text-white/70">{t("intro")}</p>
+          </div>
+          <div className="border-s border-white/20 ps-6 text-sm leading-7 text-white/65">
+            <p className="font-bold text-gold-bright">{actions("pricing")}</p>
+            <p>{t("intro")}</p>
+          </div>
+        </SectionReveal>
       </section>
       <section className="section-space">
         <div className="site-container">
-          <form
-            className="grid gap-3 rounded-[1.5rem] border border-border bg-card p-4 lg:grid-cols-[2fr_repeat(4,1fr)_auto]"
-            role="search"
-          >
-            <label className="relative">
-              <span className="sr-only">{t("search")}</span>
-              <Search
-                className="absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
+          <FilterPanel label={t("filters")} activeCount={activeFilterCount}>
+            <form
+              className="grid gap-3 border border-border bg-card p-4 lg:grid-cols-[2fr_repeat(4,1fr)_auto]"
+              role="search"
+            >
+              <label className="relative">
+                <span className="sr-only">{t("search")}</span>
+                <Search
+                  className="absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <input
+                  name="q"
+                  defaultValue={filters.q ?? ""}
+                  placeholder={t("search")}
+                  className="h-12 w-full rounded-xl border border-input bg-background ps-11 pe-4"
+                />
+              </label>
+              <Filter
+                name="origin"
+                label={t("origin")}
+                value={filters.origin}
+                options={facets.origins.map((o) => ({
+                  value: o.slug,
+                  label: o.label,
+                }))}
+                all={nav("all")}
               />
-              <input
-                name="q"
-                defaultValue={filters.q ?? ""}
-                placeholder={t("search")}
-                className="h-12 w-full rounded-xl border border-input bg-background ps-11 pe-4"
+              <Filter
+                name="process"
+                label={t("process")}
+                value={filters.process}
+                options={facets.processes.map((p) => ({
+                  value: p.slug,
+                  label: p.label,
+                }))}
+                all={nav("all")}
               />
-            </label>
-            <Filter
-              name="origin"
-              label={t("origin")}
-              value={filters.origin}
-              options={facets.origins.map((o) => ({
-                value: o.slug,
-                label: o.label,
-              }))}
-              all={nav("all")}
-            />
-            <Filter
-              name="process"
-              label={t("process")}
-              value={filters.process}
-              options={facets.processes.map((p) => ({
-                value: p.slug,
-                label: p.label,
-              }))}
-              all={nav("all")}
-            />
-            <Filter
-              name="location"
-              label={t("location")}
-              value={filters.location}
-              options={facets.warehouses.map((w) => ({
-                value: w.code,
-                label: w.label,
-              }))}
-              all={nav("all")}
-            />
-            <Filter
-              name="type"
-              label={t("category")}
-              value={filters.type}
-              options={facets.types.map((c) => ({
-                value: c.slug,
-                label: c.label,
-              }))}
-              all={nav("all")}
-            />
-            <button className="h-12 rounded-xl bg-highlight px-5 font-bold text-white">
-              {t("filters")}
-            </button>
-          </form>
+              <Filter
+                name="location"
+                label={t("location")}
+                value={filters.location}
+                options={facets.warehouses.map((w) => ({
+                  value: w.code,
+                  label: w.label,
+                }))}
+                all={nav("all")}
+              />
+              <Filter
+                name="type"
+                label={t("category")}
+                value={filters.type}
+                options={facets.types.map((c) => ({
+                  value: c.slug,
+                  label: c.label,
+                }))}
+                all={nav("all")}
+              />
+              <button className="h-12 bg-gold px-5 font-bold text-[#17251c]">
+                {t("filters")}
+              </button>
+            </form>
+          </FilterPanel>
 
           <div className="mt-8 flex items-center justify-between">
             <p className="text-sm font-bold" aria-live="polite">
@@ -203,7 +223,7 @@ export default async function OfferListPage({
 
           {result.rows.length ? (
             <>
-              <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <FilterTransition className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                 {result.rows.map((item) => (
                   <CatalogCard
                     key={item.id}
@@ -212,7 +232,7 @@ export default async function OfferListPage({
                     labels={labels}
                   />
                 ))}
-              </div>
+              </FilterTransition>
               {result.pageCount > 1 ? (
                 <nav
                   aria-label={t("title")}
