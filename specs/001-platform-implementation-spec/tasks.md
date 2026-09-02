@@ -906,7 +906,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 10 — Admin interaction and responsive redesign
 
-- [ ] P10-T01 [P] Characterize the remaining 14 Admin modules before touching any of them
+- [x] P10-T01 [P] Characterize the remaining 14 Admin modules before touching any of them
   - **Goal**: Record the exact current CRUD behavior (create/update/archive, validation, allow-listed fields, `requireAdmin()` re-check) for every module not already redesigned in Phase 5/7 — products, offers, pricing, origins, regions, warehouses, taxonomy, varieties, media, articles, article-categories, content, settings, audit — so no working, audited functionality regresses.
   - **Dependencies**: Phase 5, Phase 7 complete.
   - **Files/modules**: none changed; a recorded characterization artifact only, covering `src/actions/admin-operations.ts` and each module's current route.
@@ -920,7 +920,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a complete, accurate record of current behavior exists for all 14 modules.
   - **Out of scope**: any code change.
 
-- [ ] P10-T02 Replace generic UX only where demonstrably insufficient
+- [x] P10-T02 Replace generic UX only where demonstrably insufficient
   - **Goal**: For any module where P10-T01 shows the generic `[module]` list/detail pattern is genuinely insufficient (per the master plan's explicit REPLACE criterion — not by default for every module), build a task-specific list/detail/edit surface reusing `admin-operations.ts`'s existing validated mutation functions.
   - **Dependencies**: P10-T01.
   - **Files/modules**: whichever specific module routes are identified as needing replacement.
@@ -934,7 +934,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every redesigned module preserves its existing business semantics exactly (zero behavior regression) while gaining task-specific UX.
   - **Out of scope**: redesigning a module P10-T01 found the generic pattern already serves adequately.
 
-- [ ] P10-T03 [P] Verify Admin responsive, theme, and RTL treatment
+- [x] P10-T03 [P] Verify Admin responsive, theme, and RTL treatment
   - **Goal**: Confirm the already-fixed sidebar height/scroll behavior and grouped navigation (from the prior completion pass) hold across the full responsive matrix (375/768/1024/1280×650/1440) and both themes/locales, for both redesigned and un-redesigned modules.
   - **Dependencies**: P10-T02.
   - **Files/modules**: `src/components/admin/**` (nav, forms, tables), the Admin shell layout.
@@ -948,7 +948,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: no horizontal overflow, no clipped status chip, no obscured sticky action, at any tested width/theme/locale combination.
   - **Out of scope**: any new module capability.
 
-- [ ] P10-T04 Run the full per-module CRUD/responsive/RTL test pass
+- [x] P10-T04 Run the full per-module CRUD/responsive/RTL test pass
   - **Goal**: Produce evidence that every touched module (Phase 5, 7, and 10) is operable on mobile/tablet/short-desktop and preserves its business semantics exactly.
   - **Dependencies**: P10-T01 through P10-T03.
   - **Files/modules**: `tests/e2e/**`.
@@ -962,7 +962,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `plan.md` Phase 10's runtime acceptance criteria hold with attached evidence.
   - **Out of scope**: the role model, catalog semantics, or any module/feature not already supported.
 
-- [ ] P10-T05 **PHASE 10 ACCEPTANCE GATE**
+- [x] P10-T05 **PHASE 10 ACCEPTANCE GATE**
   - **Goal**: Confirm the Admin workspace is fully task-appropriate and responsive before cross-cutting polish (Phase 11) closes remaining gaps.
   - **Dependencies**: P10-T01 through P10-T04.
   - **Runtime acceptance condition** (per `plan.md` Phase 10): all conditions in P10-T04 hold with recorded evidence.

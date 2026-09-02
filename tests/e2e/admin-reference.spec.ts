@@ -355,35 +355,63 @@ test.describe("Phase 6 closure — reference module flows", () => {
     expect(warehouseOptions.length).toBeGreaterThan(1);
   });
 
-  test("legacy reference forms still rely on browser-native validation", async ({
+  test("every Admin form is application-validated, not browser-validated", async ({
+    page,
+  }) => {
+    await signIn(page);
+
+    // Phase 6 recorded the honest state of the reference modules: their forms
+    // were not `noValidate`, so the browser blocked a submit with its own
+    // unlocalized popup instead of the application rendering a per-field
+    // message. Phase 10 moved them onto the same form stack as the catalog,
+    // and this test now asserts the fixed behaviour on both.
+    for (const path of [
+      "/admin/origins",
+      "/admin/regions",
+      "/admin/warehouses",
+      "/admin/varieties",
+      "/admin/taxonomy",
+      "/admin/article-categories",
+      "/admin/products/new",
+      "/admin/offers/new",
+    ]) {
+      await page.goto(path);
+      const form = page.locator("main form").first();
+      await expect(form, `${path} is not application-validated`).toHaveAttribute(
+        "novalidate",
+        "",
+      );
+      await expect(
+        form.locator("[required]"),
+        `${path} still uses a native required attribute`,
+      ).toHaveCount(0);
+    }
+  });
+
+  test("an empty reference form reports each failure under its own field", async ({
     page,
   }) => {
     await signIn(page);
     await page.goto("/admin/origins");
+    const form = page.locator("main form").first();
 
-    // This is the honest state of these modules after Phase 6: the form is not
-    // `noValidate`, so the browser blocks the submit with its own unlocalized
-    // popup instead of the application rendering a per-field message. The new
-    // form stack (products/offers/pricing) does not behave this way.
-    const form = page.locator("form").first();
-    await expect(form).not.toHaveAttribute("novalidate", "");
-    const requiredCount = await form.locator("[required]").count();
-    expect(requiredCount).toBeGreaterThan(0);
-
-    // Submitting empty leaves the page put — the browser refuses it.
-    await page.locator('form button[type="submit"]').first().click();
+    await form.locator('button[type="submit"]').first().click();
+    // The page stays put, and the reason appears beside each input rather
+    // than in a browser bubble.
     await expect(page).toHaveURL(/\/admin\/origins$/);
-    const invalid = await form.locator(":invalid").count();
-    expect(invalid).toBeGreaterThan(0);
-  });
-
-  test("the new catalog forms do not share that behaviour", async ({
-    page,
-  }) => {
-    await signIn(page);
-    await page.goto("/admin/products/new");
-    const form = page.locator("form").first();
-    await expect(form).toHaveAttribute("novalidate", "");
-    await expect(form.locator("[required]")).toHaveCount(0);
+    for (const field of ["slug", "countryCode", "nameEn", "nameAr"]) {
+      const input = form.locator(`[name="${field}"]`);
+      await expect(input, `${field} not flagged`).toHaveAttribute(
+        "aria-invalid",
+        "true",
+        { timeout: 30_000 },
+      );
+      const describedBy = await input.getAttribute("aria-describedby");
+      expect(describedBy, `${field} has no error association`).toBeTruthy();
+      await expect(
+        page.locator(`#${describedBy!.split(" ")[0]}`),
+        `${field} has no inline message`,
+      ).toBeVisible();
+    }
   });
 });

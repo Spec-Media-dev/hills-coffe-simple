@@ -180,7 +180,9 @@ test.describe("Phase 5 Admin settings independence", () => {
       .locator('input[name="lowStockThreshold"]')
       .fill(String(threshold));
     await form.locator('button[type="submit"]').click();
-    await expect(page.getByText(/site settings updated/i)).toBeVisible();
+    await expect(
+      page.locator("main").getByText(/site settings updated/i),
+    ).toBeVisible();
     expect(Number(await fixtures.siteSetting("low_stock_threshold"))).toBe(
       threshold,
     );
@@ -195,7 +197,9 @@ test.describe("Phase 5 Admin settings independence", () => {
     await invalid.locator('input[name="email"]').fill("not-an-email");
     await invalid.locator('input[name="lowStockThreshold"]').fill("999");
     await invalid.locator('button[type="submit"]').click();
-    await expect(page.getByText(/site settings updated/i)).toHaveCount(0);
+    await expect(
+      page.locator("main").getByText(/site settings updated/i),
+    ).toHaveCount(0);
     expect(Number(await fixtures.siteSetting("low_stock_threshold"))).toBe(
       threshold,
     );

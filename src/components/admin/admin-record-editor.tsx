@@ -1,27 +1,53 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import {
-  saveArticleAction,
   saveNamedEntityAction,
   saveOriginAction,
   saveRegionAction,
   saveVarietyAction,
   saveWarehouseAction,
 } from "@/actions/admin-operations";
-import { AdminActionForm } from "@/components/admin/admin-action-form";
-import type { AdminActionState } from "@/lib/admin/action-state";
+import {
+  AdminField,
+  AdminForm,
+  AdminSelect,
+  AdminTextarea,
+} from "@/components/admin/admin-form";
+import type { ActionFormState, ActionResult } from "@/lib/actions";
 import type { AdminOption } from "@/lib/data/admin";
 
+/**
+ * Edit forms for the reference modules.
+ *
+ * The mirror of `admin-module-form.tsx`, and moved onto the same Phase 6 form
+ * family for the same reasons: localized labels, an inline message under the
+ * field that failed, no browser popup as the final word, and typed values that
+ * survive a rejection.
+ *
+ * One field registry drives both the create and edit forms, so a field cannot
+ * exist on one and be forgotten on the other.
+ */
+
 type EditorAction = (
-  state: AdminActionState,
+  state: ActionFormState,
   formData: FormData,
-) => Promise<AdminActionState>;
+) => Promise<ActionResult>;
+
 type Field = {
   name: string;
+  /** Key inside `admin.modules`. */
   label: string;
-  required?: boolean;
-  type?: "text" | "number" | "email" | "tel" | "textarea" | "select";
+  hint?: string;
+  kind?: "text" | "number" | "email" | "textarea" | "select";
+  dir?: "ltr" | "rtl";
   options?: AdminOption[];
-  step?: string;
+  placeholder?: string;
+  emptyMessage?: string;
+  emptyHref?: string;
+  emptyCta?: string;
 };
+
 type Options = {
   coffees: AdminOption[];
   origins: AdminOption[];
@@ -31,190 +57,6 @@ type Options = {
   warehouses: AdminOption[];
   articleCategories: AdminOption[];
 };
-
-const statuses = (items: string[]) =>
-  items.map((item) => ({ id: item, label: item }));
-const activeOptions = [
-  { id: "true", label: "Active / visible" },
-  { id: "false", label: "Inactive / hidden" },
-];
-
-function definition(module: string, options: Options) {
-  const definitions: Record<
-    string,
-    { action: EditorAction; fields: Field[]; hidden?: Record<string, string> }
-  > = {
-    origins: {
-      action: saveOriginAction,
-      fields: [
-        { name: "slug", label: "Slug", required: true },
-        { name: "countryCode", label: "ISO country code", required: true },
-        { name: "continent", label: "Continent" },
-        { name: "nameEn", label: "English name", required: true },
-        { name: "nameAr", label: "Arabic name", required: true },
-        { name: "summaryEn", label: "English summary", type: "textarea" },
-        { name: "summaryAr", label: "Arabic summary", type: "textarea" },
-        {
-          name: "isActive",
-          label: "State",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
-    regions: {
-      action: saveRegionAction,
-      fields: [
-        {
-          name: "originId",
-          label: "Origin",
-          type: "select",
-          options: options.origins,
-          required: true,
-        },
-        { name: "slug", label: "Slug", required: true },
-        { name: "nameEn", label: "English name", required: true },
-        { name: "nameAr", label: "Arabic name", required: true },
-        {
-          name: "descriptionEn",
-          label: "English description",
-          type: "textarea",
-        },
-        {
-          name: "descriptionAr",
-          label: "Arabic description",
-          type: "textarea",
-        },
-        {
-          name: "isActive",
-          label: "State",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
-    warehouses: {
-      action: saveWarehouseAction,
-      fields: [
-        {
-          name: "code",
-          label: "Code",
-          type: "select",
-          options: statuses(["EGYPT", "DUBAI"]),
-          required: true,
-        },
-        { name: "name", label: "English name", required: true },
-        { name: "nameAr", label: "Arabic name", required: true },
-        { name: "countryCode", label: "ISO country code", required: true },
-        { name: "city", label: "City" },
-        { name: "address", label: "Address" },
-        { name: "email", label: "Email", type: "email" },
-        { name: "phone", label: "Phone", type: "tel" },
-        {
-          name: "isActive",
-          label: "State",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
-    varieties: {
-      action: saveVarietyAction,
-      fields: [
-        { name: "slug", label: "Slug", required: true },
-        { name: "name", label: "Name", required: true },
-        {
-          name: "isActive",
-          label: "State",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
-    articles: {
-      action: saveArticleAction,
-      fields: [
-        {
-          name: "categoryId",
-          label: "Category",
-          type: "select",
-          options: options.articleCategories,
-        },
-        {
-          name: "status",
-          label: "Status",
-          type: "select",
-          options: statuses(["DRAFT", "PUBLISHED", "ARCHIVED"]),
-          required: true,
-        },
-        { name: "slugEn", label: "English slug", required: true },
-        { name: "slugAr", label: "Arabic slug", required: true },
-        { name: "titleEn", label: "English title", required: true },
-        { name: "titleAr", label: "Arabic title", required: true },
-        { name: "excerptEn", label: "English excerpt", type: "textarea" },
-        { name: "excerptAr", label: "Arabic excerpt", type: "textarea" },
-        { name: "bodyEn", label: "English Markdown", type: "textarea" },
-        { name: "bodyAr", label: "Arabic Markdown", type: "textarea" },
-      ],
-    },
-    "article-categories": {
-      action: saveNamedEntityAction,
-      hidden: { entity: "article_categories" },
-      fields: [
-        { name: "slug", label: "Slug", required: true },
-        { name: "nameEn", label: "English name", required: true },
-        { name: "nameAr", label: "Arabic name", required: true },
-        {
-          name: "descriptionEn",
-          label: "English description",
-          type: "textarea",
-        },
-        {
-          name: "descriptionAr",
-          label: "Arabic description",
-          type: "textarea",
-        },
-        {
-          name: "isActive",
-          label: "State",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
-    taxonomy: {
-      action: saveNamedEntityAction,
-      fields: [
-        { name: "slug", label: "Slug", required: true },
-        { name: "nameEn", label: "English name", required: true },
-        { name: "nameAr", label: "Arabic name", required: true },
-        {
-          name: "descriptionEn",
-          label: "English description",
-          type: "textarea",
-        },
-        {
-          name: "descriptionAr",
-          label: "Arabic description",
-          type: "textarea",
-        },
-        {
-          name: "isActive",
-          label: "State",
-          type: "select",
-          options: activeOptions,
-          required: true,
-        },
-      ],
-    },
-  };
-  return definitions[module];
-}
 
 export function AdminRecordEditor({
   module,
@@ -227,61 +69,218 @@ export function AdminRecordEditor({
   values: Record<string, unknown>;
   options: Options;
 }) {
-  const editor = definition(module, options);
+  const t = useTranslations("admin.modules");
+
+  const stateField: Field = {
+    name: "isActive",
+    label: "state",
+    kind: "select",
+    placeholder: "chooseState",
+    options: [
+      { id: "true", label: t("stateActive") },
+      { id: "false", label: t("stateInactive") },
+    ],
+  };
+
+  const registry: Record<
+    string,
+    { action: EditorAction; fields: Field[]; hidden?: Record<string, string> }
+  > = {
+    origins: {
+      action: saveOriginAction,
+      fields: [
+        { name: "slug", label: "slug", hint: "slugHint", dir: "ltr" },
+        {
+          name: "countryCode",
+          label: "countryCode",
+          hint: "countryCodeHint",
+          dir: "ltr",
+        },
+        { name: "continent", label: "continent" },
+        { name: "nameEn", label: "nameEn", dir: "ltr" },
+        { name: "nameAr", label: "nameAr", dir: "rtl" },
+        { name: "summaryEn", label: "summaryEn", kind: "textarea", dir: "ltr" },
+        { name: "summaryAr", label: "summaryAr", kind: "textarea", dir: "rtl" },
+        stateField,
+      ],
+    },
+    regions: {
+      action: saveRegionAction,
+      fields: [
+        {
+          name: "originId",
+          label: "origin",
+          kind: "select",
+          placeholder: "chooseOrigin",
+          options: options.origins,
+          emptyMessage: "noOrigins",
+          emptyHref: "/admin/origins",
+          emptyCta: "goToOrigins",
+        },
+        { name: "slug", label: "slug", hint: "slugHint", dir: "ltr" },
+        { name: "nameEn", label: "nameEn", dir: "ltr" },
+        { name: "nameAr", label: "nameAr", dir: "rtl" },
+        {
+          name: "descriptionEn",
+          label: "descriptionEn",
+          kind: "textarea",
+          dir: "ltr",
+        },
+        {
+          name: "descriptionAr",
+          label: "descriptionAr",
+          kind: "textarea",
+          dir: "rtl",
+        },
+        stateField,
+      ],
+    },
+    warehouses: {
+      action: saveWarehouseAction,
+      fields: [
+        {
+          name: "code",
+          label: "warehouseCode",
+          kind: "select",
+          placeholder: "chooseWarehouseCode",
+          options: [
+            { id: "EGYPT", label: "EGYPT" },
+            { id: "DUBAI", label: "DUBAI" },
+          ],
+        },
+        { name: "name", label: "name", dir: "ltr" },
+        { name: "nameAr", label: "nameAr", dir: "rtl" },
+        {
+          name: "countryCode",
+          label: "countryCode",
+          hint: "countryCodeHint",
+          dir: "ltr",
+        },
+        { name: "city", label: "city" },
+        { name: "address", label: "address" },
+        { name: "email", label: "email", kind: "email", dir: "ltr" },
+        { name: "phone", label: "phone", dir: "ltr" },
+        stateField,
+      ],
+    },
+    varieties: {
+      action: saveVarietyAction,
+      fields: [
+        { name: "slug", label: "slug", hint: "slugHint", dir: "ltr" },
+        { name: "name", label: "name", dir: "ltr" },
+        stateField,
+      ],
+    },
+    taxonomy: {
+      action: saveNamedEntityAction,
+      fields: [
+        { name: "slug", label: "slug", hint: "slugHint", dir: "ltr" },
+        { name: "nameEn", label: "nameEn", dir: "ltr" },
+        { name: "nameAr", label: "nameAr", dir: "rtl" },
+        {
+          name: "descriptionEn",
+          label: "descriptionEn",
+          kind: "textarea",
+          dir: "ltr",
+        },
+        {
+          name: "descriptionAr",
+          label: "descriptionAr",
+          kind: "textarea",
+          dir: "rtl",
+        },
+        stateField,
+      ],
+    },
+    "article-categories": {
+      action: saveNamedEntityAction,
+      hidden: { entity: "article_categories" },
+      fields: [
+        { name: "slug", label: "slug", hint: "slugHint", dir: "ltr" },
+        { name: "nameEn", label: "nameEn", dir: "ltr" },
+        { name: "nameAr", label: "nameAr", dir: "rtl" },
+        {
+          name: "descriptionEn",
+          label: "descriptionEn",
+          kind: "textarea",
+          dir: "ltr",
+        },
+        {
+          name: "descriptionAr",
+          label: "descriptionAr",
+          kind: "textarea",
+          dir: "rtl",
+        },
+        stateField,
+      ],
+    },
+  };
+
+  const editor = registry[module];
   if (!editor) return null;
+  const label = (key: string) => t(key as Parameters<typeof t>[0]);
+  const read = (name: string) => {
+    const value = values[name];
+    return value === null || value === undefined ? "" : String(value);
+  };
+
   return (
-    <AdminActionForm
+    <AdminForm
       action={editor.action}
-      submitLabel="Save changes"
+      submitLabel={t("saveChanges")}
+      pendingLabel={t("saving")}
       className="mt-8 grid gap-4 rounded-2xl border border-border bg-card p-6 md:grid-cols-2 xl:grid-cols-3"
     >
       <input type="hidden" name="id" value={recordId} />
       {Object.entries(editor.hidden ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
+      {/* Taxonomy rows carry which of the seven tables they came from; the
+          action needs it and the Admin cannot change it after creation. */}
       {module === "taxonomy" ? (
-        <input type="hidden" name="entity" value={String(values.entity)} />
+        <input type="hidden" name="entity" value={read("entity")} />
       ) : null}
+
       {editor.fields.map((field) => {
-        const value = String(values[field.name] ?? "");
+        if (field.kind === "select")
+          return (
+            <AdminSelect
+              key={field.name}
+              name={field.name}
+              label={label(field.label)}
+              placeholder={label(field.placeholder ?? "chooseState")}
+              defaultValue={read(field.name) || null}
+              options={field.options ?? []}
+              emptyMessage={
+                field.emptyMessage ? label(field.emptyMessage) : undefined
+              }
+              emptyHref={field.emptyHref}
+              emptyCta={field.emptyCta ? label(field.emptyCta) : undefined}
+            />
+          );
+        if (field.kind === "textarea")
+          return (
+            <AdminTextarea
+              key={field.name}
+              name={field.name}
+              label={label(field.label)}
+              hint={field.hint ? label(field.hint) : undefined}
+              dir={field.dir}
+              defaultValue={read(field.name)}
+            />
+          );
         return (
-          <label key={field.name} className="grid gap-1.5 text-sm font-bold">
-            {field.label}
-            {field.type === "textarea" ? (
-              <textarea
-                name={field.name}
-                required={field.required}
-                defaultValue={value}
-                rows={field.name.startsWith("body") ? 10 : 4}
-                className="rounded-lg border border-input bg-background p-3 text-sm font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-              />
-            ) : field.type === "select" ? (
-              <select
-                name={field.name}
-                required={field.required}
-                defaultValue={value}
-                className="h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-              >
-                {!field.required ? <option value="">None</option> : null}
-                {field.options?.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                name={field.name}
-                required={field.required}
-                type={field.type ?? "text"}
-                step={field.step}
-                defaultValue={value}
-                className="h-11 rounded-lg border border-input bg-background px-3 text-sm font-normal outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
-              />
-            )}
-          </label>
+          <AdminField
+            key={field.name}
+            name={field.name}
+            label={label(field.label)}
+            hint={field.hint ? label(field.hint) : undefined}
+            type={field.kind === "email" ? "email" : (field.kind ?? "text")}
+            dir={field.dir}
+            defaultValue={read(field.name)}
+          />
         );
       })}
-    </AdminActionForm>
+    </AdminForm>
   );
 }

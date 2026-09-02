@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Modal } from "@/components/motion/primitives";
 
 /**
@@ -103,7 +104,13 @@ export function ModalDialog({
 
   if (!open) return null;
 
-  return (
+  // Rendered into <body> rather than in place. The site shell gives <main>
+  // and <footer> their own `view-transition-name`, and a named element is a
+  // stacking context: two sibling stacking contexts at `z-index: auto` paint
+  // in source order, so the footer covered every dialog opened from the page
+  // beneath it — `z-[80]` cannot escape an ancestor context. At body level the
+  // dialog is a sibling of the shell, and the z-index means what it says.
+  return createPortal(
     <div className="fixed inset-0 z-[80] grid place-items-end p-0 sm:place-items-center sm:p-5">
       {/* Inert backdrop: hidden from assistive technology and unfocusable, so
           the dialog is the only thing reachable. */}
@@ -148,6 +155,7 @@ export function ModalDialog({
         </div>
         {children}
       </Modal>
-    </div>
+    </div>,
+    document.body,
   );
 }

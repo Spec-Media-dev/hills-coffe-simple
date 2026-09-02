@@ -141,11 +141,75 @@ export async function findLowContrastText(page: Page): Promise<string[]> {
   });
 }
 
-/** The document must never scroll sideways, in either direction. */
+/**
+ * The page must never scroll sideways, and nothing may be stranded outside it.
+ *
+ * `scrollWidth > innerWidth` alone is not the test. The app sets
+ * `overflow-x: clip` on the root, and a browser still reports the content
+ * extent of a *nested* scroller — a wide table inside its own
+ * `overflow-x: auto`, say — in the root's `scrollWidth`. That is a contained,
+ * intentional scroller, not a page that scrolls sideways, and treating it as a
+ * failure would punish exactly the pattern that makes wide tables usable on a
+ * phone.
+ *
+ * So two things are checked instead, both of which a person would notice:
+ * the page cannot actually be scrolled horizontally, and no visible element
+ * sits outside the viewport unless it lives inside a scroll container.
+ */
 export async function hasHorizontalOverflow(page: Page): Promise<boolean> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth + 1,
-  );
+  return page.evaluate(() => {
+    const before = window.scrollX;
+    window.scrollTo(window.innerWidth * 4, window.scrollY);
+    const scrolled = Math.abs(window.scrollX) > 1;
+    window.scrollTo(before, window.scrollY);
+    if (scrolled) return true;
+
+    // Anything painting past the viewport that is not inside a scroller is
+    // genuinely unreachable, whether or not the root clips it.
+    const limit = document.documentElement.clientWidth;
+    const contained = (element: HTMLElement) => {
+      let node: HTMLElement | null = element.parentElement;
+      while (node && node !== document.body) {
+        const overflowX = getComputedStyle(node).overflowX;
+        if (overflowX !== "visible") return true;
+        node = node.parentElement;
+      }
+      return false;
+    };
+    for (const element of document.querySelectorAll<HTMLElement>("body *")) {
+      if (element.offsetParent === null) continue;
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0) continue;
+      if ((rect.right > limit + 1 || rect.left < -1) && !contained(element))
+        return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Waits for entrance motion to finish before anything is measured.
+ *
+ * The public site reveals sections as they enter view, and an element part-way
+ * through a transform reports the geometry of that instant: a heading sliding
+ * in really is wider than the viewport for a few hundred milliseconds. Measured
+ * then, motion reads as a layout defect. Infinite animations — spinners — are
+ * excluded, because they never finish.
+ */
+async function settleAnimations(page: Page) {
+  await page
+    .evaluate(async () => {
+      const finite = document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Infinity,
+        );
+      await Promise.all(
+        finite.map((animation) => animation.finished.catch(() => undefined)),
+      );
+    })
+    .catch(() => undefined);
 }
 
 /**
@@ -155,6 +219,7 @@ export async function hasHorizontalOverflow(page: Page): Promise<boolean> {
  * page and which theme rather than only which assertion.
  */
 export async function auditScreen(page: Page, label: string) {
+  await settleAnimations(page);
   const [keys, images, contrast, overflow] = await Promise.all([
     findRawTranslationKeys(page),
     findBrokenImages(page),

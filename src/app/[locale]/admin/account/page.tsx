@@ -34,11 +34,14 @@ export default async function AdminAccountPage({
       <h1 className="mt-4 text-4xl md:text-5xl">{t("title")}</h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">{t("intro")}</p>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-2">
+      {/* `minmax(0,1fr)` rather than a bare `1fr`: a grid item defaults to
+          `min-width: auto`, so the identity card below was sized by its own
+          min-content and pushed the page wider than a 375px screen. */}
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
         <section className="rounded-2xl border border-border bg-card p-6 md:p-7">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <ShieldCheck className="size-5 shrink-0 text-highlight" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-bold" dir="ltr">
                 {admin.email}
               </p>
@@ -47,7 +50,7 @@ export default async function AdminAccountPage({
               </p>
             </div>
             {admin.emailVerified ? (
-              <span className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 ms-auto dark:text-emerald-300">
                 <BadgeCheck className="size-3.5" />
                 {security("verified")}
               </span>

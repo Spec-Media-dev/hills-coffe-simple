@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+} from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogCard } from "@/components/catalog/catalog-card";
 import { FilterPanel } from "@/components/catalog/filter-panel";
@@ -46,7 +51,6 @@ export default async function OfferListPage({
   setRequestLocale(locale);
   const t = await getTranslations("catalog");
   const actions = await getTranslations("actions");
-  const nav = await getTranslations("nav");
 
   const filters: CatalogFilters = {
     q: (first(query.q) ?? "").trim() || undefined,
@@ -169,7 +173,6 @@ export default async function OfferListPage({
                   value: o.slug,
                   label: o.label,
                 }))}
-                all={nav("all")}
               />
               <Filter
                 name="process"
@@ -179,7 +182,6 @@ export default async function OfferListPage({
                   value: p.slug,
                   label: p.label,
                 }))}
-                all={nav("all")}
               />
               <Filter
                 name="location"
@@ -189,7 +191,6 @@ export default async function OfferListPage({
                   value: w.code,
                   label: w.label,
                 }))}
-                all={nav("all")}
               />
               <Filter
                 name="type"
@@ -199,7 +200,6 @@ export default async function OfferListPage({
                   value: c.slug,
                   label: c.label,
                 }))}
-                all={nav("all")}
               />
               <button className="h-12 bg-gold px-5 font-bold text-[#17251c]">
                 {t("filters")}
@@ -289,35 +289,41 @@ function Filter({
   label,
   value,
   options,
-  all,
 }: {
   name: string;
   label: string;
   value?: string;
   options: { value: string; label: string }[];
-  all: string;
 }) {
   return (
-    <label>
+    <label className="relative block">
       <span className="sr-only">{label}</span>
       <select
         name={name}
         defaultValue={value ?? ""}
-        className="h-12 w-full rounded-xl border border-input bg-background px-4"
+        className="h-12 w-full appearance-none truncate rounded-xl border border-input bg-background px-4 pe-9 text-foreground"
       >
-        <option value="">
-          {label} — {all}
+        {/* Just the label, not "label — all" repeated — avoids overflow */}
+        <option value="" className="bg-background text-foreground">
+          {label}
         </option>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            className="bg-background text-foreground"
+          >
             {option.label}
           </option>
         ))}
       </select>
+      <ChevronDown
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
     </label>
   );
 }
-
 function PageLink({
   href,
   disabled,

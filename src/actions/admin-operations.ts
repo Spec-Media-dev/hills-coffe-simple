@@ -1,54 +1,87 @@
 "use server";
 
 /**
- * Legacy Admin operations.
+ * Admin operations for reference data, taxonomy and site settings.
  *
- * Coffee, Offer and Pricing moved to `src/actions/admin-catalog.ts` in Phase 6,
- * where they use the project's real `ActionResult` contract with localized
- * message keys. What remains here still returns the older `AdminActionState`
- * with hardcoded English prose and is scheduled for the Phase 11 migration.
+ * Coffee, Offer and Pricing moved to `admin-catalog.ts` in Phase 6; media, CMS
+ * and articles to their own modules in Phase 8. What remains is the reference
+ * layer the catalog depends on — origins, regions, warehouses, varieties, the
+ * seven taxonomy tables — plus archiving and site settings.
+ *
+ * Phase 10 moved these onto the project's real `ActionResult` contract. The
+ * queries, schemas, guards and revalidation are unchanged; what changed is the
+ * vocabulary they answer in. Previously every message was hardcoded English
+ * prose, so the Arabic Admin was told its record had failed in English, and
+ * seven paths returned Supabase's own error text verbatim. Now each result
+ * carries a message key the client resolves in the active locale, and each
+ * field rule carries the key for its own failure so the error lands under the
+ * input that caused it (findings N65, N66).
  */
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import {
+  fail,
+  ok,
+  type ActionFormState,
+  type ActionResult,
+  type FieldErrors,
+} from "@/lib/actions";
 import { requireAdmin } from "@/lib/auth/session";
-import type { AdminActionState } from "@/lib/admin/action-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const uuid = z.string().uuid();
+const uuid = z.string().uuid("invalidReference");
 const slug = z
   .string()
   .trim()
-  .min(2)
-  .max(120)
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+  .min(2, "required")
+  .max(120, "tooLong")
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "invalidSlug");
 const optionalUuid = z.preprocess(
   (value) => (value === "" ? null : value),
-  uuid.nullable(),
+  z.string().uuid("invalidReference").nullable(),
 );
 const optionalText = (max: number) =>
   z.preprocess(
     (value) => (value === "" ? null : value),
-    z.string().trim().max(max).nullable(),
+    z.string().trim().max(max, "tooLong").nullable(),
   );
 
-function invalid(error: z.ZodError): AdminActionState {
-  return {
-    status: "error",
-    message: "Check the highlighted fields and try again.",
-    fieldErrors: error.flatten().fieldErrors,
-  };
+/**
+ * Turns a Zod failure into per-field message keys.
+ *
+ * Each rule below names its own key, so the client can render the specific
+ * reason beneath the specific input. A rule that somehow arrives without one
+ * degrades to `invalidValue` rather than leaking Zod's English default.
+ */
+function invalid(error: z.ZodError): ActionResult {
+  const flattened = error.flatten().fieldErrors as Record<
+    string,
+    string[] | undefined
+  >;
+  const fieldErrors: FieldErrors = {};
+  for (const [field, messages] of Object.entries(flattened))
+    if (messages?.length)
+      fieldErrors[field] = [
+        /^[a-z][A-Za-z]*$/.test(messages[0]) ? messages[0] : "invalidValue",
+      ];
+  return fail("VALIDATION", "checkHighlightedFields", { fieldErrors });
 }
 
+/**
+ * A failure the Administrator can do nothing about.
+ *
+ * The provider's own message is logged server-side and never returned: a
+ * constraint name or SQLSTATE on screen is neither actionable nor safe.
+ */
 const failed = (
-  message = "The database did not accept this change.",
-): AdminActionState => ({
-  status: "error",
-  message,
-});
-const saved = (message: string): AdminActionState => ({
-  status: "success",
-  message,
-});
+  where: string,
+  error?: { code?: string; message?: string } | null,
+) => {
+  // The code is enough to diagnose; the message may quote row data.
+  if (error) console.error(`[admin-operations] ${where}: ${error.code ?? "upstream"}`);
+  return fail("UNEXPECTED", "saveFailed");
+};
+const expired = () => fail("FORBIDDEN", "adminRequired");
 
 async function adminContext() {
   const admin = await requireAdmin();
@@ -67,23 +100,23 @@ const namedEntityNames = [
 ] as const;
 const namedSchema = z.object({
   id: optionalUuid.optional(),
-  entity: z.enum(namedEntityNames),
+  entity: z.enum(namedEntityNames, { message: "required" }),
   slug,
-  nameEn: z.string().trim().min(1).max(160),
-  nameAr: z.string().trim().min(1).max(160),
+  nameEn: z.string().trim().min(1, "required").max(160, "tooLong"),
+  nameAr: z.string().trim().min(1, "required").max(160, "tooLong"),
   descriptionEn: optionalText(1000),
   descriptionAr: optionalText(1000),
-  isActive: z.enum(["true", "false"]).default("true"),
+  isActive: z.enum(["true", "false"], { message: "required" }).default("true"),
 });
 
 export async function saveNamedEntityAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = namedSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const { db } = context;
   const input = parsed.data;
   const baseResult = input.id
@@ -98,7 +131,8 @@ export async function saveNamedEntityAction(
         .insert({ slug: input.slug, is_active: input.isActive === "true" })
         .select("id")
         .single();
-  if (baseResult.error || !baseResult.data) return failed();
+  if (baseResult.error || !baseResult.data)
+    return failed("named entity", baseResult.error);
   const entityId = baseResult.data.id;
   // Only four of the seven taxonomy translation tables actually have a
   // `description` column. Sending it to the others made PostgREST reject the
@@ -153,26 +187,26 @@ export async function saveNamedEntityAction(
       { onConflict: "category_id,locale" },
     ));
   if (error)
-    return failed("The record was saved, but its translations were not.");
+    return fail("UNEXPECTED", "translationsNotSaved");
   revalidatePath("/", "layout");
-  return saved(input.id ? "Record updated." : "Record created.");
+  return ok(input.id ? "recordUpdated" : "recordCreated");
 }
 
 const varietySchema = z.object({
   id: optionalUuid.optional(),
   slug,
-  name: z.string().trim().min(1).max(160),
-  isActive: z.enum(["true", "false"]).default("true"),
+  name: z.string().trim().min(1, "required").max(160, "tooLong"),
+  isActive: z.enum(["true", "false"], { message: "required" }).default("true"),
 });
 
 export async function saveVarietyAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = varietySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const values = {
     slug: parsed.data.slug,
     name: parsed.data.name,
@@ -181,31 +215,31 @@ export async function saveVarietyAction(
   const result = parsed.data.id
     ? await context.db.from("varieties").update(values).eq("id", parsed.data.id)
     : await context.db.from("varieties").insert(values);
-  if (result.error) return failed();
+  if (result.error) return failed("variety", result.error);
   revalidatePath("/admin/varieties");
-  return saved(parsed.data.id ? "Variety updated." : "Variety created.");
+  return ok(parsed.data.id ? "recordUpdated" : "recordCreated");
 }
 
 const originSchema = z.object({
   id: optionalUuid.optional(),
   slug,
-  countryCode: z.string().trim().length(2).toUpperCase(),
+  countryCode: z.string().trim().length(2, "invalidCountryCode").toUpperCase(),
   continent: optionalText(80),
-  nameEn: z.string().trim().min(1).max(160),
-  nameAr: z.string().trim().min(1).max(160),
+  nameEn: z.string().trim().min(1, "required").max(160, "tooLong"),
+  nameAr: z.string().trim().min(1, "required").max(160, "tooLong"),
   summaryEn: optionalText(2000),
   summaryAr: optionalText(2000),
-  isActive: z.enum(["true", "false"]).default("true"),
+  isActive: z.enum(["true", "false"], { message: "required" }).default("true"),
 });
 
 export async function saveOriginAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = originSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const input = parsed.data;
   const values = {
     slug: input.slug,
@@ -226,7 +260,7 @@ export async function saveOriginAction(
         .insert({ ...values, created_by: context.admin.id })
         .select("id")
         .single();
-  if (base.error || !base.data) return failed();
+  if (base.error || !base.data) return failed("record", base.error);
   const { error } = await context.db.from("origin_translations").upsert(
     [
       {
@@ -245,30 +279,30 @@ export async function saveOriginAction(
     { onConflict: "origin_id,locale" },
   );
   if (error)
-    return failed("The origin was saved, but its translations were not.");
+    return fail("UNEXPECTED", "translationsNotSaved");
   revalidatePath("/", "layout");
-  return saved(input.id ? "Origin updated." : "Origin created.");
+  return ok(input.id ? "recordUpdated" : "recordCreated");
 }
 
 const regionSchema = z.object({
   id: optionalUuid.optional(),
   originId: uuid,
   slug,
-  nameEn: z.string().trim().min(1).max(160),
-  nameAr: z.string().trim().min(1).max(160),
+  nameEn: z.string().trim().min(1, "required").max(160, "tooLong"),
+  nameAr: z.string().trim().min(1, "required").max(160, "tooLong"),
   descriptionEn: optionalText(1000),
   descriptionAr: optionalText(1000),
-  isActive: z.enum(["true", "false"]).default("true"),
+  isActive: z.enum(["true", "false"], { message: "required" }).default("true"),
 });
 
 export async function saveRegionAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = regionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const input = parsed.data;
   const values = {
     origin_id: input.originId,
@@ -283,7 +317,7 @@ export async function saveRegionAction(
         .select("id")
         .single()
     : await context.db.from("regions").insert(values).select("id").single();
-  if (base.error || !base.data) return failed();
+  if (base.error || !base.data) return failed("record", base.error);
   const { error } = await context.db.from("region_translations").upsert(
     [
       {
@@ -302,35 +336,35 @@ export async function saveRegionAction(
     { onConflict: "region_id,locale" },
   );
   if (error)
-    return failed("The region was saved, but its translations were not.");
+    return fail("UNEXPECTED", "translationsNotSaved");
   revalidatePath("/", "layout");
-  return saved(input.id ? "Region updated." : "Region created.");
+  return ok(input.id ? "recordUpdated" : "recordCreated");
 }
 
 const warehouseSchema = z.object({
   id: optionalUuid.optional(),
-  code: z.enum(["EGYPT", "DUBAI"]),
-  name: z.string().trim().min(1).max(160),
-  countryCode: z.string().trim().length(2).toUpperCase(),
+  code: z.enum(["EGYPT", "DUBAI"], { message: "required" }),
+  name: z.string().trim().min(1, "required").max(160, "tooLong"),
+  countryCode: z.string().trim().length(2, "invalidCountryCode").toUpperCase(),
   city: optionalText(160),
   address: optionalText(500),
   email: z.preprocess(
     (value) => (value === "" ? null : value),
-    z.email().nullable(),
+    z.email("invalidEmail").nullable(),
   ),
   phone: optionalText(60),
-  isActive: z.enum(["true", "false"]).default("true"),
-  nameAr: z.string().trim().min(1).max(160),
+  isActive: z.enum(["true", "false"], { message: "required" }).default("true"),
+  nameAr: z.string().trim().min(1, "required").max(160, "tooLong"),
 });
 
 export async function saveWarehouseAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = warehouseSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const input = parsed.data;
   const values = {
     code: input.code,
@@ -350,7 +384,7 @@ export async function saveWarehouseAction(
         .select("id")
         .single()
     : await context.db.from("warehouses").insert(values).select("id").single();
-  if (base.error || !base.data) return failed();
+  if (base.error || !base.data) return failed("record", base.error);
   const { error } = await context.db.from("warehouse_translations").upsert(
     [
       {
@@ -371,89 +405,16 @@ export async function saveWarehouseAction(
     { onConflict: "warehouse_id,locale" },
   );
   if (error)
-    return failed("The warehouse was saved, but its translations were not.");
+    return fail("UNEXPECTED", "translationsNotSaved");
   revalidatePath("/", "layout");
-  return saved(input.id ? "Warehouse updated." : "Warehouse created.");
-}
-
-const articleSchema = z.object({
-  id: optionalUuid.optional(),
-  categoryId: optionalUuid,
-  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
-  slugEn: slug,
-  slugAr: slug,
-  titleEn: z.string().trim().min(1).max(240),
-  titleAr: z.string().trim().min(1).max(240),
-  excerptEn: optionalText(1000),
-  excerptAr: optionalText(1000),
-  bodyEn: optionalText(30000),
-  bodyAr: optionalText(30000),
-});
-
-export async function saveArticleAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = articleSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const input = parsed.data;
-  const values = {
-    category_id: input.categoryId,
-    status: input.status,
-    published_at:
-      input.status === "PUBLISHED" ? new Date().toISOString() : null,
-    updated_by: context.admin.id,
-  };
-  const base = input.id
-    ? await context.db
-        .from("articles")
-        .update(values)
-        .eq("id", input.id)
-        .select("id")
-        .single()
-    : await context.db
-        .from("articles")
-        .insert({ ...values, created_by: context.admin.id })
-        .select("id")
-        .single();
-  if (base.error || !base.data) return failed();
-  const { error } = await context.db.from("article_translations").upsert(
-    [
-      {
-        article_id: base.data.id,
-        locale: "en",
-        slug: input.slugEn,
-        title: input.titleEn,
-        excerpt: input.excerptEn,
-        body_markdown: input.bodyEn,
-      },
-      {
-        article_id: base.data.id,
-        locale: "ar",
-        slug: input.slugAr,
-        title: input.titleAr,
-        excerpt: input.excerptAr,
-        body_markdown: input.bodyAr,
-      },
-    ],
-    { onConflict: "article_id,locale" },
-  );
-  if (error)
-    return failed("The article was saved, but its translations were not.");
-  revalidatePath("/", "layout");
-  return saved(input.id ? "Article updated." : "Article created.");
+  return ok(input.id ? "recordUpdated" : "recordCreated");
 }
 
 /*
- * `uploadMediaAction` and `updateMediaTranslationAction` were removed in
- * Phase 8. Both are superseded by `src/actions/admin-media.ts`, which shares
- * the single ingest pipeline in `lib/media/upload.ts`. The versions here
- * trusted the browser-declared MIME type instead of the file's own signature,
- * never recorded intrinsic dimensions — so nothing they uploaded could be
- * rendered by the CMS at all — and returned the provider's error text
- * verbatim (findings N50, N57).
+ * `saveArticleAction` was removed in Phase 10. Articles have had their own
+ * workspace and action since Phase 8 (`src/actions/admin-articles.ts`), which
+ * writes `featured_media_id` and stamps `published_at` once rather than on
+ * every save. This copy had become unreachable.
  */
 
 const archiveEntities = [
@@ -477,15 +438,18 @@ const archiveEntities = [
 ] as const;
 
 export async function archiveAdminRecordAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = z
-    .object({ id: uuid, entity: z.enum(archiveEntities) })
+    .object({
+      id: uuid,
+      entity: z.enum(archiveEntities, { message: "required" }),
+    })
     .safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const { id, entity } = parsed.data;
   const now = new Date().toISOString();
   let error: { message: string } | null = null;
@@ -546,29 +510,33 @@ export async function archiveAdminRecordAction(
       .update({ is_active: false })
       .eq("id", id));
   }
-  if (error) return failed(error.message);
+  if (error) return failed("archive", error);
   revalidatePath("/", "layout");
-  return saved(entity === "sections" ? "Section hidden." : "Record archived.");
+  return ok(entity === "sections" ? "sectionHidden" : "recordArchived");
 }
 
 export async function updateSiteSettingsAction(
-  _: AdminActionState,
+  _state: ActionFormState,
   formData: FormData,
-): Promise<AdminActionState> {
+): Promise<ActionResult> {
   const parsed = z
     .object({
       // `site_settings` is a single-row table keyed by a smallint (id = 1),
       // not a uuid. Validating it as a uuid rejected every submission with
       // "Invalid UUID", so Site settings could never be saved (finding N25).
-      id: z.coerce.number().int().nonnegative(),
+      id: z.coerce.number().int("invalidNumber").nonnegative("mustNotBeNegative"),
       brandName: optionalText(160),
       legalName: optionalText(200),
       email: z.preprocess(
         (value) => (value === "" ? null : value),
-        z.email().nullable(),
+        z.email("invalidEmail").nullable(),
       ),
       phone: optionalText(60),
-      lowStockThreshold: z.coerce.number().int().min(0).max(100000),
+      lowStockThreshold: z.coerce
+        .number({ message: "invalidNumber" })
+        .int("invalidNumber")
+        .min(0, "mustNotBeNegative")
+        .max(100000, "tooLarge"),
       displayNameEn: optionalText(160),
       displayNameAr: optionalText(160),
       taglineEn: optionalText(300),
@@ -579,7 +547,7 @@ export async function updateSiteSettingsAction(
     .safeParse(Object.fromEntries(formData));
   if (!parsed.success) return invalid(parsed.error);
   const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
+  if (!context) return expired();
   const input = parsed.data;
   const base = await context.db
     .from("site_settings")
@@ -592,7 +560,7 @@ export async function updateSiteSettingsAction(
       updated_by: context.admin.id,
     })
     .eq("id", input.id);
-  if (base.error) return failed();
+  if (base.error) return failed("site settings", base.error);
   const { error } = await context.db.from("site_settings_translations").upsert(
     [
       {
@@ -612,234 +580,23 @@ export async function updateSiteSettingsAction(
     ],
     { onConflict: "settings_id,locale" },
   );
-  if (error) return failed("Settings were saved, but translations were not.");
+  if (error) return fail("UNEXPECTED", "translationsNotSaved");
   revalidatePath("/", "layout");
-  return saved("Site settings updated.");
+  return ok("siteSettingsUpdated");
 }
 
-export async function updateWorkflowStatusAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      id: uuid,
-      // "inquiries" was removed here in Phase 7: `updateInquiryStatusAction`
-      // is now the single writer of inquiry status. This path knew only four
-      // of the six live statuses and returned the provider's own error text,
-      // which would have put the transition trigger's wording in front of an
-      // Administrator.
-      entity: z.enum(["offers", "content"]),
-      status: z.string(),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const { id, entity, status } = parsed.data;
-  let error: { message: string } | null = null;
-  if (entity === "offers") {
-    const valid = z
-      .enum([
-        "ARRIVING_SOON",
-        "NEW_ARRIVAL",
-        "IN_STORE",
-        "DISCOUNT",
-        "SOLD_OUT",
-        "INACTIVE",
-      ])
-      .safeParse(status);
-    if (!valid.success) return failed("Choose a valid offer status.");
-    ({ error } = await context.db
-      .from("coffee_offers")
-      .update({ status: valid.data })
-      .eq("id", id));
-  } else {
-    const valid = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).safeParse(status);
-    if (!valid.success) return failed("Choose a valid page status.");
-    ({ error } = await context.db
-      .from("site_pages")
-      .update({
-        status: valid.data,
-        published_at:
-          valid.data === "PUBLISHED" ? new Date().toISOString() : null,
-      })
-      .eq("id", id));
-  }
-  if (error) return failed(error.message);
-  revalidatePath("/", "layout");
-  return saved("Status updated.");
-}
+/*
+ * `updateWorkflowStatusAction` was removed in Phase 10. It served a status
+ * dropdown on the generic module list for offers and CMS pages; both now have
+ * their own workspaces with status controls that offer only the transitions
+ * their state allows, so the branch had become unreachable.
+ */
 
-export async function createCmsPageAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      pageKey: slug,
-      routePath: z.string().trim().startsWith("/").max(200),
-      template: z.enum([
-        "STANDARD",
-        "HOME",
-        "COMMERCIAL",
-        "SEGMENT",
-        "PRICING",
-        "LEGAL",
-        "SUPPORT",
-      ]),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const { error } = await context.db.from("site_pages").insert({
-    page_key: parsed.data.pageKey,
-    route_path: parsed.data.routePath,
-    template: parsed.data.template,
-    status: "DRAFT",
-    is_active: true,
-    sort_order: 0,
-    created_by: context.admin.id,
-    updated_by: context.admin.id,
-  });
-  if (error) return failed(error.message);
-  revalidatePath("/admin/content");
-  return saved("CMS draft created.");
-}
-
-export async function upsertPageTranslationAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      pageId: uuid,
-      locale: z.enum(["en", "ar"]),
-      title: z.string().trim().min(1).max(200),
-      h1: optionalText(240),
-      summary: optionalText(500),
-      bodyMarkdown: optionalText(20000),
-      seoTitle: optionalText(200),
-      seoDescription: optionalText(500),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const input = parsed.data;
-  const { error } = await context.db.from("site_page_translations").upsert(
-    {
-      page_id: input.pageId,
-      locale: input.locale,
-      title: input.title,
-      h1: input.h1,
-      summary: input.summary,
-      body_markdown: input.bodyMarkdown,
-      seo_title: input.seoTitle,
-      seo_description: input.seoDescription,
-    },
-    { onConflict: "page_id,locale" },
-  );
-  if (error) return failed(error.message);
-  revalidatePath("/", "layout");
-  return saved(`${input.locale.toUpperCase()} page content saved.`);
-}
-
-export async function createCmsSectionAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      pageId: uuid,
-      sectionKey: slug,
-      sectionType: z.enum([
-        "HERO",
-        "RICH_TEXT",
-        "CTA",
-        "ENTITY_LIST",
-        "WAREHOUSES",
-        "MEDIA_TEXT",
-      ]),
-      sortOrder: z.coerce.number().int().min(0).max(1000),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const { error } = await context.db.from("site_page_sections").insert({
-    page_id: parsed.data.pageId,
-    section_key: parsed.data.sectionKey,
-    section_type: parsed.data.sectionType,
-    sort_order: parsed.data.sortOrder,
-    is_visible: false,
-  });
-  if (error) return failed(error.message);
-  revalidatePath("/admin/content");
-  return saved("CMS section created hidden by default.");
-}
-
-export async function updateCmsSectionAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      id: uuid,
-      sortOrder: z.coerce.number().int().min(0).max(1000),
-      isVisible: z.enum(["true", "false"]),
-      ctaHref: optionalText(500),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const { error } = await context.db
-    .from("site_page_sections")
-    .update({
-      sort_order: parsed.data.sortOrder,
-      is_visible: parsed.data.isVisible === "true",
-      cta_href: parsed.data.ctaHref,
-    })
-    .eq("id", parsed.data.id);
-  if (error) return failed(error.message);
-  revalidatePath("/", "layout");
-  return saved("Section settings updated.");
-}
-
-export async function upsertSectionTranslationAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      sectionId: uuid,
-      locale: z.enum(["en", "ar"]),
-      heading: optionalText(240),
-      subheading: optionalText(240),
-      bodyMarkdown: optionalText(20000),
-      ctaLabel: optionalText(120),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const input = parsed.data;
-  const { error } = await context.db
-    .from("site_page_section_translations")
-    .upsert(
-      {
-        section_id: input.sectionId,
-        locale: input.locale,
-        heading: input.heading,
-        subheading: input.subheading,
-        body_markdown: input.bodyMarkdown,
-        cta_label: input.ctaLabel,
-      },
-      { onConflict: "section_id,locale" },
-    );
-  if (error) return failed(error.message);
-  revalidatePath("/", "layout");
-  return saved(`${input.locale.toUpperCase()} section content saved.`);
-}
+/*
+ * The five CMS actions that stood here — page create, page translation,
+ * section create, section update, section translation — were removed in
+ * Phase 10. Phase 8 replaced them with `src/actions/admin-cms.ts`, which
+ * validates against the live check constraints (the template list, the
+ * snake_case section key, the eight approved section types) and returns
+ * message keys. Nothing had imported these since.
+ */

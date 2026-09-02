@@ -4,9 +4,11 @@
 
 ## Current Phase
 
-**Phase 9 — Public design and motion rebuild — COMPLETE, GATE PASSED.**
+**Phase 10 — Admin interaction, responsive redesign, and final Admin flow
+closure — COMPLETE, GATE PASSED.**
 
-Phase 10 **has not been started**.
+Phase 9 remains COMPLETE / GATE PASSED and was not reverted. Phase 11 **has not
+been started**.
 
 > ### Still outstanding from Phase 3 — one manual step
 >
@@ -234,10 +236,40 @@ change. The live Sucafina site was used only as a visual/interaction reference
 under the owner's explicit Phase 9 instruction; no reference copy, media,
 brand device, code, or business claim appears in the application.
 
+### Phase 10 — COMPLETE, gate PASSED
+
+| Task                          | Status   | Notes                                                                                                                        |
+| ----------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `P10-T01` characterization    | **PASS** | all 18 modules opened in a real browser, both locales and themes, before any edit; 8 rebuilt, 10 left alone                  |
+| `P10-T02` targeted redesign   | **PASS** | the legacy form system deleted; the whole Admin now runs one form family with inline errors and preserved values            |
+| `P10-T03` responsive/theme/RTL| **PASS** | 5 viewports x 18 modules x 2 themes x 2 locales = 360 audited screens, all green                                            |
+| `P10-T04` full test pass      | **PASS** | 573 passing checks across unit, live-integration, desktop, mobile and dev-server suites; 0 failing                          |
+| `P10-T05` **PHASE 10 GATE**   | **PASS** | production build, clean typecheck and lint, QA data removed, storage reconciled                                             |
+
+Evidence: `evidence/phase-10-admin-interaction-responsive.md`.
+
+No schema change, no migration, and no change to Auth, RLS, roles, blocking,
+protected pricing, sample/inquiry rules, CMS schema or Media schema. Business
+logic in `admin-operations.ts` was preserved exactly; only its error vocabulary
+moved onto the `ActionResult` contract.
+
+Three regressions in existing work were found by this phase's regression run
+and fixed by adapting around the current implementation rather than reverting
+it: modal dialogs painted beneath the footer (Phase 9 view-transition stacking
+contexts, fixed by portalling dialogs to `<body>`), the About hero clipped at
+375px (hero `clamp()` floor), and a Phase 8 assertion tied to the native
+`<details>` element Phase 9 replaced with an ARIA disclosure. A fourth fix
+made `color-scheme` follow the theme at the root, so native option popups and
+scrollbars stop being forced dark in the light theme.
+
+**N27 and N37 are now closed** by P10-T02: `admin-operations.ts` no longer
+returns hardcoded English prose, so Admin feedback is localized in both
+locales.
+
 ## Current / Next Task
 
-**Next**: `P10-T01` — first task of Phase 10 (Admin interaction and responsive
-redesign). Not started; do not begin it without instruction.
+**Next**: `P11-T01` — first task of Phase 11. Not started; do not begin it
+without instruction.
 
 Two items need an owner decision before a later phase leans on them:
 
@@ -280,13 +312,13 @@ seven assertions now always run instead of skipping behind an env flag.
 | **N23** | **MEDIUM** | **New.** A block is audited only by `blocked_by`/`blocked_at`/`block_reason` on the profile row — attributable and unforgeable, but current-state only: unblock clears all four. `public.profiles` has no audit trigger and `audit_logs` has no INSERT policy, so block _history_ would need a database change. **Owner decision required.**                                                                                     | owner / a later phase            |
 | **N32** | **MEDIUM** | **New.** `varieties` has a plain `name` column and **no** `variety_translations` table, so varieties are English-only _by schema_ and an Arabic Admin necessarily sees English names. Closing it needs a migration — **owner decision required**, not applied                                                                                                                                                                    | owner / a later phase            |
 | **N33** | **MEDIUM** | **New.** Sensory notes attach to **offers** (`offer_sensory_notes`), not coffees — there is no `coffee_sensory_notes`. Implemented per the live schema; confirm this matches the intended product model                                                                                                                                                                                                                          | owner                            |
-| **N37** | **LOW**    | **New.** The legacy `admin-operations.ts` modules Phase 6 did not take (CMS, articles, media, taxonomy, origins, regions, warehouses, varieties) still return hardcoded English prose in both locales. Extends N27                                                                                                                                                                                                               | Phase 11                         |
+| **N37** | **LOW**    | **New.** The legacy `admin-operations.ts` modules Phase 6 did not take (CMS, articles, media, taxonomy, origins, regions, warehouses, varieties) still return hardcoded English prose in both locales. Extends N27                                                                                                                                                                                                               | **CLOSED in Phase 10**           |
 | **N39** | **HIGH**   | **New.** `reuseExistingServer: true` in both Playwright configs lets a suite attach to whatever holds port 3000. A stale server produced a 104-failure run that was pure artifact; the same suite passed 200/0 against a verified one. The dev config has the mirror hazard — with a production server up the dev suite passes vacuously. **Verify the server answers correctly before trusting a suite result.** Supersedes N29 | noted for every later phase      |
 | **N40** | **MEDIUM** | **New.** The locale switcher drops the query string if clicked before hydration (its `href` is pathname-only by design, to keep the shared header statically rendered). No client-side fix exists. Accepted limitation                                                                                                                                                                                                           | owner / Phase 13                 |
 | **N38** | —          | **New, fixed in the Phase 6 closure audit.** Taxonomy terms were created without either name: the shared action sent a `description` column to all seven translation tables but only three have one, so four entities failed their translation upsert and displayed as raw slugs                                                                                                                                                 | noted for every later phase      |
 | **N41** | —          | **New, fixed in the Phase 6 closure audit.** The catalog write path verified each many-to-many id with its own query (~15 sequential round trips per coffee save); replaced with one `in (…)` per group. Same guarantee, suite time 10.7 → 8.8 min                                                                                                                                                                               | noted for every later phase      |
 | N6      | **MEDIUM** | An `auth.users` row (`shadyshref2001@gmail.com`) has no `profiles` row, so it behaves as signed-out                                                                                                                                                                                                                                                                                                                              | Phase 3                          |
-| **N27** | **LOW**    | **New.** `admin-operations.ts` still returns the legacy `AdminActionState` with hardcoded English prose, so Site-settings feedback is English-only in both locales                                                                                                                                                                                                                                                               | Phase 11                         |
+| **N27** | **LOW**    | **New.** `admin-operations.ts` still returns the legacy `AdminActionState` with hardcoded English prose, so Site-settings feedback is English-only in both locales                                                                                                                                                                                                                                                               | **CLOSED in Phase 10**           |
 | **N24** | **LOW**    | **New.** The staging Supabase project rejects `@example.com` for outbound mail, so no fixture can prove an email send end to end                                                                                                                                                                                                                                                                                                 | Phase 12/13 test infrastructure  |
 | **N26** | —          | **New, fixed in Phase 5.** `requireAccountOwner()` now gates self-scoped account edits. A later pass must not "harden" it back to `requireVerifiedUser()` or widen it beyond self-scoped writes                                                                                                                                                                                                                                  | noted for every later phase      |
 | **N25** | —          | **New, fixed in Phase 5.** `site_settings.id` is a `smallint`, not a uuid. Broader lesson: `types.generated.ts` is curated, not generated, and can drift from the live schema                                                                                                                                                                                                                                                    | noted for every later phase      |
@@ -317,8 +349,8 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
 
 ## Last Safe Checkpoint
 
-- **Branch**: `main`; Phases 0–8 committed (`27648ca finish phase 8`). Phase 9
-  is uncommitted.
+- **Branch**: `main`; Phases 0–9 committed (`8811dae finish phase 9`). Phase 10
+  is uncommitted, per the owner's instruction not to commit.
 - **Database**: unchanged by Phases 6, 7 and 8 — no migration, no function, RLS,
   storage policy or bucket change. Owner-approved QA/demo **rows** were
   inserted in Phase 6 and are inventoried in

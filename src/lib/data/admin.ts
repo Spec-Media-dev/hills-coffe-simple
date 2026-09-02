@@ -1,4 +1,5 @@
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -92,7 +93,7 @@ export async function getAdminModuleRows(
   }
   if (module === "origins") {
     const [originsQ, translationsQ] = await Promise.all([
-      db.from("origins").select("id,slug,is_active"),
+      db.from("origins").select("id,slug,is_active,country_code"),
       db
         .from("origin_translations")
         .select("origin_id,name")
@@ -105,7 +106,7 @@ export async function getAdminModuleRows(
       id: x.id,
       primary: names.get(x.id) ?? x.slug,
       secondary: x.slug,
-      detail: "Origin",
+      detail: x.country_code ?? "",
       status: x.is_active ? "active" : "inactive",
     }));
   }
@@ -118,18 +119,43 @@ export async function getAdminModuleRows(
       "certifications",
       "tags",
     ] as const;
+    // Each taxonomy keeps its names in its own translation table; the list
+    // reads them so a term appears under the name it was given.
+    const TRANSLATIONS = {
+      coffee_types: ["coffee_type_translations", "coffee_type_id"],
+      processing_methods: ["processing_method_translations", "processing_method_id"],
+      packaging_types: ["packaging_type_translations", "packaging_type_id"],
+      sensory_notes: ["sensory_note_translations", "sensory_note_id"],
+      certifications: ["certification_translations", "certification_id"],
+      tags: ["tag_translations", "tag_id"],
+    } as const;
+
+    const t = await getTranslations({ locale, namespace: "admin.modules" });
     const groups = await Promise.all(
-      tables.map(async (table) => ({
-        table,
-        result: await db.from(table).select("id,slug,is_active"),
-      })),
+      tables.map(async (table) => {
+        const [translationTable, foreignKey] = TRANSLATIONS[table];
+        const [rows, translations] = await Promise.all([
+          db.from(table).select("id,slug,is_active"),
+          db
+            .from(translationTable)
+            .select(`${foreignKey},name`)
+            .eq("locale", locale),
+        ]);
+        const names = new Map(
+          (translations.data ?? []).map((row) => [
+            String((row as Record<string, unknown>)[foreignKey]),
+            String((row as Record<string, unknown>).name ?? ""),
+          ]),
+        );
+        return { table, rows: rows.data ?? [], names };
+      }),
     );
-    return groups.flatMap(({ table, result }) =>
-      (result.data ?? []).map((x) => ({
+    return groups.flatMap(({ table, rows, names }) =>
+      rows.map((x) => ({
         id: x.id,
-        primary: x.slug,
-        secondary: table.replaceAll("_", " "),
-        detail: "Taxonomy",
+        primary: names.get(String(x.id)) || x.slug,
+        secondary: x.slug,
+        detail: t(table as Parameters<typeof t>[0]),
         status: x.is_active ? "active" : "inactive",
         entity: table,
       })),
@@ -198,7 +224,7 @@ export async function getAdminModuleRows(
       id: variety.id,
       primary: variety.name ?? variety.slug,
       secondary: variety.slug,
-      detail: "Variety",
+      detail: "",
       status: variety.is_active ? "active" : "inactive",
       entity: "varieties",
     }));
@@ -242,7 +268,7 @@ export async function getAdminModuleRows(
           locale,
         ).translation?.name ?? category.slug,
       secondary: category.slug,
-      detail: "Article category",
+      detail: "",
       status: category.is_active ? "active" : "inactive",
       entity: "article_categories",
     }));

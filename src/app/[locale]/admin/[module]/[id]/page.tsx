@@ -1,4 +1,6 @@
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AdminRecordEditor } from "@/components/admin/admin-record-editor";
 import { OriginMedia } from "@/components/admin/origin-media";
 import { Link } from "@/i18n/navigation";
@@ -43,22 +45,54 @@ export default async function AdminRecordPage({
     module === "origins"
       ? await Promise.all([getOriginImages(id), listPickableMedia()])
       : [[], []];
+  const t = await getTranslations("admin.modules");
+  // The heading used to be the raw route slug, untranslated in both
+  // languages; the breadcrumb and the body copy were hardcoded English.
+  const titles: Record<string, string> = {
+    origins: "originsTitle",
+    regions: "regionsTitle",
+    varieties: "varietiesTitle",
+    warehouses: "warehousesTitle",
+    taxonomy: "taxonomyTitle",
+    "article-categories": "articleCategoriesTitle",
+  };
+  const moduleName = t(
+    (titles[module] ?? "breadcrumbEdit") as Parameters<typeof t>[0],
+  );
+
   return (
     <div className="p-5 md:p-8">
-      <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
-        <Link href="/admin">Admin</Link>
-        <span aria-hidden="true"> / </span>
-        <Link href={`/admin/${module}`}>{module.replaceAll("-", " ")}</Link>
-        <span aria-hidden="true"> / </span>
-        <span>Edit</span>
+      <nav
+        aria-label={t("breadcrumbAdmin")}
+        className="text-sm text-muted-foreground"
+      >
+        <Link href="/admin" className="hover:text-foreground">
+          {t("breadcrumbAdmin")}
+        </Link>
+        <span aria-hidden="true" className="mx-2">
+          /
+        </span>
+        <Link href={`/admin/${module}`} className="hover:text-foreground">
+          {moduleName}
+        </Link>
+        <span aria-hidden="true" className="mx-2">
+          /
+        </span>
+        <span>{t("breadcrumbEdit")}</span>
       </nav>
-      <p className="eyebrow mt-6">Operations</p>
-      <h1 className="mt-4 text-5xl capitalize">
-        Edit {module.replaceAll("-", " ")}
+
+      <Link
+        href={`/admin/${module}`}
+        className="mt-4 inline-flex h-11 min-h-11 items-center gap-2 text-sm font-bold text-muted-foreground transition hover:text-foreground"
+      >
+        <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+        {t("back")}
+      </Link>
+
+      <h1 className="mt-4 text-4xl md:text-5xl">
+        {t("editTitle", { module: moduleName })}
       </h1>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Record {id}. All changes are validated and authorised on the server.
-      </p>
+      <p className="mt-3 max-w-2xl text-muted-foreground">{t("editIntro")}</p>
       <AdminRecordEditor
         module={module}
         recordId={id}

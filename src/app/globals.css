@@ -71,9 +71,14 @@
   --font-body: var(--font-manrope), Arial, sans-serif;
   --font-display: var(--font-manrope), Arial, sans-serif;
   --shadow-soft: 0 18px 60px rgb(28 42 30 / 0.08);
+  /* Native controls the page cannot paint — the select popup, scrollbars,
+     date pickers — follow the theme from here, so no component has to force a
+     scheme of its own and get it wrong in the other theme. */
+  color-scheme: light;
 }
 
 .dark {
+  color-scheme: dark;
   --background: #1a2420;
   --page: #192420;
   --foreground: #eee8dc;
@@ -188,10 +193,17 @@
   }
   .display-hero {
     font-family: var(--font-display);
-    font-size: clamp(4rem, 10.5vw, 9.5rem);
+    /* The floor governs every phone: 10.5vw only overtakes 3.25rem above
+       ~495px. At the previous 4rem floor a single long word — "accountability"
+       in the About hero — measured 395px against a 355px column and was
+       clipped off the side of a 375px screen. */
+    font-size: clamp(3.25rem, 10.5vw, 9.5rem);
     line-height: 0.84;
     letter-spacing: -0.075em;
     font-weight: 800;
+    /* Last resort for a word no type scale can fit: break it rather than let
+       it paint outside the page. */
+    overflow-wrap: break-word;
   }
   [dir="rtl"] .display-hero {
     font-size: clamp(3.5rem, 9vw, 8rem);

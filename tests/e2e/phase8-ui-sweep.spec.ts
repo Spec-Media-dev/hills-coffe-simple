@@ -357,11 +357,16 @@ test.describe("Phase 8 runtime UI sweep", () => {
     // STAT_ROW renders a description list, with the label as the term.
     await expect(page.locator("main dl dt")).toHaveCount(2);
     await expect(page.getByText("warehouses")).toBeVisible();
-    // FAQ renders a disclosure per question.
-    await expect(page.locator("main details")).toHaveCount(2);
+    // FAQ renders a disclosure per question. Phase 9 moved these from a native
+    // <details> to an ARIA disclosure, so the assertion is on the behaviour
+    // both share: a collapsed control per question that reveals its answer.
+    const questions = main(page).getByRole("button", { expanded: false });
+    await expect(questions).toHaveCount(2);
     await expect(
       page.getByText("Is this rendered?", { exact: true }),
     ).toBeVisible();
+    await questions.first().click();
+    await expect(page.getByText("Yes, by its own renderer.")).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Talk to the team" }),
     ).toBeVisible();
