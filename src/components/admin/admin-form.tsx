@@ -159,11 +159,17 @@ export function AdminTextarea({
   label,
   defaultValue,
   hint,
+  dir,
+  rows,
 }: {
   name: string;
   label: string;
   defaultValue?: string | null;
   hint?: string;
+  /** Set explicitly on a translation editor so Arabic typing reads correctly
+   *  even inside the English Admin (Phase 8 §14). */
+  dir?: "ltr" | "rtl";
+  rows?: number;
 }) {
   const { id, errorId, hintId, keys, ref, invalid } = useField(name);
   const [value, setValue] = useState(defaultValue ?? "");
@@ -175,6 +181,8 @@ export function AdminTextarea({
       <textarea
         id={id}
         name={name}
+        dir={dir}
+        rows={rows}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         aria-invalid={invalid || undefined}
@@ -293,6 +301,31 @@ export function AdminSelect({
   const isControlled = controlledValue !== undefined;
   const value = isControlled ? controlledValue : internal;
   const empty = options.length === 0;
+
+  /*
+   * React resets the form element once an action settles. For a text input it
+   * then rewrites the value from the vdom, but for a `<select>` whose value did
+   * not change it skips the DOM write — so the browser shows the reset option
+   * while React still believes the old one is chosen, and the next submit sends
+   * an empty value. The Admin sees a rejection with no visible cause
+   * (finding N59).
+   *
+   * Restoring on the form's own `reset` event is what makes this reliable:
+   * render-order guesses are not, because the reset happens after the effects
+   * of the render that settled the action.
+   */
+  useEffect(() => {
+    const node = ref.current as HTMLSelectElement | null;
+    const owner = node?.form;
+    if (!node || !owner) return;
+    const restore = () => {
+      queueMicrotask(() => {
+        if (node.value !== value) node.value = value;
+      });
+    };
+    owner.addEventListener("reset", restore);
+    return () => owner.removeEventListener("reset", restore);
+  }, [value, ref]);
 
   return (
     <div className="grid gap-1.5">

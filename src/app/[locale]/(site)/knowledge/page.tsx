@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { BookOpen } from "lucide-react";
@@ -59,8 +60,22 @@ export default async function KnowledgePage({
                   href={`/knowledge/${article.slug}`}
                   className="rounded-[1.5rem] border border-border bg-card p-7 transition hover:border-highlight"
                 >
-                  <BookOpen className="size-6 text-highlight" />
-                  <h2 lang={article.lang} className="mt-12 text-3xl">
+                  {article.featuredMedia ? (
+                    <Image
+                      src={article.featuredMedia.url}
+                      alt={article.featuredMedia.alt}
+                      width={article.featuredMedia.width}
+                      height={article.featuredMedia.height}
+                      className="mb-6 aspect-[16/10] w-full rounded-[1rem] object-cover"
+                      sizes="(min-width:1280px) 24rem, (min-width:768px) 44vw, 90vw"
+                    />
+                  ) : (
+                    <BookOpen className="size-6 text-highlight" />
+                  )}
+                  <h2
+                    lang={article.lang}
+                    className={`text-3xl ${article.featuredMedia ? "" : "mt-12"}`}
+                  >
                     {article.title}
                   </h2>
                   {article.excerpt ? (

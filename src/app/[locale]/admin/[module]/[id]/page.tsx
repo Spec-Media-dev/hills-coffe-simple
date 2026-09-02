@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import { AdminRecordEditor } from "@/components/admin/admin-record-editor";
+import { OriginMedia } from "@/components/admin/origin-media";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getAdminFormOptions, getAdminRecordForEdit } from "@/lib/data/admin";
+import { listPickableMedia } from "@/lib/data/media-library";
+import { getOriginImages } from "@/lib/data/origin-media";
 
 const editableModules = [
   // "products" and "offers" edit through their own workspace routes.
@@ -10,10 +13,10 @@ const editableModules = [
   "regions",
   "warehouses",
   "varieties",
-  "articles",
+  // "articles" edit through `admin/articles/[id]`.
   "article-categories",
   "taxonomy",
-  "media",
+  // "media" edits through `admin/media/[id]`.
 ] as const;
 
 export default async function AdminRecordPage({
@@ -32,6 +35,14 @@ export default async function AdminRecordPage({
     getAdminFormOptions(locale),
   ]);
   if (!record) notFound();
+
+  // Origins carry images on the existing `origin_media` relation, managed
+  // with the shared media library and picker (finding N61). Loaded only for
+  // that module.
+  const [originImages, mediaLibrary] =
+    module === "origins"
+      ? await Promise.all([getOriginImages(id), listPickableMedia()])
+      : [[], []];
   return (
     <div className="p-5 md:p-8">
       <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
@@ -54,6 +65,21 @@ export default async function AdminRecordPage({
         values={record}
         options={options}
       />
+      {module === "origins" ? (
+        <OriginMedia
+          originId={id}
+          images={originImages}
+          library={mediaLibrary.map((item) => ({
+            id: item.id,
+            url: item.url,
+            width: item.width,
+            height: item.height,
+            altEn: item.altEn,
+            altAr: item.altAr,
+            storagePath: item.storagePath,
+          }))}
+        />
+      ) : null}
     </div>
   );
 }

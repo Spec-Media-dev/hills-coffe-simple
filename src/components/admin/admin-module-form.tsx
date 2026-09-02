@@ -6,7 +6,6 @@ import {
   saveVarietyAction,
   saveWarehouseAction,
   updateSiteSettingsAction,
-  uploadMediaAction,
 } from "@/actions/admin-operations";
 import { AdminActionForm } from "@/components/admin/admin-action-form";
 import type { AdminOption } from "@/lib/data/admin";
@@ -294,28 +293,6 @@ export function AdminModuleForm({
         <Textarea name="excerptAr" label="Arabic excerpt" />
         <Textarea name="bodyEn" label="English Markdown" />
         <Textarea name="bodyAr" label="Arabic Markdown" />
-      </AdminActionForm>
-    );
-  if (module === "media")
-    return (
-      <AdminActionForm
-        action={uploadMediaAction}
-        submitLabel="Upload media"
-        encType="multipart/form-data"
-        className={grid}
-      >
-        <label className="grid gap-1.5 text-sm font-bold">
-          Image (JPEG, PNG, WebP, AVIF; maximum 10 MB)
-          <input
-            name="file"
-            type="file"
-            required
-            accept="image/jpeg,image/png,image/webp,image/avif"
-            className={`${field} py-2`}
-          />
-        </label>
-        <Input name="altEn" label="English alt text" required />
-        <Input name="altAr" label="Arabic alt text" required />
       </AdminActionForm>
     );
   if (module === "settings" && settings) {

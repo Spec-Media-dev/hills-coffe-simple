@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -71,6 +72,20 @@ export default async function ArticlePage({
         </div>
       </header>
       <div className="site-container section-space max-w-4xl">
+        {/* Present only when the media row is live and measurable; an archived
+            or unreadable image leaves the article intact rather than showing a
+            broken frame (§33). */}
+        {article.featuredMedia ? (
+          <Image
+            src={article.featuredMedia.url}
+            alt={article.featuredMedia.alt}
+            width={article.featuredMedia.width}
+            height={article.featuredMedia.height}
+            className="mb-10 h-auto w-full rounded-[2rem] border border-border object-cover"
+            sizes="(min-width:1024px) 56rem, 100vw"
+            priority
+          />
+        ) : null}
         {article.bodyMarkdown ? (
           <SafeMarkdown className="prose-hills text-lg">
             {article.bodyMarkdown}

@@ -6,24 +6,23 @@ import type { Locale } from "@/i18n/routing";
 import { getSitePage } from "@/lib/data/site-content";
 import { cmsMetadata } from "@/lib/seo/metadata";
 
-const commercialPages = new Set([
-  "green-coffee-beans-supplier",
-  "coffee-beans-supplier",
-  "wholesale-coffee-beans",
-  "specialty-coffee-beans",
-  "arabica-coffee-beans-wholesale",
-  "robusta-coffee-beans-wholesale",
-  "raw-coffee-beans-for-roasters",
-  "bulk-coffee-beans",
-  "coffee-beans-wholesale-price",
-  "privacy",
-  "terms",
-]);
+/**
+ * Any CMS page an Administrator publishes is served here.
+ *
+ * This used to be a hardcoded allow-list of eleven page keys, so a page
+ * created in the Admin returned 404 until someone edited this file — which
+ * made "manage the website without editing code" untrue (finding N60).
+ *
+ * Nothing is loosened by removing it. `getSitePage` still requires the page to
+ * be PUBLISHED, active, not soft-deleted, past its publication date, and to
+ * have a translation in the requested locale; anything else is a 404. And a
+ * static route always wins this dynamic segment, so a page key can never
+ * shadow `/about`, `/contact` or the catalog.
+ */
 export async function generateMetadata({
   params,
 }: PageProps<"/[locale]/[page]">): Promise<Metadata> {
   const { locale, page: key } = await params;
-  if (!commercialPages.has(key)) return {};
   const page = await getSitePage(key, locale as Locale);
   return page ? cmsMetadata(page, locale as Locale, `/${key}`) : {};
 }
@@ -31,7 +30,6 @@ export default async function CmsRoutePage({
   params,
 }: PageProps<"/[locale]/[page]">) {
   const { locale, page: key } = await params;
-  if (!commercialPages.has(key)) notFound();
   const page = await getSitePage(key, locale as Locale);
   if (!page) notFound();
   return (

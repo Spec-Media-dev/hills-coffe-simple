@@ -2,7 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { BrandMark } from "@/components/brand/mark";
+import { BrandMark, type BrandLogo } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
 
 type Item = { href: string; label: string };
@@ -12,11 +12,14 @@ export function MobileMenu({
   openLabel,
   closeLabel,
   brandLabel = "Hills Coffee",
+  logo = null,
 }: {
   items: Item[];
   openLabel: string;
   closeLabel: string;
   brandLabel?: string;
+  /** Resolved by the server header; this component never reads the database. */
+  logo?: BrandLogo | null;
 }) {
   const [open, setOpen] = useState(false);
   const dialogId = useId();
@@ -107,7 +110,7 @@ export function MobileMenu({
                 onClick={() => setOpen(false)}
                 className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <BrandMark height={36} label={brandLabel} />
+                <BrandMark height={36} label={brandLabel} logo={logo} />
               </Link>
               <button
                 type="button"

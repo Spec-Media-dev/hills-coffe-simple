@@ -8,6 +8,7 @@ import { Link } from "@/i18n/navigation";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import { AccountMenu } from "./account-menu";
 import { avatarInitials, getOwnAvatarUrl } from "@/lib/data/avatar";
+import { getSiteLogo } from "@/lib/data/site-logo";
 import type { Locale } from "@/i18n/routing";
 import { getLocale } from "next-intl/server";
 
@@ -22,6 +23,9 @@ export async function SiteHeader() {
   const viewer = await requireVerifiedUser();
   const locale = (await getLocale()) as Locale;
   const avatarUrl = viewer ? await getOwnAvatarUrl() : null;
+  // Resolved once per render and shared with the mobile menu, which is a
+  // client component and cannot read it itself.
+  const logo = await getSiteLogo(locale);
   const account = await getTranslations("account");
   const items = [
     { href: "/", label: t("home") },
@@ -39,7 +43,12 @@ export async function SiteHeader() {
           href="/"
           className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <BrandMark height={40} priority label={brand("logoAlt")} />
+          <BrandMark
+            height={40}
+            priority
+            label={brand("logoAlt")}
+            logo={logo}
+          />
         </Link>
         <nav
           className="hidden items-center gap-8 lg:flex"
@@ -173,6 +182,7 @@ export async function SiteHeader() {
             openLabel={t("menu")}
             closeLabel={t("close")}
             brandLabel={brand("logoAlt")}
+            logo={logo}
           />
         </div>
       </div>

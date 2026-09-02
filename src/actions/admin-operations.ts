@@ -446,110 +446,15 @@ export async function saveArticleAction(
   return saved(input.id ? "Article updated." : "Article created.");
 }
 
-export async function uploadMediaAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const file = formData.get("file");
-  const altEn = String(formData.get("altEn") ?? "").trim();
-  const altAr = String(formData.get("altAr") ?? "").trim();
-  const allowed = new Map([
-    ["image/jpeg", "jpg"],
-    ["image/png", "png"],
-    ["image/webp", "webp"],
-    ["image/avif", "avif"],
-  ]);
-  if (
-    !(file instanceof File) ||
-    !allowed.has(file.type) ||
-    file.size <= 0 ||
-    file.size > 10_000_000
-  )
-    return failed(
-      "Choose a JPEG, PNG, WebP, or AVIF image no larger than 10 MB.",
-    );
-  if (!altEn || !altAr)
-    return failed("English and Arabic alt text are required.");
-  const extension = allowed.get(file.type)!;
-  const storagePath = `media/${new Date().getUTCFullYear()}/${crypto.randomUUID()}.${extension}`;
-  const upload = await context.db.storage
-    .from("hills-public")
-    .upload(storagePath, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-  if (upload.error) return failed("The image could not be uploaded.");
-  const media = await context.db
-    .from("media")
-    .insert({
-      storage_bucket: "hills-public",
-      storage_path: storagePath,
-      mime_type: file.type,
-      file_size_bytes: file.size,
-      is_public: true,
-      uploaded_by: context.admin.id,
-    })
-    .select("id")
-    .single();
-  if (media.error || !media.data) {
-    await context.db.storage.from("hills-public").remove([storagePath]);
-    return failed(
-      "The upload succeeded, but its media record could not be created.",
-    );
-  }
-  const translations = await context.db.from("media_translations").upsert(
-    [
-      { media_id: media.data.id, locale: "en", alt_text: altEn },
-      { media_id: media.data.id, locale: "ar", alt_text: altAr },
-    ],
-    { onConflict: "media_id,locale" },
-  );
-  if (translations.error)
-    return failed("The image was saved, but its alt text was not.");
-  revalidatePath("/", "layout");
-  return saved("Media uploaded.");
-}
-
-export async function updateMediaTranslationAction(
-  _: AdminActionState,
-  formData: FormData,
-): Promise<AdminActionState> {
-  const parsed = z
-    .object({
-      id: uuid,
-      altEn: z.string().trim().min(1).max(500),
-      altAr: z.string().trim().min(1).max(500),
-      captionEn: optionalText(1000),
-      captionAr: optionalText(1000),
-    })
-    .safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return invalid(parsed.error);
-  const context = await adminContext();
-  if (!context) return failed("Your admin session has expired.");
-  const input = parsed.data;
-  const { error } = await context.db.from("media_translations").upsert(
-    [
-      {
-        media_id: input.id,
-        locale: "en",
-        alt_text: input.altEn,
-        caption: input.captionEn,
-      },
-      {
-        media_id: input.id,
-        locale: "ar",
-        alt_text: input.altAr,
-        caption: input.captionAr,
-      },
-    ],
-    { onConflict: "media_id,locale" },
-  );
-  if (error) return failed(error.message);
-  revalidatePath("/", "layout");
-  return saved("Media translations updated.");
-}
+/*
+ * `uploadMediaAction` and `updateMediaTranslationAction` were removed in
+ * Phase 8. Both are superseded by `src/actions/admin-media.ts`, which shares
+ * the single ingest pipeline in `lib/media/upload.ts`. The versions here
+ * trusted the browser-declared MIME type instead of the file's own signature,
+ * never recorded intrinsic dimensions — so nothing they uploaded could be
+ * rendered by the CMS at all — and returned the provider's error text
+ * verbatim (findings N50, N57).
+ */
 
 const archiveEntities = [
   "products",

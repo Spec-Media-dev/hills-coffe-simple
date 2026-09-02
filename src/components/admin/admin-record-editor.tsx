@@ -5,7 +5,6 @@ import {
   saveRegionAction,
   saveVarietyAction,
   saveWarehouseAction,
-  updateMediaTranslationAction,
 } from "@/actions/admin-operations";
 import { AdminActionForm } from "@/components/admin/admin-action-form";
 import type { AdminActionState } from "@/lib/admin/action-state";
@@ -211,16 +210,6 @@ function definition(module: string, options: Options) {
           options: activeOptions,
           required: true,
         },
-      ],
-    },
-    media: {
-      action: updateMediaTranslationAction,
-      fields: [
-        { name: "storagePath", label: "Storage path" },
-        { name: "altEn", label: "English alt text", required: true },
-        { name: "altAr", label: "Arabic alt text", required: true },
-        { name: "captionEn", label: "English caption", type: "textarea" },
-        { name: "captionAr", label: "Arabic caption", type: "textarea" },
       ],
     },
   };

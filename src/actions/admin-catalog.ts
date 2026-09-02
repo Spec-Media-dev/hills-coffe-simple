@@ -20,7 +20,12 @@ import {
   type Db,
 } from "@/lib/admin/validation";
 import { requireAdmin } from "@/lib/auth/session";
-import { sniffImageType, type AvatarMimeType } from "@/lib/avatar";
+import {
+  isRejection,
+  rollbackStoredImage,
+  saveMediaTranslations,
+  storeImage,
+} from "@/lib/media/upload";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -45,13 +50,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  *  3. **An error belongs to the field that caused it**, so the Admin can fix
  *     one input rather than re-reading the whole form.
  */
-
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const IMAGE_EXTENSION: Record<AvatarMimeType, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
 
 async function adminDb(): Promise<{ db: Db; adminId: string } | ActionResult> {
   const admin = await requireAdmin();
@@ -317,47 +315,19 @@ export async function attachCoffeeImagesAction(
     1;
 
   for (const file of files) {
-    if (file.size > MAX_IMAGE_BYTES)
-      return fieldFail("images", "imageTooLarge");
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const sniffed = sniffImageType(bytes);
-    // Declared type and actual signature must agree: a script renamed .png,
-    // or a PNG announced as JPEG, is refused.
-    if (!sniffed || sniffed !== file.type)
-      return fieldFail("images", "imageTypeInvalid");
-
-    const storagePath = `coffees/${coffeeId}/${crypto.randomUUID()}.${IMAGE_EXTENSION[sniffed]}`;
-    const upload = await db.storage
-      .from("hills-public")
-      .upload(storagePath, bytes, { contentType: sniffed, upsert: false });
-    if (upload.error) return fieldFail("images", "uploadFailed");
-
-    const media = await db
-      .from("media")
-      .insert({
-        storage_bucket: "hills-public",
-        storage_path: storagePath,
-        mime_type: sniffed,
-        file_size_bytes: file.size,
-        is_public: true,
-        uploaded_by: adminId,
-      })
-      .select("id")
-      .single();
-    if (media.error || !media.data) {
-      await db.storage.from("hills-public").remove([storagePath]);
-      return fieldFail("images", "uploadFailed");
-    }
-    const mediaId = media.data.id as string;
+    // Phase 8 moved validation, storage, dimensions and orphan cleanup into
+    // the shared pipeline so the Media Library and this path cannot drift.
+    // The MAIN/GALLERY semantics below are unchanged.
+    const stored = await storeImage(db, {
+      file,
+      folder: `coffees/${coffeeId}`,
+      uploadedBy: adminId,
+    });
+    if (isRejection(stored)) return fieldFail("images", stored.rejected);
+    const mediaId = stored.mediaId;
 
     if (altEn || altAr)
-      await db.from("media_translations").upsert(
-        [
-          { media_id: mediaId, locale: "en", alt_text: altEn || null },
-          { media_id: mediaId, locale: "ar", alt_text: altAr || null },
-        ],
-        { onConflict: "media_id,locale" },
-      );
+      await saveMediaTranslations(db, mediaId, { altEn, altAr });
 
     const role = hasMain ? "GALLERY" : "MAIN";
     const link = await db.from("coffee_media").insert({
@@ -368,8 +338,7 @@ export async function attachCoffeeImagesAction(
     });
     if (link.error) {
       // Roll the whole image back so no object and no row is orphaned.
-      await db.from("media").delete().eq("id", mediaId);
-      await db.storage.from("hills-public").remove([storagePath]);
+      await rollbackStoredImage(db, stored);
       return fieldFail("images", "uploadFailed");
     }
     if (role === "MAIN") hasMain = true;

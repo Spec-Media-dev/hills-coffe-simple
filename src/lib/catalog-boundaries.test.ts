@@ -181,25 +181,67 @@ describe("coffee images use the existing normalized media model (P6 §5)", () =>
   it("writes through coffee_media and media, not a second system", () => {
     const source = code("src/actions/admin-catalog.ts");
     expect(source).toContain("coffee_media");
-    expect(source).toContain('from("media")');
-    expect(source).toContain("hills-public");
+    // Phase 8 moved the media row and storage write into the shared pipeline;
+    // the model is the same normalized one, reached through that module.
+    expect(source).toContain("storeImage");
+    expect(code("src/lib/media/upload.ts")).toContain('from("media")');
+    expect(code("src/lib/media/upload.ts")).toContain("hills-public");
   });
 
   it("decides the file type from its bytes and builds the path server-side", () => {
-    const source = code("src/actions/admin-catalog.ts");
-    expect(source).toContain("sniffImageType");
-    // The stored path is derived from the coffee id and a generated uuid, so a
-    // client cannot choose where its upload lands.
-    expect(source).toContain("`coffees/${coffeeId}/${crypto.randomUUID()}");
+    // The coffee action must not do its own uploading: one pipeline is what
+    // keeps signature sniffing from being weakened in one caller only.
+    const action = code("src/actions/admin-catalog.ts");
+    expect(action).toContain("storeImage");
+    // It may still remove an object when an image is deleted; what it must
+    // never do again is upload one itself.
+    expect(action).not.toContain(".upload(");
+    // The stored folder is derived from the coffee id, so a client cannot
+    // choose where its upload lands...
+    expect(action.replace(/\s+/g, " ")).toContain(
+      "folder: `coffees/${coffeeId}`",
+    );
+
+    const pipeline = code("src/lib/media/upload.ts");
+    // ...and the filename inside it is server-generated, never the client's.
+    expect(pipeline).toContain("crypto.randomUUID()");
+    expect(pipeline).not.toContain("file.name");
+    // Declared type and real signature must agree.
+    expect(pipeline).toContain("sniffImageType");
+    expect(pipeline.replace(/\s+/g, " ")).toContain(
+      "if (!sniffed || sniffed !== file.type)",
+    );
   });
 
   it("removes the uploaded object when a later step fails", () => {
-    // Whitespace-insensitive: what matters is that a failed attach cleans up
-    // its storage object and media row rather than orphaning them.
-    const source = code("src/actions/admin-catalog.ts").replace(/\s+/g, " ");
-    expect(source).toContain(
-      'db.storage.from("hills-public").remove([storagePath])',
+    // A failed attach must clean up its storage object and media row rather
+    // than orphaning them, wherever that rollback now lives.
+    const action = code("src/actions/admin-catalog.ts").replace(/\s+/g, " ");
+    expect(action).toContain("rollbackStoredImage(db, stored)");
+
+    const pipeline = code("src/lib/media/upload.ts").replace(/\s+/g, " ");
+    // Rollback undoes both halves, in both directions.
+    expect(pipeline).toContain(
+      'db.from("media").delete().eq("id", stored.mediaId)',
     );
-    expect(source).toContain('db.from("media").delete().eq("id", mediaId)');
+    expect(pipeline).toContain(
+      "db.storage.from(MEDIA_BUCKET).remove([stored.storagePath])",
+    );
+    // And the pipeline removes its own object if the row it just wrote fails.
+    expect(pipeline).toContain(
+      "db.storage.from(MEDIA_BUCKET).remove([storagePath])",
+    );
+  });
+
+  it("records intrinsic dimensions, without which nothing can render the image", () => {
+    // `media.width`/`height` are what next/image needs to reserve layout
+    // space; a row missing them is dropped by every renderer (finding N50).
+    const pipeline = code("src/lib/media/upload.ts");
+    expect(pipeline).toContain("readImageDimensions");
+    expect(pipeline).toContain("width: size.width");
+    expect(pipeline).toContain("height: size.height");
+    expect(pipeline.replace(/\s+/g, " ")).toContain(
+      'if (!size) return { rejected: "imageDimensionsUnreadable" }',
+    );
   });
 });

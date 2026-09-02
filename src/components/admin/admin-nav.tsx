@@ -1,10 +1,12 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
   AdminNavLink,
   type AdminNavIcon,
 } from "@/components/admin/admin-nav-link";
 import { BrandMark } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
+import { getSiteLogo } from "@/lib/data/site-logo";
 
 type NavItem = {
   href: string;
@@ -18,6 +20,7 @@ export async function AdminNav() {
   const t = await getTranslations("admin");
   const nav = await getTranslations("admin.nav");
   const groupLabels = await getTranslations("admin.groups");
+  const logo = await getSiteLogo((await getLocale()) as Locale);
 
   // Every href below maps to a module the admin router actually serves.
   const groups: NavGroup[] = [
@@ -114,7 +117,7 @@ export async function AdminNav() {
     <aside className="border-e border-white/10 bg-[#13241b] text-[#eee8dc] lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-72 lg:shrink-0 lg:flex-col">
       <div className="shrink-0 px-5 pt-5 lg:px-6 lg:pt-7">
         <Link href="/" className="inline-block">
-          <BrandMark className="text-white" />
+          <BrandMark className="text-white" logo={logo} />
         </Link>
       </div>
 

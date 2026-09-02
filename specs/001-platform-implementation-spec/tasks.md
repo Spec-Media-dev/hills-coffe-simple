@@ -752,7 +752,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 8 — CMS, media, articles, and project logo
 
-- [ ] P8-T01 Build the typed CMS section registry
+- [x] P8-T01 Build the typed CMS section registry
   - **Goal**: Map the existing section types (`HERO`, `RICH_TEXT`, `CARD_GRID`, `MEDIA_SPLIT`, `CTA`, `STAT_ROW`, `FAQ`, `ENTITY_LIST`) to validated rendering props, so an unknown/invalid section fails safely in Admin preview and never crashes a public page.
   - **Dependencies**: Phase 2 complete.
   - **Files/modules**: `src/components/content/cms-page.tsx`, `entity-sections.tsx`.
@@ -766,7 +766,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 6 acceptance scenario 2 (validation before write) extends to section content specifically.
   - **Out of scope**: adding a new section type not already in the approved list.
 
-- [ ] P8-T02 [P] Wire `BrandMark` to `site_settings.org_logo_media_id`
+- [x] P8-T02 [P] Wire `BrandMark` to `site_settings.org_logo_media_id`
   - **Goal**: Resolve the project logo from the existing `org_logo_media_id → media(id)` relation, with the existing official static asset as the fallback on any missing/invalid reference (FR-047) — closing the master plan's gap finding that the DB logo relation is not yet consumed.
   - **Dependencies**: Phase 2 complete; the already-fixed dark-mode cream-plate treatment from the prior completion pass.
   - **Files/modules**: `src/components/brand/mark.tsx`, header/footer/Auth/Admin brand consumers.
@@ -780,7 +780,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 6 acceptance scenario 3 and Edge Cases "referenced project logo media item is archived" both pass.
   - **Out of scope**: any new logo-related column (e.g., a separate dark-logo relation) — out of scope unless separately approved.
 
-- [ ] P8-T03 [P] Add reference-aware media archive warnings and the reusable picker
+- [x] P8-T03 [P] Add reference-aware media archive warnings and the reusable picker
   - **Goal**: Warn an Admin before archiving/deleting a media item still referenced by an active coffee, origin, article, CMS section, or the site logo (FR-048); ensure one reusable media picker serves all these consumers.
   - **Dependencies**: P8-T02 (logo reference is one of the checked references).
   - **Files/modules**: Admin media module, a shared media-picker component.
@@ -794,7 +794,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` User Story 6 acceptance scenario 5 passes.
   - **Out of scope**: any change to the `hills-public` bucket's MIME/size policy (already correct, unchanged).
 
-- [ ] P8-T04 Run the CMS/media/logo test matrix
+- [x] P8-T04 Run the CMS/media/logo test matrix
   - **Goal**: Produce evidence for CRUD/publish/archive correctness, invalid-media handling, XSS/sanitization regression, and logo behavior across every shell, both themes, and both locales.
   - **Dependencies**: P8-T01 through P8-T03.
   - **Files/modules**: `tests/e2e/**`.
@@ -808,7 +808,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: real content drives the appropriate section types; the logo never disappears; no copied/unlicensed asset is introduced; the existing `org_logo_media_id` relation is reused, not duplicated — all with attached evidence.
   - **Out of scope**: any new CMS/media capability not already approved.
 
-- [ ] P8-T05 **PHASE 8 ACCEPTANCE GATE**
+- [x] P8-T05 **PHASE 8 ACCEPTANCE GATE**
   - **Goal**: Confirm CMS/media/logo correctness before the public redesign (Phase 9) composes the homepage from this content.
   - **Dependencies**: P8-T01 through P8-T04.
   - **Runtime acceptance condition** (per `plan.md` Phase 8): all conditions in P8-T04 hold with recorded evidence.

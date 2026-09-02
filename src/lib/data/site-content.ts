@@ -3,6 +3,11 @@ import type { Locale } from "@/i18n/routing";
 import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { SitePage, SiteSection } from "@/lib/supabase/types.generated";
+import {
+  isSectionType,
+  validateSection,
+  type SectionType,
+} from "@/lib/cms/sections";
 import { groupBy, pickTranslation, storagePublicUrl } from "./shared";
 
 export type CmsMedia = {
@@ -12,6 +17,8 @@ export type CmsMedia = {
   alt: string;
 };
 export type CmsSection = SiteSection & {
+  /** Narrowed by the registry: a section that reaches a renderer is valid. */
+  sectionType: SectionType;
   heading: string | null;
   subheading: string | null;
   bodyMarkdown: string | null;
@@ -107,38 +114,71 @@ export async function getSitePage(
     seoTitle: translation.translation.seo_title,
     seoDescription: translation.translation.seo_description,
     lang: translation.translation.locale,
+    // A section is validated against the registry before it can reach a
+    // renderer (P8-T01). An unknown type, or content that does not satisfy
+    // its own type, is dropped from the page and logged server-side: the
+    // visitor sees a page missing one block, never a crash or a stack trace
+    // (§12). Nothing about the failure is rendered.
     sections: sections.flatMap((section) => {
       const sectionT = pickTranslation(
         sectionTranslations.get(section.id) ?? [],
         locale,
       );
       if (!sectionT.translation) return [];
-      const media = section.media_id ? mediaMap.get(section.media_id) : null;
+      const mediaRow = section.media_id ? mediaMap.get(section.media_id) : null;
+      // Archived media is treated as absent, so retiring an image degrades a
+      // section rather than rendering a dead link.
+      const media =
+        mediaRow && !mediaRow.deleted_at && mediaRow.width && mediaRow.height
+          ? mediaRow
+          : null;
       const mediaT = media
         ? pickTranslation(mediaTranslations.get(media.id) ?? [], locale)
             .translation
         : null;
+
+      const issues = validateSection({
+        sectionType: section.section_type,
+        heading: sectionT.translation.heading,
+        subheading: sectionT.translation.subheading,
+        bodyMarkdown: sectionT.translation.body_markdown,
+        ctaLabel: sectionT.translation.cta_label,
+        ctaHref: section.cta_href,
+        entityRef: section.entity_ref,
+        entityLimit: section.entity_limit,
+        hasMedia: Boolean(media),
+      });
+      if (issues.length || !isSectionType(section.section_type)) {
+        console.warn(
+          `[cms] skipped section ${section.section_key} on page ${pageKey}: ` +
+            issues
+              .map((issue) => `${issue.field}/${issue.messageKey}`)
+              .join(", "),
+        );
+        return [];
+      }
+
       return [
         {
           ...section,
+          sectionType: section.section_type,
           heading: sectionT.translation.heading,
           subheading: sectionT.translation.subheading,
           bodyMarkdown: sectionT.translation.body_markdown,
           ctaLabel: sectionT.translation.cta_label,
           lang: sectionT.translation.locale,
-          media:
-            media && media.width && media.height
-              ? {
-                  url: storagePublicUrl(
-                    url,
-                    media.storage_bucket,
-                    media.storage_path,
-                  ),
-                  width: media.width,
-                  height: media.height,
-                  alt: mediaT?.alt_text ?? "",
-                }
-              : null,
+          media: media
+            ? {
+                url: storagePublicUrl(
+                  url,
+                  media.storage_bucket,
+                  media.storage_path,
+                ),
+                width: media.width!,
+                height: media.height!,
+                alt: mediaT?.alt_text ?? "",
+              }
+            : null,
         },
       ];
     }),

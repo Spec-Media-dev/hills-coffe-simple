@@ -1,8 +1,8 @@
 import "server-only";
 import type { Locale } from "@/i18n/routing";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { pickTranslation } from "./shared";
+import { pickTranslation, storagePublicUrl } from "./shared";
 
 /**
  * P6-T04 — active, non-deleted origins with a published-coffee count.
@@ -99,6 +99,28 @@ export async function getOriginRegions(originId: string, locale: Locale) {
     .sort((a, b) => a.name.localeCompare(b.name, locale));
 }
 
+export type ArticleMedia = {
+  url: string;
+  width: number;
+  height: number;
+  alt: string;
+};
+
+/**
+ * Published articles for the public site.
+ *
+ * Three visibility rules, all enforced here rather than trusted from the
+ * caller: the status must be PUBLISHED, the row must not be soft-deleted, and
+ * a future `published_at` is not yet public — the same embargo rule
+ * `getSitePage` applies, so scheduling behaves consistently across content
+ * types.
+ *
+ * Phase 8 added the featured image. It is resolved from
+ * `articles.featured_media_id` — the relation the schema already had, which no
+ * code consumed — and is dropped rather than rendered when the media row is
+ * archived or carries no intrinsic dimensions, so retiring an image degrades
+ * an article instead of breaking it (§17, §33).
+ */
 export async function getArticles(locale: Locale) {
   if (!isSupabaseConfigured()) return [];
   const db = await createSupabaseServerClient();
@@ -113,7 +135,53 @@ export async function getArticles(locale: Locale) {
   ]);
   if (rowsQ.error || translationsQ.error)
     throw new Error("Knowledge content unavailable (upstream)");
-  return (rowsQ.data ?? []).flatMap((row) => {
+
+  const now = Date.now();
+  const live = (rowsQ.data ?? []).filter(
+    (row) => !row.published_at || new Date(row.published_at).getTime() <= now,
+  );
+
+  const mediaIds = [
+    ...new Set(
+      live.flatMap((row) =>
+        row.featured_media_id ? [String(row.featured_media_id)] : [],
+      ),
+    ),
+  ];
+  const [mediaQ, mediaTranslationsQ] = mediaIds.length
+    ? await Promise.all([
+        db
+          .from("media")
+          .select("id,storage_bucket,storage_path,width,height")
+          .in("id", mediaIds)
+          .is("deleted_at", null),
+        db
+          .from("media_translations")
+          .select("media_id,locale,alt_text")
+          .in("media_id", mediaIds),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const { url } = getSupabaseConfig();
+  const mediaMap = new Map<string, ArticleMedia>();
+  for (const media of mediaQ.data ?? []) {
+    if (!media.width || !media.height) continue;
+    const translations = (mediaTranslationsQ.data ?? []).filter(
+      (row) => row.media_id === media.id,
+    );
+    const alt =
+      translations.find((row) => row.locale === locale)?.alt_text ??
+      translations.find((row) => row.locale === "en")?.alt_text ??
+      "";
+    mediaMap.set(String(media.id), {
+      url: storagePublicUrl(url, media.storage_bucket, media.storage_path),
+      width: Number(media.width),
+      height: Number(media.height),
+      alt: String(alt),
+    });
+  }
+
+  return live.flatMap((row) => {
     const t = pickTranslation(
       (translationsQ.data ?? []).filter((x) => x.article_id === row.id),
       locale,
@@ -129,6 +197,9 @@ export async function getArticles(locale: Locale) {
             seoTitle: t.translation.seo_title,
             seoDescription: t.translation.seo_description,
             lang: t.translation.locale,
+            featuredMedia: row.featured_media_id
+              ? (mediaMap.get(String(row.featured_media_id)) ?? null)
+              : null,
           },
         ]
       : [];

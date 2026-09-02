@@ -168,10 +168,58 @@ was removed in Phase 7; the other two are a pre-existing Phase 6 surface and a
 Constitution Principle XII concern. Deferred to Phase 11 rather than widening
 Phase 7's scope.
 
+### Phase 8 — COMPLETE, gate PASSED
+
+| Task                          | Status   | Notes                                                                                                                                          |
+| ----------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `P8-T01` section registry     | **PASS** | eight approved types, each with a validation rule and its own renderer; invalid or unknown sections are refused at write and dropped at render |
+| `P8-T02` project logo         | **PASS** | `org_logo_media_id` resolved with the official artwork as fallback on every failure, including a missing storage object                        |
+| `P8-T03` media library/picker | **PASS** | one ingest pipeline, one picker, seven-consumer reference check, archive warning with explicit confirmation                                    |
+| `P8-T04` test matrix          | **PASS** | 137 unit, 95 live-integration, 8/8 Phase 8 browser, full Phase 1-7 regression                                                                  |
+| `P8-T05` **PHASE 8 GATE**     | **PASS** | the content flow works end to end: upload -> page -> translated sections -> publish -> public render -> article -> logo                        |
+
+Evidence: `evidence/phase-8-cms-media-logo.md`
+
+A final **runtime UI acceptance sweep** drove every Phase 8 surface through its
+real Admin form in English and Arabic, light and dark
+(`tests/e2e/phase8-ui-sweep.spec.ts`, 6/6). It found and closed **N62** (the
+Articles form rendered the literal key `admin.articles.statusPublished`),
+**N63** (type-specific section fields never appeared on the add form, so an
+ENTITY_LIST could not be given its feed), and **N64** (`STAT_ROW` printed every
+label twice, once hidden from readers and once from assistive technology). All
+eight section types were created through the editor and verified rendering on
+the published public page.
+
+**No database, RLS or storage change.** The pending N32 Variety translation
+migration was not touched. Every Phase 8 fixture account, content row and
+storage object was removed; the database is byte-for-byte back to its
+pre-Phase-8 state (verified: 0 stray accounts, 0 `qa-p8` rows, 0 orphan storage
+objects, Phase 6 QA catalog intact at 2 coffees / 3 offers).
+
+Closed here: **N50** (no upload recorded intrinsic dimensions, so uploaded media
+could never render), **N51** (four of eight section types had no renderer),
+**N52** (section-type vocabulary disagreed with the live check constraint),
+**N53** (`org_logo_media_id` was consumed by nothing), **N54** (the default page
+template was one the database rejects), **N55** (section keys validated as
+hyphenated slugs), **N56** (articles could not have a featured image), **N57**
+(a second upload system trusted the declared MIME type and leaked provider
+text), **N58** (route paths validated against the wrong rule), **N59** (a
+rejected Admin submit silently emptied every `<select>`), **N60** (a page
+created in the Admin returned 404 behind a hardcoded route allow-list).
+
+Opened and **closed** here: **N61** — `origin_media` existed with
+`HERO`/`GALLERY` roles and no Admin workflow. Deferred at the gate, then built
+on the owner's instruction as a scoped follow-up: attach from the shared media
+picker, one hero (enforced by `origin_media_one_hero_image`), many gallery
+images with `sort_order`, promote, and unlink — which leaves the shared library
+row alone, unlike the coffee flow where the image belongs to the coffee.
+No migration, no schema change, no second upload path. Proven by 10 live-database
+tests and 7 browser tests; coffee MAIN/GALLERY re-verified at 18/18.
+
 ## Current / Next Task
 
-**Next**: `P8-T01` — first task of Phase 8 (CMS, media, articles and project
-logo). Not started; do not begin it without instruction.
+**Next**: `P9-T01` — first task of Phase 9 (public design and motion rebuild).
+Not started; do not begin it without instruction.
 
 Two items need an owner decision before a later phase leans on them:
 
@@ -251,8 +299,9 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
 
 ## Last Safe Checkpoint
 
-- **Branch**: `main`; Phases 0–5 committed. Phases 6 and 7 are uncommitted.
-- **Database**: unchanged by Phases 6 and 7 — no migration, no function, RLS,
+- **Branch**: `main`; Phases 0–7 committed (`6899f98 finish phase 7`). Phase 8
+  is uncommitted.
+- **Database**: unchanged by Phases 6, 7 and 8 — no migration, no function, RLS,
   storage policy or bucket change. Owner-approved QA/demo **rows** were
   inserted in Phase 6 and are inventoried in
   `evidence/phase-6-catalog-admin-flow.md`. Phase 7 left no rows behind.
@@ -293,4 +342,34 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
     `admin-operations.ts` (inquiry status writer removed),
     `messages/{en,ar}.json`, `types.generated.ts`
 - **Phase 7 rollback**: delete the new files above and revert the modified ones.
+  No schema state and no data to undo.
+
+- **Phase 8 additions**:
+  - new: `src/lib/media/{dimensions,upload}.ts`, `src/lib/cms/sections.ts`,
+    `src/lib/data/{media-library,admin-content,site-logo}.ts`
+  - new: `src/actions/{admin-media,admin-cms,admin-articles,admin-branding}.ts`
+  - new: `src/components/admin/{media-picker,media-upload-form,media-actions,cms-forms,cms-controls,article-forms,site-logo-form}.tsx`,
+    `src/components/brand/brand-image.tsx`
+  - new routes: `src/app/[locale]/admin/{media,articles}/**`,
+    `src/app/[locale]/admin/content/page.tsx`
+  - N61 follow-up: `src/lib/data/origin-media.ts`,
+    `src/actions/admin-origin-media.ts`,
+    `src/components/admin/origin-media.tsx`,
+    `tests/integration/origin-media.test.ts`,
+    `tests/e2e/origin-media.spec.ts`; `media-picker.tsx` gained one optional
+    `onSelect` callback and the `[module]/[id]` editor mounts the workspace
+  - new tests: `src/lib/media/dimensions.test.ts`,
+    `src/lib/cms/sections.test.ts`, `src/lib/content-boundaries.test.ts`,
+    `tests/integration/content-media.test.ts`,
+    `tests/e2e/{content-workflow.spec.ts,content-fixtures.ts}`
+  - modified: `src/components/content/cms-page.tsx` (rewritten onto the
+    registry), `src/components/brand/mark.tsx`, `src/lib/data/site-content.ts`
+    (section validation) and `editorial.ts` (article featured media, embargo),
+    `src/actions/admin-catalog.ts` (coffee uploader onto the shared pipeline),
+    `src/actions/admin-operations.ts` (legacy media actions removed),
+    `src/components/admin/admin-form.tsx` (select reset fix, textarea `dir`),
+    the generic `[module]` renderer (media/content/articles removed), the
+    `(admin)` entry layout, the public `[page]` route (allow-list removed), the
+    knowledge list and article pages, `messages/{en,ar}.json`
+- **Phase 8 rollback**: delete the new files above and revert the modified ones.
   No schema state and no data to undo.

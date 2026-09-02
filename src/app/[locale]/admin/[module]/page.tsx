@@ -9,11 +9,12 @@ import {
 } from "@/lib/data/admin";
 import {
   archiveAdminRecordAction,
-  createCmsPageAction,
   updateWorkflowStatusAction,
 } from "@/actions/admin-operations";
 import { AdminActionForm } from "@/components/admin/admin-action-form";
 import { AdminModuleForm } from "@/components/admin/admin-module-form";
+import { SiteLogoForm } from "@/components/admin/site-logo-form";
+import { getMediaItem, listPickableMedia } from "@/lib/data/media-library";
 
 const modules = [
   // "products", "offers" and "pricing" are deliberately absent: each has a
@@ -34,12 +35,20 @@ const modules = [
   // which the generic renderer cannot express. The static segment would win
   // the route match anyway — removing it here keeps that intentional rather
   // than incidental.
-  "content",
+  // "content" is deliberately absent: CMS pages have their own workspace at
+  // `admin/content/**` (page list with per-language translation state, the
+  // settings/publish split, and the section editor driven by the typed
+  // registry).
   "settings",
   "regions",
   "warehouses",
-  "media",
-  "articles",
+  // "media" is deliberately absent: the Media Library has its own workspace
+  // at `admin/media/**` (grid, search, active/archived filter, upload,
+  // per-item alt text, usage list and reference-aware archiving), none of
+  // which the generic renderer can express.
+  // "articles" is deliberately absent: they have their own workspace at
+  // `admin/articles/**`, with both translations, a featured image from the
+  // media library, and publish/archive controls.
   "article-categories",
   "varieties",
   "audit",
@@ -52,11 +61,18 @@ export default async function AdminModulePage({
   const query = await searchParams;
   const ops = await getTranslations("admin.ops");
   if (!modules.includes(module as (typeof modules)[number])) notFound();
-  const [rows, options, settings] = await Promise.all([
+  const [rows, options, settings, logoMedia] = await Promise.all([
     getAdminModuleRows(module, locale as Locale),
     getAdminFormOptions(locale as Locale),
     module === "settings" ? getAdminSiteSettings() : Promise.resolve(null),
+    // The logo picker is part of Site settings (P8-T02), so its library is
+    // loaded only for that module.
+    module === "settings" ? listPickableMedia() : Promise.resolve([]),
   ]);
+  const currentLogoId = settings?.settings.org_logo_media_id
+    ? String(settings.settings.org_logo_media_id)
+    : null;
+  const currentLogo = currentLogoId ? await getMediaItem(currentLogoId) : null;
   const auditQuery =
     typeof query.q === "string" ? query.q.trim().toLocaleLowerCase() : "";
   const auditPage = Math.max(
@@ -84,6 +100,23 @@ export default async function AdminModulePage({
         {module.replaceAll("-", " ")}
       </h1>
       <AdminModuleForm module={module} options={options} settings={settings} />
+      {module === "settings" ? (
+        <div className="mt-8">
+          <SiteLogoForm
+            media={logoMedia.map((item) => ({
+              id: item.id,
+              url: item.url,
+              width: item.width,
+              height: item.height,
+              altEn: item.altEn,
+              altAr: item.altAr,
+              storagePath: item.storagePath,
+            }))}
+            currentMediaId={currentLogoId}
+            currentPreviewUrl={currentLogo?.url ?? null}
+          />
+        </div>
+      ) : null}
       {module === "audit" ? (
         <form
           method="get"
@@ -103,37 +136,6 @@ export default async function AdminModulePage({
             Filter
           </button>
         </form>
-      ) : null}
-      {module === "content" ? (
-        <AdminActionForm
-          action={createCmsPageAction}
-          submitLabel={ops("createDraft")}
-          className="mt-7 grid gap-3 rounded-2xl border border-border bg-card p-5 md:grid-cols-[1fr_1fr_1fr_auto]"
-        >
-          <input
-            name="pageKey"
-            required
-            placeholder="page-key"
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
-          />
-          <input
-            name="routePath"
-            required
-            placeholder="/route-path"
-            className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
-          />
-          <select
-            name="template"
-            className="h-11 rounded-lg border border-input bg-background px-3"
-          >
-            <option>STANDARD</option>
-            <option>COMMERCIAL</option>
-            <option>SEGMENT</option>
-            <option>PRICING</option>
-            <option>LEGAL</option>
-            <option>SUPPORT</option>
-          </select>
-        </AdminActionForm>
       ) : null}
       <div className="mt-9 overflow-hidden rounded-2xl border border-border bg-card">
         {displayedRows.length ? (
@@ -161,28 +163,21 @@ export default async function AdminModulePage({
                   entity={row.entity}
                 />
                 {[
-                  "content",
                   "products",
                   "offers",
                   "origins",
                   "regions",
                   "warehouses",
                   "varieties",
-                  "articles",
                   "article-categories",
                   "taxonomy",
-                  "media",
                 ].includes(module) ? (
                   <Link
-                    href={
-                      module === "content"
-                        ? `/admin/content/${row.id}`
-                        : `/admin/${module}/${row.id}${
-                            module === "taxonomy" && row.entity
-                              ? `?entity=${row.entity}`
-                              : ""
-                          }`
-                    }
+                    href={`/admin/${module}/${row.id}${
+                      module === "taxonomy" && row.entity
+                        ? `?entity=${row.entity}`
+                        : ""
+                    }`}
                     className="rounded-lg border border-border px-3 py-2 text-xs font-bold"
                   >
                     {ops("edit")}
