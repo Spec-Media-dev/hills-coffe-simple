@@ -1344,3 +1344,380 @@ None of these are considered proven by file existence alone, per the
 planning brief's explicit instruction and Constitution Principle XIV — each
 requires the artifact `quickstart.md` describes, collected no earlier than
 Phase 12 for any authenticated-persona row.
+
+---
+
+# Pre-Phase 12 Owner Alignment Addendum: Public RFQ, Public Sample Requests & Buyer Journey
+
+Plans `spec.md` FR-069–FR-083 only. This is not Phase 12 and is not
+numbered into the Phase 0–13 sequence — it is a bounded unit of work to be
+completed and gated before Phase 12 begins, exactly as `spec.md`'s own
+addendum section describes. Nothing below revises the Constitution Check,
+Project Structure, Complexity Tracking, or any Phase 0–13 section above;
+this block carries its own equivalent sections, scoped to this addendum
+only.
+
+## Corrected routing decision: `/request-a-quote` is the canonical RFQ route
+
+An earlier pass of this plan proposed a new `/request-an-offer` route,
+reasoning from the audit below. The owner corrected this: **the SEO
+architecture already treats `/request-a-quote/` as the canonical RFQ route**
+— there is to be no parallel route. "Request an Offer" is CTA/copy wording
+only and must link to `/request-a-quote`, never to a second URL.
+
+The audit itself still matters, because it is what makes the correct scope
+of the change precise: `src/app/[locale]/(site)/request-a-quote/page.tsx`
+already exists, and today it is:
+
+| | Current behavior |
+|---|---|
+| Gate | `requireVerifiedUser()` — the whole page requires a session |
+| Anonymous visitor's experience today | A "sign in to continue" prompt — no form is rendered at all |
+| Signed-in shape | Picks **one specific offer** from a dropdown; `RequestQuoteForm` calls `createProductInquiry` |
+| Inquiry type created (signed-in path) | `PRODUCT` |
+| Indexability | `robots: { index: false, follow: true }` — currently non-indexable, like an account utility page |
+| Profile completeness (signed-in path) | Requires phone/address/country already on file (FR-036) |
+
+**Decision**: extend this page rather than build a second one. Its `page.tsx`
+gains a **third branch**, alongside its existing two (`viewer && offers.length`
+→ `RequestQuoteForm`; `viewer` with no offers → empty state): when there is
+**no** `viewer` at all, render a new, coffee-agnostic anonymous form calling
+`submitPublicRfq` (`type = 'GENERAL'`) instead of today's sign-in prompt.
+Nothing about the signed-in branches changes — `requireVerifiedUser()` stays
+exactly where it is for them, `RequestQuoteForm`/`createProductInquiry` is
+untouched, and a signed-in verified customer sees exactly what they see
+today. Only the *anonymous* branch's content changes, from a dead-end prompt
+to a working, unauthenticated form.
+
+Two consequences of the page becoming genuinely public follow directly and
+are in scope:
+
+- **`generateMetadata`'s `robots: { index: false, follow: true }` override
+  must be removed** (or set to indexable) for the fallback (non-CMS) case —
+  the page is no longer authenticated-only, so FR-061's "every indexable
+  public page carries a canonical URL and EN/AR alternates" now applies to
+  it. If a CMS override for `request-a-quote` already exists, its own
+  robots directive is unaffected by this change.
+- **`/request-a-quote` must be added to `src/app/sitemap.ts`'s
+  `staticPaths`** — it is not there today (correctly, since the page was
+  authenticated-only) and needs to be now.
+- `/request-a-quote` is **already** in `src/lib/auth/redirects.ts`'s
+  `knownRoots` — no change needed there.
+- `/request-a-quote` is **not** currently in `tests/e2e/helpers.ts`'s
+  `PUBLIC_ROUTES` (it was correctly excluded while authenticated-only) and
+  needs to be added now that an anonymous visitor has a real, working path
+  through it.
+
+No parallel route is created. No second page exists. "Request an Offer" as
+copy/CTA wording points at `/request-a-quote` everywhere it appears.
+
+## Constitution re-check (addendum-scoped)
+
+| Principle | Check | Status |
+|---|---|---|
+| I. Platform Identity & Scope | FR-082 explicitly forbids any cart/checkout/payment/seller/custody/trading mechanic; "Buy Available Lots"/"Trade With Hills" are positioning copy only | PASS |
+| IV/V. Authoritative authorization / protected-access gate | The new path grants no capability at all — it is unauthenticated by design, and `submit_public_inquiry`'s parameter allow-list is the enforcement mechanism (`research.md` #12) | PASS |
+| VI. Admin/Customer Entitlement Separation | Unaffected — nothing in this addendum touches pricing or Admin's browsing-path access | PASS |
+| XII. No Raw Backend Error Exposure | `public-inquiry-actions.md` maps every failure (including the DB function's raised exceptions) to the closed `ActionResult` vocabulary; no new domain error code is introduced (`DUPLICATE_SAMPLE`/`RATE_LIMITED` already exist) | PASS |
+| XIII. Preserve Correct Existing Business Logic | `createProductInquiry`, `createSampleRequestInquiry`, `hydrate_inquiry_context()`, and `validate_inquiry_status_transition()` are all explicitly named as unchanged. `/request-a-quote` itself is extended (a new anonymous branch added) but its existing signed-in branches, gate ordering, and `RequestQuoteForm`/`createProductInquiry` call are untouched — see "Corrected routing decision" above | PASS |
+| XIV. Evidence-Based Completion | `quickstart.md`'s new addendum section is the gate; every row requires an artifact, none is proven by file existence | PASS |
+| XV. Database Contract Governance | **Two new migrations, two different approval statuses, never conflated**: Migration A (reconciliation) records an **already owner-approved, already-applied** delta — no new approval needed to apply it. Migration B (`submit_public_inquiry`) is genuinely new schema and **does** need explicit owner approval before being applied, exactly like `P1-T04`. The anti-abuse mechanism introduces no schema of its own (`research.md` #16). No migration in this addendum is silent or inferred, and neither migration touches, renames, or replaces an existing file | PASS |
+| XVI. Security and Correctness Precedence | The write boundary is a single, narrow, revocable function grant rather than a broadened RLS policy (`research.md` #12) | PASS |
+| XIX. npm-Only Tooling | No new npm dependency of any kind — no CAPTCHA vendor package, no Redis/Upstash client (`research.md` #16). The CAPTCHA/Redis avoidance itself is the owner's clarified decision (`spec.md` Clarifications), not something Principle XIX independently requires — this row confirms no *tooling* violation, not that XIX mandated the choice | PASS |
+
+**Gate result**: PASS, no violations, no new Complexity Tracking entry
+needed — every deferral (confirmation email, CAPTCHA, durable per-IP rate
+limiting) is an owner-approved or research-justified scope boundary, not an
+unaddressed constitutional tension.
+
+## Project Structure delta (addendum-scoped)
+
+```text
+specs/001-platform-implementation-spec/
+├── contracts/
+│   └── public-inquiry-actions.md          # NEW — this planning pass
+├── migrations/
+│   ├── PP12-T01_inquiries_public_rfq_sample_reconciliation.sql   # NEW —
+│   │     Migration A. "PP12" = Pre-Phase-12, deliberately NOT "P1-..." —
+│   │     this is not Phase 1 work.
+│   └── PP12-T02_submit_public_inquiry_function.sql               # NEW —
+│         Migration B. A distinct file from Migration A: different content,
+│         different approval status (see Constitution re-check, Principle
+│         XV, above). Exact filenames/task IDs may be finalized by
+│         /speckit-tasks; neither existing migration file is renamed,
+│         edited, moved, or rewritten by either.
+├── research.md            # extended: §§11–20 (this planning pass)
+├── data-model.md           # extended: Inquiry entity note + addendum section
+└── quickstart.md           # extended: addendum validation section
+
+src/app/[locale]/(site)/
+  request-a-quote/page.tsx         # EXTENDED — new anonymous (no-`viewer`)
+                                    #   branch calling `submitPublicRfq`;
+                                    #   robots override removed/flipped to
+                                    #   indexable. Existing `viewer`/
+                                    #   `viewer && offers.length` branches,
+                                    #   `RequestQuoteForm`, and
+                                    #   `createProductInquiry` untouched.
+                                    #   THIS IS THE ONLY RFQ ROUTE — no
+                                    #   parallel page is created.
+  green-coffee-offer-list/[slug]/page.tsx   # EXTENDED — anonymous "Request a
+                                             #   sample" trigger alongside the
+                                             #   existing signed-in one
+  page.tsx (home) / about/ / contact/       # EXTENDED (copy/positioning
+                                             #   sections only) per FR-079
+
+src/app/sitemap.ts                   # EXTENDED — add "/request-a-quote" to
+                                      #   staticPaths (not there today,
+                                      #   correctly, while authenticated-only)
+tests/e2e/helpers.ts                  # EXTENDED — add "/request-a-quote" to
+                                      #   PUBLIC_ROUTES
+src/lib/auth/redirects.ts             # UNCHANGED — "/request-a-quote" is
+                                      #   already in knownRoots
+
+src/actions/
+  inquiries.ts                     # UNCHANGED (createProductInquiry,
+                                    #   createSampleRequestInquiry)
+  public-inquiries.ts               # NEW — submitPublicRfq,
+                                    #   submitPublicSampleRequest
+                                    #   (public-inquiry-actions.md)
+
+src/components/inquiries/
+  inquiry-panel.tsx                 # EXTENDED (anonymous sample branch only;
+                                    #   PRODUCT branch and the entire
+                                    #   authenticated path untouched)
+  public-rfq-form.tsx               # NEW — the anonymous branch of
+                                    #   request-a-quote/page.tsx, not a new
+                                    #   page of its own
+  public-sample-request-form.tsx    # NEW (or a shared component parameterized
+                                    #   for both — a task-level, not plan-level,
+                                    #   choice)
+  request-quote-form.tsx            # UNCHANGED
+
+src/lib/
+  rate-limit/public-inquiries.ts    # NEW — the in-process per-IP sliding
+                                    #   window (`research.md` #16); per-email
+                                    #   limiting lives inside the database
+                                    #   function instead, not here
+
+messages/en.json, messages/ar.json   # EXTENDED — a new namespace for the RFQ
+                                     #   page + form copy, and the new
+                                     #   anonymous sample-request form's
+                                     #   labels/errors; both languages, same
+                                     #   keys, per the project's standing
+                                     #   parity test
+```
+
+**Structure decision**: every new file sits inside an existing top-level
+directory that already holds its kind of file (`src/actions`,
+`src/components/inquiries`, `src/lib`) — no new top-level directory, no move
+of anything existing. This mirrors how the rest of this plan already treats
+structural change: incremental, file-group by file-group, never a
+restructuring commit riding along with a feature change.
+
+## A. DB/repository migration reconciliation — Migration A
+
+**Scope**: FR-083 only. One new file (Migration A of two — see section B for
+Migration B),
+`specs/001-platform-implementation-spec/migrations/PP12-T01_inquiries_public_rfq_sample_reconciliation.sql`.
+**Purpose in one line**: reconcile the repository's migration history with a
+database delta the owner already applied and verified live — it represents
+an existing fact, it does not introduce a new one.
+
+- **Status the file itself will declare**: `ALREADY APPLIED LIVE` — unlike
+  `P1-T04` (pending), this file documents a delta the owner already applied
+  and this planning pass already re-verified empirically (`research.md`
+  #11). Running it against the current database must be a safe no-op;
+  running it against a clean database (the full migration sequence from
+  scratch) must produce the identical end state.
+- **Contents** (idiom decided, exact statements authored at implementation
+  time — `research.md` #15): `BEGIN;` → `ALTER TABLE public.inquiries DROP
+  CONSTRAINT IF EXISTS inquiries_product_needs_user` → `ADD CONSTRAINT
+  inquiries_product_needs_user CHECK (type = 'PRODUCT'::inquiry_type =
+  false OR user_id IS NOT NULL)` (exact boolean form to be finalized against
+  the live constraint's actual current text, read once more at
+  implementation time rather than re-typed from memory) → `CREATE UNIQUE
+  INDEX IF NOT EXISTS uq_inquiries_active_sample_anon_email_coffee ON
+  public.inquiries (lower(btrim(email)), coffee_id) WHERE type =
+  'SAMPLE_REQUEST' AND user_id IS NULL AND status IN ('NEW','RECEIVED',
+  'CONTACTED','SAMPLE_SENT','DELIVERED')` → `COMMIT;`.
+- **Explicitly not touched** (stated in the file itself, mirroring `P1-T04`'s
+  "Explicitly NOT changed by this migration" section): `uq_inquiries_active_
+  sample_user_coffee`, `hydrate_inquiry_context()`,
+  `validate_inquiry_status_transition()`, every other constraint/trigger/
+  index on `inquiries`, every other table.
+- **No generated snapshot is hand-edited.** `src/lib/supabase/types.generated.ts`
+  and `docs/HILLS_SUPABASE_CURRENT_STATE.md` are both already stale relative
+  to the live database on this one constraint (`research.md` #11); the task
+  that authors this migration must also regenerate whichever of those two
+  is produced by tooling (not retype by hand) rather than leave the
+  discrepancy standing.
+- **Owner approval status**: none needed to *apply* this file, since it
+  reconciles a delta the owner already approved and applied directly — but
+  the file itself, and the fact that it is being added now, should still be
+  shown to the owner before being run anywhere, as a courtesy diff-review,
+  not as a new approval gate.
+
+## B. Server/security boundary — Migration B
+
+**Scope**: FR-081, FR-078. One new Postgres function
+(`public.submit_public_inquiry`, `research.md` #12) plus its Next.js call
+sites. This function is its own migration — Migration B of two — in a file
+distinct from Migration A (section A), because its content and its approval
+status are both different: Migration A represents an already-approved,
+already-live fact; Migration B is genuinely new schema.
+**Purpose in one line**: create the one narrow, revocable, anonymous-callable
+write boundary this whole addendum's public-facing side depends on.
+
+- **File**: `specs/001-platform-implementation-spec/migrations/PP12-T02_submit_public_inquiry_function.sql`
+  (name may be finalized by `/speckit-tasks`; never the same file as
+  Migration A, and neither file touches, renames, or rewrites an existing
+  migration).
+- **Owner approval status**: unlike Migration A, this one **does** need
+  explicit owner approval before being applied — it is new schema, not a
+  record of something already live, exactly like `P1-T04`'s pending status.
+- **Required content, all of it explicit in the file** (mirroring `P1-T04`'s
+  structure — header/purpose, predicate rationale, `BEGIN`/`COMMIT`,
+  "explicitly not changed," post-application verification, commented-out
+  rollback):
+  - `SECURITY DEFINER`, owned by `postgres` (same ownership pattern as
+    `admin_list_users()`/`hydrate_inquiry_context()`).
+  - **Pinned `search_path`** — `SET search_path TO 'pg_catalog', 'public',
+    'auth'`, the same explicit pin `admin_list_users()` already uses, so the
+    function can never be tricked by a session-level `search_path` change
+    into resolving an unqualified name to an attacker-controlled object.
+  - **Strict parameter allow-list**: exactly the parameters enumerated in
+    `data-model.md`'s "New database object" section — no `user_id`, no
+    `status`, no `type` string, no snapshot column, ever accepted.
+  - **Server-controlled `type`/`status`/`user_id`/snapshot behavior**: the
+    function decides `type` from whether `p_offer_id` is present, hardcodes
+    `status = 'NEW'`, never sets `user_id` (left to
+    `hydrate_inquiry_context()`, which already only touches it when
+    `auth.uid()` is non-null), and never accepts a snapshot column as input
+    — all per `data-model.md`'s "Behavior" list and FR-072/FR-081.
+  - **Coffee-context validation for `SAMPLE_REQUEST`**: inherited from the
+    existing `hydrate_inquiry_context()` trigger by requiring `p_offer_id`
+    and inserting with it set — not re-implemented inside the new function.
+  - **No broad anonymous INSERT RLS policy** — confirmed as unnecessary in
+    `research.md` #12; this migration adds none.
+  - **`REVOKE ALL` from `PUBLIC` and from `authenticated`**, then
+    **`GRANT EXECUTE` to `anon` only** — the minimum role that needs to call
+    it, mirroring `P1-T02`'s exact `REVOKE`/`GRANT` shape.
+  - **Verification guidance**: a commented block naming the exact empirical
+    checks to re-run post-application — the four probe cases from
+    `research.md` #11 (now exercised through the function itself rather than
+    a raw insert), plus confirming `anon` can call the function but a raw
+    `anon` `INSERT` into `inquiries` still fails.
+  - **Rollback guidance**: a commented-out `DROP FUNCTION
+    public.submit_public_inquiry(...)`, restoring the pre-migration state
+    exactly (there is nothing else to revert — no policy or trigger was
+    touched).
+- No RLS policy change on `public.inquiries` (`research.md` #12's
+  "why not a policy" reasoning) — restated here because it is also a
+  required-content item for Migration B's own header, not only a design
+  note.
+- Rate limiting: per-normalized-email inside the function (reads
+  `public.inquiries` only, `research.md` #16); per-IP in a new
+  `src/lib/rate-limit/public-inquiries.ts` in-process sliding window, IP read
+  from `headers()` in the calling server action. Both checks run before the
+  honeypot's absence is even relevant, and both map to the single
+  `RATE_LIMITED` domain error.
+- Honeypot: a `website` field, identical name/shape/emptiness rule to the
+  one already in `src/actions/inquiries.ts`, on both new forms.
+
+## C. Public General RFQ
+
+**Scope**: FR-069, FR-070, FR-072, FR-075, FR-077, FR-079 (RFQ half).
+
+- **No new route.** `/request-a-quote` is extended with a new anonymous
+  branch (see "Corrected routing decision" above), calling the new server
+  action `submitPublicRfq` (`public-inquiry-actions.md`) through a new form
+  component rendered only when there is no `viewer`. The page's existing
+  signed-in branches are untouched.
+- Required: full name, email, phone, message. Never required: delivery
+  address, country (FR-070) — the field set is visibly and structurally
+  different from the signed-in `RequestQuoteForm`'s (which additionally
+  picks a specific offer, since it creates a `PRODUCT` inquiry, not a
+  `GENERAL` one).
+- No coffee/offer selection at all in the anonymous branch — this is the one
+  structural feature that most clearly distinguishes it from the existing
+  signed-in form on the same page.
+- Success: on-screen confirmation with the request code; no email sent
+  (FR-077, clarified decision).
+- No duplicate-identity rule applies (FR-075) — repeated submissions from
+  the same visitor are simply accepted for manual review, same as any
+  ordinary contact form.
+- "Request an Offer" as CTA/copy wording, wherever it appears on the site
+  (Home, About, Contact, the coffee/offer detail pages), links to
+  `/request-a-quote` — never to a second URL.
+
+## D. Public Sample Request
+
+**Scope**: FR-071, FR-073, FR-074, FR-076, FR-079 (sample half).
+
+- New server action `submitPublicSampleRequest`, new form component, attached
+  to `InquiryPanel`'s existing `!signedIn` branch on coffee/offer detail
+  pages (`research.md` #18) — the `PRODUCT`/"Send inquiry" half of that same
+  branch is untouched and still links to `/sign-in`.
+- Required: full name, email, phone, delivery address, country, plus the
+  specific offer the sample is requested against (FR-071).
+- Coffee/offer context resolved server-side by the existing
+  `hydrate_inquiry_context()` trigger from a trusted `offer_id` — the new
+  action never trusts a client-supplied coffee id, matching FR-037's
+  existing guarantee for the authenticated path.
+- Duplicate identity: normalized email + coffee (FR-073); active states
+  `NEW`/`RECEIVED`/`CONTACTED`/`SAMPLE_SENT`/`DELIVERED` (FR-074); `CLOSED`
+  frees a new request, mirroring FR-040.
+- The existing authenticated identity (`user_id` + coffee) is untouched and
+  never consulted by this path (FR-076) — a signed-in verified customer who
+  reaches a coffee page still sees, and must keep using, the existing
+  authenticated `InquiryPanel` branch, not this one.
+- No quantity, order, reservation, shipping automation, checkout, or payment
+  field or side effect, at any point (owner decision 4, FR-082).
+
+## E. Owner content/buyer-journey alignment
+
+**Scope**: FR-079, and the content/journey audit list in `spec.md`'s
+addendum section — resolved by the already-approved page-structure decision,
+planned here only as *where* each piece of copy lands. No new page is
+built anywhere in this addendum: `/request-a-quote` is the sole, canonical
+RFQ route, extended rather than duplicated.
+
+| Owner-supplied item | Where it lands | New route? |
+|---|---|---|
+| Request an Offer / RFQ | `/request-a-quote` (section C) — extended with a new anonymous branch | **No** — the existing canonical route, not a new page |
+| Public Sample Request | Coffee/offer detail pages (section D) | No |
+| Dubai-first positioning | Home and/or About, as a copy section | No |
+| Source a Coffee | Home and/or About, as a copy section | No |
+| Buy Available Lots | Home and/or the catalog page's own framing, as copy — never a transactable control (FR-082) | No |
+| Trade With Hills | About and/or Contact, as non-executable positioning/navigation only | No |
+| Traceability / quality / sourcing proof | Distributed across Home/About/origin pages, wherever the owner supplies real copy — never invented (existing "Assumptions" entry on real content) | No |
+
+Preserves the Phase 9 motion/design system as-is: any new section on Home/
+About/Contact uses the same `SectionReveal`/`ImageReveal` primitives already
+in use on those pages (including the Phase-11-fixed `ImageReveal`), not a
+new pattern. No owner HTML is copied literally; every string is written
+fresh into the message catalogue, same as every other page in this project.
+
+## F. Regression and acceptance gate
+
+**Scope**: proves sections A–E did not disturb anything already working,
+and that everything new actually works, per `quickstart.md`'s new addendum
+section (already written this planning pass) and the brief's own test list.
+
+- **Full existing suite, unmodified, must still pass**: unit (139),
+  integration (105), the Phase 7 authenticated inquiry/sample Playwright
+  spec, the Phase 9/10/11 desktop/mobile/cross-browser suites, typecheck,
+  lint, build — this addendum's acceptance gate is additive to, not a
+  replacement for, Phase 11's already-closed gate.
+- **New coverage** (task-level detail deferred to `/speckit-tasks`, tested
+  per `quickstart.md`'s addendum section): anonymous browse/RFQ/sample
+  success, anonymous duplicate blocked/different-coffee-allowed/
+  reopens-after-CLOSED, `PRODUCT` still denied without a user, protected
+  price/account/favorites/trading still unreachable anonymously, Verified-
+  USER paths unchanged, Admin Lead Inbox displays both new anonymous types
+  through existing controls, honeypot/rate-limit both work, direct anon
+  `INSERT` still denied, console/EN/AR/RTL/light/dark clean on both new/
+  changed surfaces.
+- **Gate**: this addendum is not closed until every row above has a real
+  artifact (Constitution Principle XIV) — the same standard every phase in
+  this plan is already held to.

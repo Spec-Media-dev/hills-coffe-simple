@@ -14,6 +14,7 @@ export const PUBLIC_ROUTES = [
   "/coffee-origins",
   "/knowledge",
   "/contact",
+  "/request-a-quote",
   "/sign-in",
   "/sign-up",
   "/verify-email",

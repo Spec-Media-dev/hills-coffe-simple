@@ -7,6 +7,7 @@ import {
   createProductInquiry,
   createSampleRequestInquiry,
 } from "@/actions/inquiries";
+import { PublicSampleRequestForm } from "@/components/inquiries/public-inquiry-form";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { Link } from "@/i18n/navigation";
 import {
@@ -52,27 +53,47 @@ export function InquiryPanel({
     sampleSend: string;
     verify: string;
     close: string;
+    publicSampleTitle: string;
+    publicSampleBody: string;
   };
 }) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<"product" | "sample">("product");
 
+  // Anonymous visitors: the PRODUCT inquiry still requires an account and
+  // still routes to sign-in, exactly as before. Only the sample control
+  // changed — it now opens a real, working public request instead of being
+  // a second link to the sign-in wall (FR-071, FR-079).
   if (!signedIn)
     return (
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/sign-in"
-          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+      <>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/sign-in"
+            className="inline-flex h-11 min-h-11 items-center justify-center rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground"
+          >
+            {labels.signin}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+          >
+            {labels.sample}
+          </button>
+        </div>
+
+        <ModalDialog
+          open={open}
+          eyebrow={warehouse}
+          title={labels.publicSampleTitle}
+          description={`${coffeeName} · ${labels.publicSampleBody}`}
+          closeLabel={labels.close}
+          onClose={() => setOpen(false)}
         >
-          {labels.signin}
-        </Link>
-        <Link
-          href="/sign-in"
-          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary"
-        >
-          {labels.sample}
-        </Link>
-      </div>
+          <PublicSampleRequestForm offerId={offerId} />
+        </ModalDialog>
+      </>
     );
 
   if (!verifiedEmail)

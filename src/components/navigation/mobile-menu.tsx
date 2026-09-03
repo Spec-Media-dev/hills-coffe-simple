@@ -116,7 +116,7 @@ export function MobileMenu({
                 aria-label={openLabel}
                 className="absolute inset-y-0 start-0 flex w-[min(92vw,28rem)] flex-col overflow-y-auto overscroll-contain border-e border-border bg-background px-5 pb-8 pt-[max(1rem,env(safe-area-inset-top))] shadow-2xl [--drawer-enter-x:-28px] rtl:[--drawer-enter-x:28px]"
               >
-                <div className="mx-auto flex max-w-3xl items-center justify-between border-b border-border pb-4">
+                <div className=" flex  w-full items-center justify-between border-b border-border pb-4">
                   <Link
                     href="/"
                     onClick={() => setOpen(false)}

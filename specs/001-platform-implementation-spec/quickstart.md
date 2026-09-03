@@ -86,3 +86,35 @@ A phase is not "done" until: static gates are green, every applicable row
 of the runtime evidence checklist above has an attached artifact (not a
 description of what should happen), and any row marked manual has a signed
 staging observation recorded per the master plan's Test Data Strategy.
+
+---
+
+## Pre-Phase 12 Owner Alignment Addendum: validation
+
+Additional runtime evidence for FR-069–FR-083, on top of (not instead of)
+the checklist above. Also anonymous, so every row here can be run with no
+session at all — no persona fixture is a prerequisite.
+
+| Capability | How to produce evidence | Automatable? |
+|---|---|---|
+| DB reconciliation applied correctly | Empirically probe (as in `research.md` #11, tagged and cleaned up): `SAMPLE_REQUEST` + `user_id = NULL` accepted; `PRODUCT` + `user_id = NULL` still rejected (`23514`); a normalized-email + coffee duplicate while active rejected (`23505` on `uq_inquiries_active_sample_anon_email_coffee`); the same after `CLOSED` accepted | Yes |
+| Public GENERAL RFQ | Playwright: `/request-a-quote` (and `/ar/request-a-quote`) **while signed out** with only name/email/phone/message → on-screen confirmation with a request code, no account created, no session granted; separately, confirm the page's existing signed-in `RequestQuoteForm` branch still renders and still works unmodified when signed in | Yes |
+| Public sample request | Playwright: coffee/offer detail page → "Request a sample" (anonymous) → name/email/phone/address/country → confirmation with a request code | Yes |
+| Anonymous duplicate rule | Same normalized email + same coffee, still active → `DUPLICATE_SAMPLE` with the existing code; a **different** coffee → succeeds independently; after Admin closes it → a new request for that email+coffee succeeds | Yes |
+| Authenticated rule unaffected | Repeat the existing Phase 7 authenticated duplicate-sample Playwright test unmodified; it must still pass exactly as before — this addendum must not have moved it | Yes (regression, not new) |
+| PRODUCT stays authenticated-only | Confirm no public route/action exists for `type = 'PRODUCT'`; the coffee detail "Send inquiry" control still routes an anonymous visitor to `/sign-in`, unchanged | Yes |
+| No protected data leaks to anonymous submitters | Across both public forms and their confirmation screens: zero price value, zero favorites/account affordance, zero marketplace/checkout control (cart, pay, "buy now") in HTML/response/error text | Yes |
+| Verified USER unaffected | Re-run the existing authenticated sample-request, favorites, and protected-pricing Playwright suites unmodified; all must still pass | Yes (regression, not new) |
+| Admin Lead Inbox | Submit one anonymous `GENERAL` and one anonymous `SAMPLE_REQUEST`; as Admin, confirm both appear in the existing Lead Inbox with correct name/email/phone and can be advanced through the existing status controls, using zero new Admin UI | Yes |
+| Anti-abuse | Honeypot: submit either form with the hidden field populated → rejected, no row created, no distinguishing error. Rate limit: submit the same form rapidly past the configured threshold from the same source → `RATE_LIMITED`, no row created for the excess attempts | Yes |
+| Direct anonymous DB write still denied | Attempt a direct `anon`-key `INSERT` into `public.inquiries` bypassing `submit_public_inquiry` entirely → still denied by RLS, proving the new function is the only anonymous write path, not a policy widening | Yes |
+| Console/EN/AR/RTL/theme | Both changed surfaces (`/request-a-quote`'s new anonymous branch, the coffee/offer detail sample action) through the same locale-switch repetition, axe, and theme checks already required above — zero new console error, zero missing translation key, correct RTL | Yes |
+| `/request-a-quote` is now indexable | Confirm the page's `robots` output is no longer `index: false` for the non-CMS-override case, and that it now appears in `sitemap.xml` with correct canonical + EN/AR alternates (FR-061) | Yes |
+
+### Cleanup
+
+Every fixture row created by the checks above uses a `[QA-...]`-prefixed name
+and a `*.invalid`/disposable email; delete by that tag after the run, the
+same hygiene already practiced by this project's other QA fixtures — never
+leave a probe row behind, and never touch the owner-approved persistent
+Phase 6 QA catalog rows while doing so.

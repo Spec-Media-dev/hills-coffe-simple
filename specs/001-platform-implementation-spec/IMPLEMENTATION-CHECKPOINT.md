@@ -1,14 +1,25 @@
 # Implementation Resume Checkpoint
 
-**Last updated**: 2026-09-02
+**Last updated**: 2026-09-03
 
 ## Current Phase
 
-**Phase 11 — Cross-cutting accessibility, i18n, theme and domain-error
-closure — COMPLETE, GATE PASSED.**
+**Pre-Phase 12 Owner Alignment Addendum — Public RFQ, Public Sample Requests
+& Buyer Journey — COMPLETE, GATE PASSED (OA-T01 through OA-T11).**
 
-Phases 9 and 10 remain COMPLETE / GATE PASSED and were not reverted. Phase 12
-**has not been started**.
+Phase 11 (and 9, 10 before it) remain COMPLETE / GATE PASSED and were not
+reverted. Phase 12 **has not been started** — the addendum is deliberately
+unnumbered and does not renumber the Phase 0–13 sequence.
+
+Two migrations are live: `PP12-T01` (reconciliation of a delta the owner had
+already applied) and `PP12-T02` (`public.submit_public_inquiry()`, applied by
+the owner on 2026-09-03). Anonymous visitors can now submit a `GENERAL` RFQ at
+`/request-a-quote` and a `SAMPLE_REQUEST` from a coffee page; both persist real
+rows and appear in the existing Admin Lead Inbox. **No RLS policy was added or
+widened** — the `SECURITY DEFINER` function is the entire write boundary, and a
+direct anonymous `INSERT` on `inquiries` is still refused with `42501`.
+
+Full evidence: `evidence/owner-alignment-public-rfq-sample.md`.
 
 > ### Still outstanding from Phase 3 — one manual step
 >

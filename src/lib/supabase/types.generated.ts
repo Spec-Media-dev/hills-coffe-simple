@@ -434,6 +434,27 @@ export interface Database {
         };
         Returns: undefined;
       };
+      /* OA-T02 (Pre-Phase 12 Owner Alignment Addendum): the anonymous
+       * submission boundary created by migration PP12-T02. `anon` is the only
+       * role granted EXECUTE. Omitting `p_offer_id` produces a GENERAL RFQ;
+       * supplying it produces a SAMPLE_REQUEST, in which case the function
+       * also requires `p_address`/`p_country_code`. `type`, `status`,
+       * `user_id`, `coffee_id` and every snapshot column are decided
+       * server-side and are deliberately absent from this signature. */
+      submit_public_inquiry: {
+        Args: {
+          p_full_name: string;
+          p_email: string;
+          p_phone: string;
+          p_message: string;
+          p_offer_id?: string | null;
+          p_address?: string | null;
+          p_country_code?: string | null;
+          p_company_name?: string | null;
+          p_subject?: string | null;
+        };
+        Returns: { request_code: string; inquiry_id: string };
+      };
       hills_is_admin: { Args: Record<string, never>; Returns: boolean };
       hills_is_blocked: { Args: Record<string, never>; Returns: boolean };
       hills_is_verified_user: { Args: Record<string, never>; Returns: boolean };

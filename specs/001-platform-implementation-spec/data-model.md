@@ -134,6 +134,27 @@ and `SAMPLE_SENT`/`DELIVERED` are explicitly rejected. `CLOSED` is terminal.
 This is the database-level implementation of FR-041/FR-043; the application
 must treat a rejected transition (raised exception) as the `CONFLICT` domain
 error and must not attempt to pre-validate and skip calling the database.
+This function is untouched by the Pre-Phase 12 addendum below (owner
+requirement #7: "no status-transition-function change").
+
+**Row-creation derivation (already live, unchanged by this addendum)**:
+`BEFORE INSERT` trigger `hills_hydrate_inquiry_context` →
+`hydrate_inquiry_context()`, `SECURITY DEFINER`, owner `postgres`. Sets
+`new.user_id = auth.uid()` **only when `auth.uid()` is not null** — for an
+anonymous caller it leaves `user_id` exactly as the INSERT supplied it
+(nothing, i.e. `NULL`). When `offer_id` is present it derives `coffee_id`,
+`offer_reference_snapshot`, and `warehouse_code_snapshot` from the offer/
+warehouse rows and raises `'Invalid offer'` / `'Offer does not belong to
+selected coffee'` if the offer doesn't resolve; it then derives
+`coffee_name_snapshot` from the coffee's English translation (or slug). Both
+the authenticated path and the addendum's new anonymous path rely on this
+same trigger for coffee-context resolution — see "Pre-Phase 12 Owner
+Alignment Addendum" below.
+
+**`inquiries_coffee_or_offer_required` (existing, unchanged)**:
+`CHECK (type = 'GENERAL' OR coffee_id IS NOT NULL)` — a `GENERAL` inquiry may
+have no coffee; `PRODUCT`/`SAMPLE_REQUEST` must resolve one (via `offer_id`,
+enforced by the trigger above, not by this constraint directly).
 
 ## Entity: Inquiry Status History (`public.inquiry_status_history`)
 
@@ -187,3 +208,107 @@ Inquiry status (stored, DB-enforced):
   GENERAL/PRODUCT: NEW -> RECEIVED -> CONTACTED -> CLOSED
                   (CLOSED reachable directly from NEW/RECEIVED/CONTACTED)
 ```
+
+---
+
+# Pre-Phase 12 Owner Alignment Addendum: Data Model
+
+Implements `spec.md` FR-069–FR-083. Extends the `Inquiry` entity above; adds
+no table, column, or enum (per owner requirement — see `research.md` #11–20
+for how this was verified rather than assumed).
+
+## Already-applied delta on `public.inquiries` (verified live, 2026-09-03)
+
+- **`inquiries_product_needs_user`** (CHECK, modified): now
+  `type = 'PRODUCT' → user_id IS NOT NULL` is the only case enforced;
+  `GENERAL` and `SAMPLE_REQUEST` may both have `user_id IS NULL`. Empirically
+  confirmed by direct probe (see `research.md` #11) — `PRODUCT` + NULL
+  `user_id` still raises `23514`; `SAMPLE_REQUEST` + NULL `user_id` no longer
+  does.
+- **`uq_inquiries_active_sample_anon_email_coffee`** (UNIQUE INDEX, new,
+  already live): partial unique index on
+  `(lower(btrim(email)), coffee_id)` **WHERE** `type = 'SAMPLE_REQUEST' AND
+  user_id IS NULL AND status IN ('NEW','RECEIVED','CONTACTED','SAMPLE_SENT',
+  'DELIVERED')`. This is the anonymous-identity twin of
+  `uq_inquiries_active_sample_user_coffee`, which is unchanged and continues
+  to key on `(user_id, coffee_id)` for authenticated requests. The two
+  indexes never interact: an anonymous submission with `user_id IS NULL`
+  cannot collide with either index's predicate for a signed-in customer's row
+  and vice versa (FR-073).
+- Confirmed empirically that these are independent: submitting the same
+  normalized email + coffee twice while `NEW` (anonymous) raises `23505` on
+  the new index; nothing about that probe touched or could touch the
+  existing authenticated index, since its predicate requires `user_id IS NOT
+  NULL`.
+
+FR-083's **Migration A** (name/location decided in `plan.md`) is the
+repository's record of this already-live state — see `plan.md` section A for
+the exact statements and their idempotency reasoning (`research.md` #15).
+It is one of two new migrations this addendum plans; see below for the
+second.
+
+## New database object: `public.submit_public_inquiry(...)` (proposed, NOT yet applied — Migration B)
+
+A `SECURITY DEFINER` function, owned by `postgres`, `GRANT EXECUTE`d to
+`anon` only. This is the public write boundary FR-081 requires. Unlike the
+reconciliation above, **this function does not exist yet** — planning
+proposes it; it is not a fact about the current database.
+
+**Parameters** (the complete allow-list — nothing else is writable through
+this path):
+
+| Parameter | Type | Required | Notes |
+|---|---|---|---|
+| `p_full_name` | text | always | |
+| `p_email` | text | always | normalized (`lower(btrim())`) inside the function before use in the duplicate check |
+| `p_phone` | text | always | |
+| `p_offer_id` | uuid | only for a sample request | presence of this parameter is what tells the function to build a `SAMPLE_REQUEST` rather than a `GENERAL` row (FR-070/FR-071) |
+| `p_address` | text | only for a sample request | rejected as missing (not silently ignored) if `p_offer_id` is set and this is null/blank |
+| `p_country_code` | text | only for a sample request | same rule as `p_address` |
+| `p_subject` | text | never required | `GENERAL` only; ignored/null for a sample request |
+| `p_message` | text | always | |
+
+**Not parameters, by design** (FR-072, FR-081): `user_id`, `type`, `status`,
+`coffee_id`, `coffee_name_snapshot`, `offer_reference_snapshot`,
+`warehouse_code_snapshot`. The function decides `type`/`status` internally
+and lets the existing `hydrate_inquiry_context()` trigger derive the rest,
+exactly as it already does for the authenticated path.
+
+**Behavior**:
+
+1. If `p_offer_id` is null → `type = 'GENERAL'`; requires
+   `p_full_name`/`p_email`/`p_phone`/`p_message` (FR-070). No coffee/offer
+   validation applies — a `GENERAL` row may have `coffee_id IS NULL`
+   (existing `inquiries_coffee_or_offer_required` constraint already permits
+   this).
+2. If `p_offer_id` is present → `type = 'SAMPLE_REQUEST'`; additionally
+   requires `p_address`/`p_country_code` (FR-071). The INSERT supplies
+   `offer_id`; the existing trigger resolves `coffee_id` and raises if the
+   offer doesn't exist or doesn't belong to the coffee — this function does
+   not re-implement that check.
+3. `status` is always inserted as `'NEW'`; `user_id` is never set (left for
+   `hydrate_inquiry_context()` to leave alone, since `auth.uid()` is null for
+   an `anon`-role call).
+4. The per-normalized-email rate check (`research.md` #16) runs as a
+   `COUNT(*) ... WHERE lower(btrim(email)) = <normalized p_email> AND
+   created_at > now() - interval '<window>'` against `public.inquiries`
+   itself, before the INSERT — no new table.
+5. Returns `request_code` (and `id`) of the created row on success.
+6. On a `23505` against `uq_inquiries_active_sample_anon_email_coffee`, the
+   exception is allowed to propagate with its constraint name intact; the
+   calling Next.js server action — not this function — is responsible for
+   catching it and mapping it to the closed `DUPLICATE_SAMPLE` domain error
+   with the existing row's `request_code` looked up, exactly mirroring how
+   `createSampleRequestInquiry` already handles the authenticated case
+   (`contracts/inquiry-actions.md`). The database layer's job is correctness
+   (never let two active rows coexist); the safe, localized error shape is
+   the application layer's job, per `spec.md` FR-060.
+
+## Deliberately not proposed: a rate-limit table
+
+A durable, cross-instance, per-IP counter would need a new table (`inquiries`
+has no IP column and gains none — see `research.md` #16). This addendum
+does not propose one. If the owner later wants durable per-IP rate limiting
+badly enough to approve new schema for it, that is a new, separate migration
+requiring its own explicit approval under Constitution Principle XV — it is
+named here only so the gap is visible, not filled without approval.

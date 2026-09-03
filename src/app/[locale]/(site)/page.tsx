@@ -231,11 +231,83 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       <WarehouseSection
-        warehouses={warehouses}
+        // Dubai-first positioning (OA-T07). The warehouse rows themselves are
+        // untouched — this only decides which card a reader meets first.
+        warehouses={[...warehouses].sort((a, b) =>
+          a.code === "DUBAI" ? -1 : b.code === "DUBAI" ? 1 : 0,
+        )}
         title={t("network")}
         intro={t("networkBody")}
         empty={t("warehouseEmpty")}
       />
+
+      <section className="section-space bg-page">
+        <SectionReveal className="site-container">
+          <p className="eyebrow">{t("tradeEyebrow")}</p>
+          <h2 className="display-lg mt-5 max-w-4xl">{t("tradeTitle")}</h2>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
+            {t("tradeBody")}
+          </p>
+
+          <h3 className="mt-14 text-2xl font-bold">{t("stepsTitle")}</h3>
+          {/* A real sequence, so it is numbered. */}
+          <ol className="mt-7 grid gap-px bg-border md:grid-cols-3">
+            {[
+              { title: t("step1Title"), body: t("step1Body") },
+              { title: t("step2Title"), body: t("step2Body") },
+              { title: t("step3Title"), body: t("step3Body") },
+            ].map((step, index) => (
+              <li
+                key={step.title}
+                className="flex min-h-56 flex-col bg-card p-7"
+              >
+                <span
+                  aria-hidden="true"
+                  className="font-mono text-xs font-bold text-highlight"
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h4 className="mt-6 text-lg font-bold">{step.title}</h4>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  {step.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-px grid gap-px bg-border md:grid-cols-2">
+            <div className="bg-card p-7">
+              <h4 className="text-lg font-bold">{t("traceTitle")}</h4>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                {t("traceBody")}
+              </p>
+            </div>
+            <div className="bg-card p-7">
+              <h4 className="text-lg font-bold">{t("accessTitle")}</h4>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                {t("accessBody")}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              href="/green-coffee-offer-list"
+              className="inline-flex h-12 min-h-11 items-center rounded-full bg-primary px-6 text-sm font-bold text-primary-foreground transition hover:bg-forest-light"
+            >
+              {t("browseLots")}
+            </Link>
+            {/* "Request an Offer" is CTA wording; the canonical route is
+                /request-a-quote and there is no parallel RFQ page. */}
+            <Link
+              href="/request-a-quote"
+              className="inline-flex h-12 min-h-11 items-center rounded-full border border-primary px-6 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
+            >
+              {t("requestOffer")}
+            </Link>
+          </div>
+        </SectionReveal>
+      </section>
 
       <section className="section-space bg-gold text-[#17251c]">
         <SectionReveal className="site-container grid gap-10 md:grid-cols-[1fr_auto] md:items-end">

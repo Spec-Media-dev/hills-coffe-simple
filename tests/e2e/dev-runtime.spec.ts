@@ -253,3 +253,93 @@ test.describe("dev runtime — same-locale client navigation", () => {
     await expectCleanRuntime(page, problems, "history forward");
   });
 });
+
+/**
+ * OA-T10 — the anonymous submission flows under the same runtime gate.
+ *
+ * The direct-load and locale-switch suites above already cover
+ * `/request-a-quote` as a page. They do not cover what happens when someone
+ * actually submits: a server action round-trip, a `useActionState`
+ * transition, and a success panel that appears after the fact. React
+ * development warnings and hydration mismatches surface exactly there, so
+ * the interaction gets its own pass — in development, where those warnings
+ * exist at all.
+ */
+test.describe("dev runtime — anonymous submissions", () => {
+  const created: string[] = [];
+
+  test.afterAll(async () => {
+    if (!created.length) return;
+    const { service } = await import("./auth-fixtures");
+    for (const email of created)
+      await service.from("inquiries").delete().eq("email", email);
+  });
+
+  const email = (tag: string) =>
+    `qa-oa-dev-${tag}-${Date.now().toString(36)}@example.invalid`;
+
+  for (const locale of ["", "/ar"]) {
+    test(`RFQ submission stays clean${locale || " (en)"}`, async ({ page }) => {
+      test.setTimeout(120_000);
+      const address = email(`rfq${locale ? "-ar" : ""}`);
+      created.push(address);
+
+      const problems = collectRuntimeProblems(page);
+      await page.goto(`${locale}/request-a-quote`, {
+        waitUntil: "domcontentloaded",
+      });
+      await page.waitForTimeout(600);
+      problems.reset();
+
+      await page.fill('input[name="fullName"]', "[QA-OA-DEV] Buyer");
+      await page.fill('input[name="email"]', address);
+      await page.fill('input[name="phone"]', "+201000000123");
+      await page.fill(
+        'textarea[name="message"]',
+        "Runtime cleanliness proof for the anonymous request form.",
+      );
+      await page.locator('form button[type="submit"]').click();
+
+      await expect(page.locator("main").getByRole("status")).toBeVisible({
+        timeout: 30_000,
+      });
+      await page.waitForTimeout(800);
+      await expectCleanRuntime(
+        page,
+        problems,
+        `RFQ submit at ${locale || "/"}/request-a-quote`,
+      );
+    });
+  }
+
+  test("sample dialog submission stays clean", async ({ page }) => {
+    test.setTimeout(120_000);
+    const address = email("sample");
+    created.push(address);
+
+    const problems = collectRuntimeProblems(page);
+    await page.goto("/green-coffee-offer-list", {
+      waitUntil: "domcontentloaded",
+    });
+    await page.locator('a[href*="/green-coffee-offer-list/"]').first().click();
+    await page.waitForTimeout(800);
+    problems.reset();
+
+    await page.getByRole("button", { name: /request sample/i }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.locator('input[name="fullName"]').fill("[QA-OA-DEV] Buyer");
+    await dialog.locator('input[name="email"]').fill(address);
+    await dialog.locator('input[name="phone"]').fill("+201000000123");
+    await dialog.locator('input[name="address"]').fill("1 Test Street, Dubai");
+    await dialog.locator('input[name="countryCode"]').fill("AE");
+    await dialog
+      .locator('textarea[name="message"]')
+      .fill("Runtime cleanliness proof for the anonymous sample dialog.");
+    await dialog.locator('button[type="submit"]').click();
+
+    await expect(dialog.getByRole("status")).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(800);
+    await expectCleanRuntime(page, problems, "sample dialog submit");
+  });
+});

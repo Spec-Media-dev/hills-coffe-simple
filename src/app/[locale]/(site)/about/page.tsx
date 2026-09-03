@@ -82,7 +82,7 @@ export default async function AboutPage({
                 delay={index * 0.05}
                 className="h-full"
               >
-                <article className="min-h-80 border-e border-b border-border bg-card p-8">
+                <article className="h-full min-h-80 border-e border-b flex flex-col border-border bg-card p-8">
                   <Icon className="size-7 text-highlight" aria-hidden="true" />
                   <p className="mt-16 text-xs text-muted-foreground">
                     {String(index + 1).padStart(2, "0")}

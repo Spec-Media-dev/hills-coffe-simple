@@ -10,6 +10,49 @@
 
 **Authoritative sources**: `docs/CODEX_HILLS_MASTER_REBUILD_PLAN.md`, `docs/HILLS_SUPABASE_CURRENT_STATE.md`, `.specify/memory/constitution.md`, and the existing approved Hills implementation/SEO/brand documents under `docs/` and `src/support/`. Where the current Supabase snapshot differs from older snapshots, the current snapshot governs. This specification documents already-approved product decisions; it does not perform new product discovery, does not redesign scope, and does not modify code or the database.
 
+## Clarifications
+
+### Session 2026-09-02
+
+Scope: the Pre-Phase 12 Owner Alignment Addendum (see the dedicated section
+near the end of this document) for public/anonymous RFQ and sample-request
+submission. These answers resolve genuine ambiguity in the owner's brief; the
+owner's explicit decisions themselves are recorded verbatim in that section
+and were not treated as open questions.
+
+- Q: What contact information should the public RFQ and sample-request forms require from an anonymous visitor? → A: Name/email/phone always (the database's real minimum — those three columns are `NOT NULL`); delivery address and country are required only for a `SAMPLE_REQUEST` (something has to ship), not for a `GENERAL` RFQ.
+- Q: After an anonymous visitor submits an RFQ or sample request, how should Hills Coffee confirm it was received? → A: An on-screen confirmation showing the request code only. No automated confirmation email is sent; building a new transactional-email path is explicitly out of scope for this addendum.
+- Q: What should prevent automated/bot spam through the new public forms, since they no longer sit behind a sign-in wall? → A: A honeypot field (matching the existing authenticated inquiry action's pattern) plus a server-side rate limit per source IP address and per normalized email address. No third-party CAPTCHA/challenge vendor is introduced.
+- Q: Should the new public RFQ/sample-request capability live on dedicated new pages, or as sections/CTAs on the existing catalog and coffee-detail pages? → A: Reuse existing pages. Add a public "Request a sample" action to each coffee/offer detail page, extend the existing `/request-a-quote` page with a new anonymous branch for the GENERAL RFQ — the canonical RFQ route is `/request-a-quote`, and no parallel route is created — and treat Dubai-first positioning, "Source a Coffee", "Buy Available Lots", and "Trade With Hills" as copy/positioning on the existing Home, About, and Contact pages rather than new dedicated routes.
+
+### Correction — 2026-09-03
+
+An earlier pass of this addendum incorrectly listed "writing the new
+repository migration that reconciles the already-applied database change" as
+out of scope/deferred. The owner corrected this: authoring that migration
+(FR-083) is a **required** implementation item of this addendum, not
+deferred — the database delta itself is already owner-approved and already
+live; what was missing was only the repository's own record of it. The
+"Database baseline" subsection and the "Explicit out of scope" list below
+were both corrected accordingly, and FR-083 was added. The three items that
+remain genuinely deferred are unchanged: the confirmation-email integration,
+a third-party CAPTCHA/Turnstile vendor, and any dedicated marketing page
+beyond the approved copy/positioning sections and `/request-a-quote` itself.
+
+### Correction — 2026-09-03 (routing)
+
+A separate, earlier pass of this addendum proposed a new `/request-an-offer`
+route for the `GENERAL` RFQ, reasoning that the existing `/request-a-quote`
+page was too different in shape (authenticated-only, per-offer `PRODUCT`
+inquiry) to extend. **The owner corrected this**: the SEO architecture
+already defines `/request-a-quote/` as the canonical RFQ route, and no
+parallel route may exist. "Request an Offer" is CTA/copy wording only and
+links to `/request-a-quote`. The fix is to extend that page with a third,
+anonymous branch (alongside its existing signed-in branches) rather than
+build a second page. Q4's answer above, FR-069, FR-079, the content/journey
+audit table, and the "Explicit out of scope" list below were all corrected
+to reflect this; nothing else about the addendum's scope changed.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Customer Authentication, Verification & Authorization State Machine (Priority: P1)
@@ -161,6 +204,10 @@ Every public, account, and admin surface behaves identically in substance across
 - What happens when the referenced project logo media item is archived or deleted while still set as the active site logo? The public and admin surfaces must fall back to the existing official static logo, never a broken image.
 - What happens when a filter combination in the catalog does not correspond to an approved landing page? The page must remain reachable but marked non-indexable and canonicalized to the unfiltered collection, never treated as a security boundary substitute.
 - What happens when the production canonical hostname is not yet configured? The system must fail clearly during production startup rather than silently publishing an incorrect host.
+- What happens when an anonymous visitor submits a `GENERAL` RFQ or `SAMPLE_REQUEST` using an email address that also belongs to a registered, verified customer account? The submission must still be accepted anonymously — no login is required or inferred — and must not be merged into that customer's account or request history, and must not be usable to bypass the authenticated (`user_id` + coffee) duplicate rule that account is separately subject to if that same person later signs in and submits again.
+- What happens when the same anonymous visitor attempts a second `SAMPLE_REQUEST` for the same coffee within the rate-limit window? The attempt must be rejected by the rate limit before the duplicate-identity check is reached, with a generic "try again shortly" message that does not reveal whether a prior request exists.
+- What happens when a public `SAMPLE_REQUEST`'s coffee or offer becomes unavailable (unpublished, archived, or its offer no longer visible) between page load and submission? The server must re-validate the offer at submission time, exactly as the authenticated path already does, and reject the request rather than create one against a stale coffee or offer.
+- What happens when the honeypot field on either public form is filled in? The submission must be silently rejected without revealing that a honeypot check exists, and must not create any inquiry record.
 
 ## Requirements _(mandatory)_
 
@@ -259,13 +306,35 @@ Every public, account, and admin surface behaves identically in substance across
 - **FR-067**: The database and storage layer MUST independently deny a blocked customer's routine self-service mutations even when the customer holds a technically valid session, with no dependence on the application layer catching the attempt first: a blocked customer's normal profile self-update path MUST be denied, and all of upload, replace, delete, and read of their own avatar through the normal owner-scoped storage policy MUST be denied.
 - **FR-068**: Closing the gap in FR-067 MUST NOT reduce Administrator or service-role access to the same resources, and MUST NOT create any path — direct or indirect — by which a blocked customer can change their own blocked state or otherwise restore their own access.
 
+### Functional Requirements — Pre-Phase 12 Owner Alignment Addendum (Public RFQ & Anonymous Sample Requests)
+
+These requirements extend, and do not replace, FR-036 through FR-043. They
+belong to the Pre-Phase 12 Owner Alignment Addendum described in full near the
+end of this document.
+
+- **FR-069**: Anonymous/public visitors MUST be able to submit exactly two new unauthenticated request types — a `GENERAL` sourcing RFQ ("Request an Offer") not tied to any specific coffee, and a `SAMPLE_REQUEST` tied to a specific coffee via a valid, visible offer — using the existing `inquiries` table and existing `inquiry_type`/`inquiry_status` enum values; no new table, column, or enum is introduced.
+- **FR-070**: A public `GENERAL` RFQ submission MUST require full name, email, and phone; it MUST NOT require delivery address or country.
+- **FR-071**: A public `SAMPLE_REQUEST` submission MUST require full name, email, phone, delivery address, and country, in addition to the coffee it is requested for, which MUST be resolved server-side from a valid, visible, trusted offer — the same server-side resolution guarantee FR-037 already requires for the authenticated sample-request path.
+- **FR-072**: A public `GENERAL` or `SAMPLE_REQUEST` submission MUST NOT require or create a `user_id` or an account, and MUST NOT itself grant the submitter account access, favorites capability, or protected-pricing visibility.
+- **FR-073**: A public `SAMPLE_REQUEST` MUST be evaluated for duplicate-identity using the normalized (lower-cased, trimmed) email address plus coffee, independent of any customer account. This anonymous identity key and the existing authenticated identity key (`user_id` plus coffee, FR-038) are evaluated independently and MUST NOT be merged or cross-checked against each other.
+- **FR-074**: The active states that block a new anonymous `SAMPLE_REQUEST` for the same normalized-email-and-coffee identity are exactly `NEW`, `RECEIVED`, `CONTACTED`, `SAMPLE_SENT`, and `DELIVERED`; once that identity's request reaches `CLOSED`, a new `SAMPLE_REQUEST` for the same normalized email and coffee MUST be accepted — mirroring FR-040's guarantee for authenticated customers.
+- **FR-075**: A public `GENERAL` RFQ MUST NOT be subject to any duplicate-identity rule, since it is not tied to a specific coffee; repeated `GENERAL` submissions from the same visitor MUST be accepted for manual review.
+- **FR-076**: The existing authenticated sample-request duplicate rule (`user_id` plus coffee, FR-038) MUST remain unchanged. A signed-in verified customer MUST continue to submit sample requests through the existing authenticated path, not the new public one, so the two rules never need to interact for the same request.
+- **FR-077**: After a public `GENERAL` or `SAMPLE_REQUEST` submission succeeds, the system MUST show the visitor an on-screen confirmation containing their request code. The system MUST NOT send an automated confirmation email as part of this addendum.
+- **FR-078**: Both public forms MUST include a non-visible honeypot field, matching the existing authenticated inquiry action's pattern, and MUST be rate-limited server-side per source IP address and per normalized email address. A submission that fails either check MUST be rejected without revealing which check failed, using the same closed, localized error vocabulary FR-060 already requires.
+- **FR-079**: The public coffee/offer detail pages MUST expose a "Request a sample" action reachable by anonymous visitors, in addition to the existing authenticated one already available to verified customers. The `GENERAL` RFQ ("Request an Offer") MUST be served from the existing `/request-a-quote` route — extended with a new anonymous branch alongside its existing signed-in branches — and MUST NOT be served from any additional, parallel route. Dubai-first positioning, "Source a Coffee," "Buy Available Lots," and "Trade With Hills" content MUST be delivered as copy/positioning sections on the existing Home, About, and Contact pages rather than as additional dedicated routes.
+- **FR-080**: Administrator Lead Inbox tooling MUST display an anonymously submitted `GENERAL` or `SAMPLE_REQUEST` inquiry using the same fields, filters, and status-transition controls already used for authenticated inquiries — the existing `full_name`/`email`/`phone`/`company_name` snapshot columns on the `inquiries` row are already independent of `user_id`. No separate anonymous-lead view is introduced.
+- **FR-081**: The write path for an anonymous submission MUST NOT rely on a direct anonymous-role table `INSERT`, which Row Level Security correctly continues to block; it MUST go through a trusted server-side path (matching the pattern the authenticated inquiry action already uses), so this addendum never requires loosening RLS to permit a direct anonymous client write.
+- **FR-082**: This addendum MUST NOT introduce a shopping cart, checkout, payment step, seller-onboarding flow, custody workflow, or any other real marketplace/trading mechanic on the public site, consistent with Constitution Principle I. "Buy Available Lots" and "Trade With Hills" content MUST read as sourcing/positioning language, never as transactable commerce.
+- **FR-083**: A single new repository migration file, added under `specs/001-platform-implementation-spec/migrations/` and never editing an existing migration file, MUST reconcile the versioned migration history with the database delta already applied and verified live: the `inquiries_product_needs_user` check constraint permitting a NULL `user_id` for `GENERAL` and `SAMPLE_REQUEST` (still required for `PRODUCT`), and the new `uq_inquiries_active_sample_anon_email_coffee` partial unique index on `lower(btrim(email))` plus `coffee_id` for anonymous active `SAMPLE_REQUEST` rows. The migration MUST preserve `uq_inquiries_active_sample_user_coffee` unchanged, MUST NOT add any table, column, enum, or status-transition function change, and MUST be written so it applies safely both to the current database (where the delta already exists) and to a clean database applying the full migration sequence from scratch. Any generated database/schema snapshot affected by this reconciliation MUST be regenerated, never hand-edited. Authoring and applying this migration is a required implementation item of this addendum, not a deferred one — the owner has already approved and applied the delta itself; what remains is the repository's own record of it.
+
 ### Key Entities _(include if feature involves data)_
 
 - **Customer/Administrator Profile**: Represents a person's application-level identity — name, contact details, role (customer or administrator), verification-relevant state, blocked state and its audit trail (when/by whom/optional internal reason), and a reference to an optional personal avatar image. Distinct from the underlying authentication credential record.
 - **Avatar Image**: A private, owner-scoped image associated with exactly one profile; independent of business/catalog media and of the project brand logo.
 - **Coffee / Offer / Price Tier**: A coffee identity (with translations, taxonomy, media) offered from a specific warehouse with visibility/status; a price tier is the protected wholesale value attached to an offer, visible only under the protected-pricing policy.
 - **Origin / Region**: A country-level sourcing origin and its dependent geographic regions; a region belongs to exactly one origin, and coffees/offers relate to these through the origin's structure.
-- **Inquiry (Product / Sample Request)**: A customer-submitted request tied to a specific coffee (and, for context, the offer it was raised from), with a type, a current status drawn from an approved progression, a timestamped and attributed status-change history, and contact details captured at submission time. Never carries a quantity value and never itself represents a shipment or fulfillment record.
+- **Inquiry (General / Product / Sample Request)**: A request tied to a specific coffee where applicable (and, for context, the offer it was raised from), with a type, a current status drawn from an approved progression, a timestamped and attributed status-change history, and contact details captured at submission time. Never carries a quantity value and never itself represents a shipment or fulfillment record. A `PRODUCT` inquiry always belongs to an authenticated verified customer (`user_id` set); a `GENERAL` or `SAMPLE_REQUEST` inquiry MAY instead be submitted anonymously (`user_id` NULL), per the Pre-Phase 12 Owner Alignment Addendum below — in that case duplicate-identity for `SAMPLE_REQUEST` is the normalized email plus coffee rather than customer plus coffee.
 - **Favorite**: A customer's saved association with a specific coffee, owned exclusively by that customer.
 - **Media Item / Site Settings**: A managed image asset (business/editorial, CMS, or brand) with translation/alt text and reference tracking; site settings hold the organization's public-facing configuration including which media item is the active project logo.
 - **Audit Log Entry**: An administrator-readable record of a privileged action — what changed, who performed it, and when — used for accountability and never exposed to non-administrators.
@@ -285,6 +354,10 @@ Every public, account, and admin surface behaves identically in substance across
 - **SC-009**: An administrator can locate a specific customer account and complete a block or unblock action, with the resulting access change observable on that customer's very next request, without any deployment or manual cache action.
 - **SC-010**: Repeated English-to-Arabic-to-English navigation across every major surface (public, auth, account, admin) produces zero console errors, zero hydration warnings, and zero malformed structured-data output.
 - **SC-011**: Every indexable public page carries a valid canonical URL and reciprocal English/Arabic alternate tags; private and administrator-only routes are absent from the sitemap and marked non-indexable in 100% of sampled pages.
+- **SC-012**: An anonymous visitor can submit a `GENERAL` RFQ providing only name, email, and phone, and a `SAMPLE_REQUEST` for a specific coffee providing name, email, phone, delivery address, and country — in both cases without creating an account or session — and receives an on-screen confirmation containing a request code.
+- **SC-013**: A second anonymous `SAMPLE_REQUEST` for the same normalized email and coffee is rejected 100% of the time while any prior anonymous request for that email/coffee pair is in an active state (`NEW`, `RECEIVED`, `CONTACTED`, `SAMPLE_SENT`, `DELIVERED`), and is accepted once that prior request reaches `CLOSED` — mirroring SC-005's guarantee for authenticated customers.
+- **SC-014**: Zero protected wholesale price value, account-only capability (favorites, protected pricing, private inventory), or marketplace/checkout mechanic (cart, payment, seller onboarding) is reachable by an anonymous visitor through the new public RFQ or sample-request journeys, verified in both languages.
+- **SC-015**: A scan of the new public forms confirms a honeypot field is present on each, a server-side rate limit rejects rapid repeated submissions from the same source, and zero raw backend/database error is exposed on any rejection path — extending FR-060's guarantee to these new anonymous surfaces.
 
 ## Assumptions
 
@@ -300,3 +373,116 @@ Every public, account, and admin surface behaves identically in substance across
 - Real legal, contact, and organizational copy is supplied by the business owner; where such content does not yet exist, the corresponding public surface shows an honest absence rather than invented text.
 - Sucafina's live site is referenced only as an interaction-quality and information-architecture study already completed in the authoritative sources; no further comparative research against it is part of this specification.
 - FR-067/FR-068 record an owner-approved hardening decision reached during consistency analysis of this specification: the current database/storage policies governing a customer's own profile row and own avatar object do not yet independently enforce the blocked-state boundary (they enforce ownership only). The owner has approved tightening the specific policies to add the same unblocked-customer predicate already used elsewhere (favorites, inquiries, protected pricing); the exact SQL is authored and reviewed as its own migration unit outside this specification, per Principle XV.
+
+## Pre-Phase 12 — Owner Alignment Addendum: Public RFQ, Public Sample Requests & Buyer Journey
+
+**Status**: Owner-approved. This addendum does not create a new Spec Kit
+feature and does not renumber the existing Phase 0–13 sequence. It is a
+bounded extension of the existing specification above, to be delivered before
+Phase 12 begins (Phase 12's staging fixtures and persona matrix should account
+for an anonymous public RFQ/sample-request persona once this addendum is
+implemented). FR-069 through FR-083, the edge cases and success criteria
+above, and the Clarifications session above are this addendum's normative
+content; this section explains the "why" and records the owner's decisions
+and the verified database baseline they rest on.
+
+### Owner decisions (verbatim intent)
+
+1. Public/anonymous visitors may browse public coffees, origins, and
+   available lots — this capability already exists (User Story 4) and is
+   unchanged by this addendum.
+2. Public/anonymous visitors may submit a `GENERAL` sourcing RFQ ("Request an
+   Offer") and a `SAMPLE_REQUEST` for a specific coffee (FR-069).
+3. Public visitors must never see protected Hills customer pricing — this
+   boundary already exists (FR-030/FR-031) and is unchanged; nothing in this
+   addendum grants pricing visibility to an anonymous submission.
+4. Public visitors gain no account access, favorites, private inventory,
+   marketplace/trading execution, checkout/payment, or protected customer
+   data as a result of submitting either public form (FR-072, FR-082).
+5. Verified `USER` behavior is unchanged: protected Hills pricing, favorites
+   and account, sample requests through the existing authenticated path, and
+   every other existing customer capability continue exactly as specified
+   elsewhere in this document (FR-076).
+6. Public `SAMPLE_REQUEST` requires `coffee_id`, does not require `user_id`,
+   uses the existing inquiry workflow and status progression, always starts
+   at `NEW`, treats `NEW`/`RECEIVED`/`CONTACTED`/`SAMPLE_SENT`/`DELIVERED` as
+   active (blocking) states, and permits a new request once the prior one
+   reaches `CLOSED` (FR-071, FR-073, FR-074).
+7. The existing authenticated sample-request duplicate rule (`user_id` +
+   coffee) is unchanged (FR-076).
+
+### Database baseline (already verified and applied) and the required reconciling migration
+
+The following is the current, owner-verified live database state this
+addendum's application behavior is built against:
+
+- No new table. No new column. No new enum.
+- The `inquiries_product_needs_user` check constraint was changed so `GENERAL`
+  and `SAMPLE_REQUEST` may have a NULL `user_id`, while `PRODUCT` still
+  requires one.
+- The existing `uq_inquiries_active_sample_user_coffee` unique index is
+  unchanged.
+- A new `uq_inquiries_active_sample_anon_email_coffee` partial unique index
+  exists, keyed on `lower(btrim(email))` plus `coffee_id`, scoped to rows
+  where `user_id IS NULL` and the `SAMPLE_REQUEST` is in an active state.
+- Structural database tests for this change have passed.
+- Direct anonymous-role `INSERT` remains blocked by Row Level Security (see
+  FR-081): the application write path, not a loosened policy, is what makes
+  the anonymous case possible.
+- This database change was applied directly against the live database rather
+  than through a repository migration file. **Authoring the new repository
+  migration that reconciles the versioned migration history with this
+  already-applied delta is a required implementation item of this addendum
+  (FR-083), not a deferred one** — the delta itself is already owner-approved
+  and already live; a new file under `specs/001-platform-implementation-spec/migrations/`
+  records it so the repository's migration history matches reality. Existing
+  migration files MUST NOT be edited to retroactively describe it.
+
+### Content and journey audit (owner-supplied list, resolved by the page-structure decision above)
+
+The owner asked that the following be audited for coverage: "Request an
+Offer" / RFQ, public Sample Request, Dubai-first positioning, "Source a
+Coffee," "Buy Available Lots," "Trade With Hills" (bounded by FR-082 to never
+introduce real marketplace mechanics), traceability/quality/sourcing proof,
+the RFQ steps, the sample-request steps, and a clear separation between the
+public site and the protected customer portal. Per the clarified page-structure
+decision, these resolve as:
+
+- **Request an Offer / RFQ** → the existing `/request-a-quote` page, extended
+  with a new anonymous branch — the canonical route, not a new page
+  (FR-079).
+- **Public Sample Request** → a "Request a sample" action added to existing
+  coffee/offer detail pages (FR-079), not a new page.
+- **Dubai-first, Source a Coffee, Buy Available Lots, Trade With Hills,
+  traceability/quality/sourcing proof** → positioning and content sections on
+  the existing Home, About, and Contact pages — real, owner-supplied copy
+  only (per the existing "Assumptions" entry on real content), never invented
+  business claims, and never phrased as transactable commerce (FR-082).
+- **Public-site vs. protected-customer-portal separation** → already the
+  existing boundary (protected pricing, favorites, account, and Admin remain
+  behind the existing authorization state machine); this addendum adds a
+  purely public, unauthenticated path alongside it and does not weaken it.
+
+### Explicit out of scope
+
+Deliberately deferred — exactly these three, and no others:
+
+- Building a transactional-email confirmation system (FR-077; deferred, not
+  silently dropped — see the Clarifications session above).
+- Adding a third-party CAPTCHA/challenge vendor (FR-078; a honeypot plus
+  server-side rate limiting was chosen instead).
+- Any dedicated "Source a Coffee," "Buy Available Lots," or "Trade With
+  Hills" page beyond the copy/positioning sections described above, and any
+  RFQ route parallel to the existing, canonical `/request-a-quote`.
+
+Also out of scope, but for the ordinary reason that it is unrelated rather
+than deferred:
+
+- Any cart, checkout, payment, seller-onboarding, or custody mechanic
+  (Constitution Principle I; FR-082).
+- Any database/RLS/storage change beyond the single reconciling migration
+  required by FR-083 — that migration is in scope (see above); nothing
+  further is.
+- Starting Phase 12 itself. This addendum is a precondition Phase 12's
+  five-persona matrix should account for once implemented, not part of
+  Phase 12's own task list.

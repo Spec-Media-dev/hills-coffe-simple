@@ -242,3 +242,290 @@ study" instruction and Constitution Principle XVII.
 | Performance Goals | Core Web Vitals "good" thresholds (LCP, INP, CLS) on public pages; bounded, paginated catalog queries independent of total catalog size |
 | Constraints | No protected price in any public payload/cache; npm-only tooling; no new database migrations; WCAG 2.2 AA on core journeys |
 | Scale/Scope | Current live data is near-empty (2 profiles, 2 warehouses, 18 site pages); design and tests must not assume production-scale data but must not silently fail at it either |
+
+---
+
+# Pre-Phase 12 Owner Alignment Addendum: Research
+
+Everything below is scoped to the addendum in `spec.md` (FR-069–FR-083). It
+does not revisit or reopen any decision above. All empirical claims were
+re-verified live against the current database during this planning pass
+(2026-09-03), not assumed from `docs/HILLS_SUPABASE_CURRENT_STATE.md`, which
+is now stale on this one table — see finding 11 below.
+
+## 11. The already-applied delta, empirically re-verified
+
+`docs/HILLS_SUPABASE_CURRENT_STATE.md` still shows the pre-delta definition
+of `inquiries_product_needs_user`
+(`CHECK (type = 'GENERAL' OR user_id IS NOT NULL)`), because that snapshot
+predates the owner's manual change. Rather than plan against a stale
+document, the live database was probed directly with disposable, immediately
+deleted rows:
+
+| Probe | Result |
+|---|---|
+| Insert `SAMPLE_REQUEST`, `user_id = NULL`, real `coffee_id` | **Accepted** |
+| Immediately repeat the same normalized email + coffee, still active | **Rejected**, `23505` on `uq_inquiries_active_sample_anon_email_coffee` |
+| Insert `PRODUCT`, `user_id = NULL` | **Rejected**, `23514` on `inquiries_product_needs_user` |
+| Insert `GENERAL`, `user_id = NULL`, `coffee_id = NULL` | **Accepted** (pre-existing allowance, unchanged) |
+
+**Decision**: treat the owner's description of the delta as confirmed fact,
+not as something planning needs to independently re-derive. The exact
+constraint name (`inquiries_product_needs_user`) and the exact new index
+name (`uq_inquiries_active_sample_anon_email_coffee`) are now known with
+certainty and are what FR-083's migration file must name.
+
+**Rationale**: Constitution Principle XVI (verify, don't assume) and this
+project's standing practice of never trusting a documentation snapshot over
+the live system. The probe rows were tagged `[QA-PLAN-PROBE]`, used only the
+existing Phase 6 QA catalog coffee as an FK reference (never modified), and
+were deleted immediately after the assertions ran — no residue.
+
+**Alternatives considered**: trusting the owner's prose as-is without
+verification (rejected — this session has repeatedly found stale
+documentation elsewhere in this same project); requesting raw SQL access to
+read `pg_get_constraintdef` (rejected — no DDL-capable credential exists for
+this agent, confirmed by `P1-T04`'s own header note, and the empirical
+insert/probe approach answers the same question without needing one).
+
+## 12. Public write boundary: a new `SECURITY DEFINER` function, not a new RLS policy
+
+This function is planned as its own migration file — **Migration B** — kept
+entirely separate from the reconciliation migration in finding #11/#15
+(**Migration A**). The two have different content and different approval
+statuses (Migration A: already owner-approved and live; Migration B: new
+schema, needs approval before being applied) and must never be merged into
+one file. See `plan.md` sections A/B for the full content requirements.
+
+**Decision**: add exactly one new Postgres function,
+`public.submit_public_inquiry(...)`, `SECURITY DEFINER`, owned by `postgres`
+— the same ownership/privilege pattern already used twice in this codebase
+(`admin_list_users()`, `hydrate_inquiry_context()`). `GRANT EXECUTE` to
+`anon` only; `REVOKE ALL` from `PUBLIC` and from `authenticated` (mirroring
+`P1-T02`'s exact `REVOKE`/`GRANT` shape). No new RLS policy is added to
+`public.inquiries`.
+
+**Why this satisfies the "safest minimal boundary" requirement, point by
+point**:
+
+- **Allow-lists writable fields**: the function's own parameter list *is*
+  the allow-list — it accepts only `full_name`, `email`, `phone`, `address`,
+  `country_code`, `offer_id` (nullable), `subject`, `message`. It does not
+  accept `user_id`, `status`, `type` as a free string, or any snapshot
+  column.
+- **Forces `type` server-side**: the function itself decides `GENERAL` (no
+  `offer_id`) vs `SAMPLE_REQUEST` (`offer_id` supplied) — the caller never
+  passes a `type` value.
+- **Forces initial `status = 'NEW'`**: hardcoded in the function body; no
+  parameter can override it.
+- **Prevents anonymous control of `user_id`**: the function never accepts a
+  `user_id` parameter and never sets one — it inserts with `user_id`
+  omitted, which the existing `hills_hydrate_inquiry_context` `BEFORE
+  INSERT` trigger already leaves untouched when `auth.uid()` is null (see
+  finding 13). The row is created with `user_id IS NULL` by construction,
+  not by trusting client input.
+- **Prevents arbitrary snapshot/private fields**: `coffee_name_snapshot`,
+  `offer_reference_snapshot`, `warehouse_code_snapshot` are never parameters;
+  they continue to be derived exclusively by the existing trigger, exactly as
+  they are for the authenticated path today.
+- **Validates coffee context for sample requests**: the function requires a
+  non-null `offer_id` when it is building a `SAMPLE_REQUEST`, and the
+  existing trigger's `raise exception 'Invalid offer'` / `'Offer does not
+  belong to selected coffee'` guards fire on the INSERT exactly as they do
+  today — this addendum does not re-implement that validation, it inherits
+  it.
+- **Prevents protected-price leakage**: the function only ever touches
+  `public.inquiries`; it has no reason to read `offer_price_tiers` and does
+  not, so there is no path by which a price could enter its response.
+- **Keeps the service-role credential server-only**: unaffected either way —
+  this function is called through the ordinary anon-key server client
+  (`createSupabaseServerClient()`), the same helper the authenticated
+  inquiry actions already use; no service-role key is introduced anywhere in
+  this addendum.
+
+**Why not an anon RLS INSERT policy instead**: a policy broad enough to let
+`anon` insert into `inquiries` directly would need its `WITH CHECK` clause to
+re-encode every one of the constraints above in policy-expression form (no
+`user_id`, forced `status`, type-shape rules), duplicating logic the function
+approach gets once, in one place, in a language (`plpgsql`) suited to it. It
+would also widen the table's attack surface permanently rather than through
+one reviewable, revocable function grant. This is exactly the case the
+addendum's own instruction anticipated: "Do NOT plan a broad anonymous INSERT
+policy unless repository evidence proves it is necessary" — the evidence
+(two existing precedents, and a clean specification of every required
+constraint at the function-parameter level) shows it is not necessary.
+
+**Alternatives considered**: a broad `anon` INSERT RLS policy (rejected,
+above); performing the INSERT from the Next.js server action using the
+service-role key (rejected — this project's standing rule keeps the
+service-role key server-only *and* out of any general-purpose write path;
+routing every anonymous write through one narrow, auditable function is
+strictly safer than handing a broad-privilege key to application code that
+also handles user input).
+
+## 13. `hydrate_inquiry_context()` needs no change
+
+Its live definition was read directly from `docs/HILLS_SUPABASE_CURRENT_STATE.md`
+(the function itself, unlike the constraint above, is not something the
+owner's delta touched, so the doc is current here):
+
+```sql
+if auth.uid() is not null then
+    new.user_id = auth.uid();
+end if;
+```
+
+It only ever *sets* `user_id` when `auth.uid()` is non-null; for an
+anonymous caller (`auth.uid()` is null) it simply does not touch the column,
+leaving whatever the INSERT already supplied — which, per finding 12, is
+nothing. **Decision**: this trigger requires zero changes. The new function
+in finding 12 relies on this behavior rather than duplicating it.
+
+## 14. Duplicate-identity handling stays inside the existing error-mapping pattern
+
+`src/actions/inquiries.ts` already catches a `23505` on
+`uq_inquiries_active_sample_user_coffee` and maps it to the `DUPLICATE_SAMPLE`
+domain error with the winning row's `request_code` looked up and returned —
+never the raw constraint name. **Decision**: the new public server action
+does the identical thing for `23505` on
+`uq_inquiries_active_sample_anon_email_coffee`. No new domain error code is
+needed; `DUPLICATE_SAMPLE` (already in the closed `DomainErrorCode` set) and
+`RATE_LIMITED` (already in the same set, for finding 16) both already exist.
+
+## 15. Migration idempotency for two starting states
+
+**Decision**: the reconciliation migration (FR-083) is written as
+`ALTER TABLE ... DROP CONSTRAINT IF EXISTS inquiries_product_needs_user`
+immediately followed by `ADD CONSTRAINT inquiries_product_needs_user CHECK
+(...)` with the desired final definition, and
+`CREATE UNIQUE INDEX IF NOT EXISTS uq_inquiries_active_sample_anon_email_coffee
+ON ...`. Both forms are naturally idempotent: on the current database (delta
+already live) the constraint drop-and-recreate is a same-definition no-op and
+the index creation is skipped by `IF NOT EXISTS`; on a clean database
+applying the full migration sequence from scratch, the same two statements
+produce the delta for the first time. One file, one script, both starting
+states, no conditional branching needed in the SQL itself.
+
+**Rationale**: this is the same idiom `P1-T02` already uses
+(`DROP FUNCTION IF EXISTS` before `CREATE FUNCTION`) for exactly this
+"may or may not already exist" situation.
+
+**Alternatives considered**: a guarded `DO $$ ... IF NOT EXISTS (SELECT ...
+pg_constraint ...) THEN ... END IF; $$` block (rejected — more code, no
+behavioral difference from the drop-and-recreate idiom the repository
+already uses, and harder to read against the existing style).
+
+## 16. Anti-abuse persistence: durable where it is free, best-effort where a new table would be needed
+
+The clarified decision is honeypot + server-side per-IP/per-email rate
+limiting, no third-party CAPTCHA (`spec.md` Clarifications). Two different
+mechanisms are needed because the two keys have different available storage:
+
+- **Per-normalized-email limiting is free**: `public.inquiries` already has
+  `email` and `created_at` on every row. A `COUNT(*)` of recent rows for the
+  same `lower(btrim(email))` within a short rolling window, evaluated inside
+  `submit_public_inquiry()` itself before the insert, needs **zero new
+  schema** — it is a read against columns that already exist for a purpose
+  (Admin Lead Inbox search) unrelated to rate limiting.
+- **Per-IP limiting has no existing column to key off**: `inquiries` stores
+  no client IP anywhere today, and adding one would be a schema change to an
+  existing table that Admin tooling already reads — a bigger, more
+  broadly-scoped change than this addendum's own instruction to avoid new
+  columns where avoidable.
+
+**Decision**: implement per-IP limiting as a best-effort, in-process,
+module-scoped sliding-window counter in the Next.js server action layer
+(reading the proxy's forwarded-for header via `headers()`, the same API
+already available to every server action in this codebase), with the
+durable per-email check inside the database function as the backstop. This
+keeps the addendum's anti-abuse layer at **zero new tables and zero new
+columns**, matching the same minimalism the owner's reconciliation-migration
+constraints already established for the rest of this addendum.
+
+**Explicitly flagged, not silently decided**: a per-instance in-process
+counter does not share state across multiple server instances/cold starts if
+this application is ever deployed on a multi-instance or serverless
+platform; it is a real but bounded weakness, not a false guarantee, and the
+plan's final report calls it out as a risk rather than presenting it as
+equivalent to a durable store. A durable, cross-instance IP-based limiter
+would need a genuinely new table and its own explicit owner approval under
+Constitution Principle XV — that table is deliberately **not** proposed here
+because it was not part of what this addendum was asked to plan, and adding
+it silently would be exactly the "silent or inferred migration" Principle XV
+forbids.
+
+**Alternatives considered**: Upstash/Redis-backed rate limiting (rejected —
+introduces a new paid third-party dependency of the same kind the owner
+already declined for CAPTCHA, and nothing in this codebase or its
+`package.json` uses one today); a new dedicated rate-limit table (rejected
+for this pass — see "explicitly flagged" above; remains available as a
+follow-up if the owner wants durable per-IP limiting badly enough to approve
+new schema for it).
+
+## 17. Confirmed: zero anonymous-callable RPC exists today
+
+The PostgREST OpenAPI document (fetched with the anon key) lists zero
+`/rpc/*` paths. **Decision**: `submit_public_inquiry` is confirmed to be a
+genuinely new surface, not a rename or extension of something already
+anon-reachable — nothing already-built is being duplicated (per the user's
+"do not duplicate already-implemented functionality" instruction).
+
+## 18. Where the anonymous "Request a sample" control attaches
+
+`InquiryPanel` (`src/components/inquiries/inquiry-panel.tsx`) already branches
+on `signedIn`: when false, it renders two links to `/sign-in` — one for
+"Send inquiry" (PRODUCT), one for "Request sample." **Decision**: leave the
+PRODUCT link exactly as-is (PRODUCT inquiries remain authenticated-only —
+FR-036 and the addendum's own decision 7 are unchanged); replace only the
+sample link's anonymous branch with a real, working public sample-request
+trigger that opens a new dialog built the same way the existing authenticated
+one is (`ModalDialog`, so focus trap/restore/Escape/scroll-lock are inherited
+rather than re-implemented). The authenticated branch of `InquiryPanel` is
+untouched.
+
+## 19. Route for the General RFQ: correction — `/request-a-quote` is canonical, no new route
+
+`/contact` was checked and is presentational only (org details, warehouses,
+an image) — it has no lead-capture form to extend, so it is not a candidate
+for reuse. A first pass of this research proposed a new `/request-an-offer`
+route on that basis. **This was corrected by the owner**: the SEO
+architecture already defines `/request-a-quote/` as the canonical RFQ
+route, and no parallel route may exist. "Request an Offer" is CTA/copy
+wording only, and it links to `/request-a-quote`.
+
+`/request-a-quote` (`src/app/[locale]/(site)/request-a-quote/page.tsx`)
+already exists — it is currently `requireVerifiedUser()`-gated and lets a
+signed-in customer pick a specific offer to raise a `PRODUCT` inquiry
+through `RequestQuoteForm`/`createProductInquiry`. Today, an anonymous
+visitor to this page sees only a "sign in to continue" prompt.
+
+**Decision**: extend this page with a third branch — rendered only when
+there is no `viewer` — that swaps today's dead-end sign-in prompt for a
+real, working, coffee-agnostic `GENERAL` RFQ form calling the new
+`submitPublicRfq`. The existing `viewer`/`viewer && offers.length` branches,
+`RequestQuoteForm`, and `createProductInquiry` are untouched. Two follow-on
+facts: the page's current `robots: { index: false, follow: true }` override
+was correct while the page was authenticated-only and must be removed (or
+flipped to indexable) now that it has a genuine anonymous path, per FR-061;
+and it must be added to `src/app/sitemap.ts`'s `staticPaths`, where it is
+not present today. It is already in `src/lib/auth/redirects.ts`'s
+`knownRoots`, so no change is needed there.
+
+**Rationale**: matches the owner's explicit SEO architecture rather than a
+plan-invented URL, and reuses one page's existing infrastructure (metadata,
+CMS-override check, offer list fetch) instead of duplicating it — directly
+satisfying "do not duplicate already-implemented functionality" in the
+opposite direction from the first pass's own reasoning (the first pass used
+that same instruction to justify *avoiding* reuse of a page it judged too
+different in shape; the owner's correction says the SEO/URL identity of the
+page outweighs that shape difference, and the shape difference is handled
+by branching, not by forking the route).
+
+## 20. `inquiryType`/`inquiryStatus` Admin display already anticipates `GENERAL`
+
+`messages/en.json`'s `inquiryType.GENERAL` is already `"General enquiry"`
+and `lead-inbox.ts`'s type filter vocabulary already includes `"GENERAL"` —
+both predate this addendum. **Decision**: FR-080 (Admin Lead Inbox needs no
+code change) is confirmed rather than assumed; the display path was already
+built for a type that simply had no anonymous-accessible way to be created
+until now.

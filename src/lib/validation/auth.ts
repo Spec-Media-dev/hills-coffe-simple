@@ -1,9 +1,8 @@
 import { z } from "zod";
 export const localeSchema = z.enum(["en", "ar"]);
-export const phoneSchema = z
-  .string()
-  .trim()
-  .regex(/^\+?[0-9\s\-()]{7,20}$/);
+/** The one phone rule, named so callers can reuse it with their own message. */
+export const PHONE_PATTERN = /^\+?[0-9\s\-()]{7,20}$/;
+export const phoneSchema = z.string().trim().regex(PHONE_PATTERN);
 export const passwordSchema = z
   .string()
   .min(10)

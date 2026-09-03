@@ -1305,3 +1305,168 @@ content (Phase 8/9) are not yet rebuilt.
   predicate); the SQL itself is authored, reviewed, and applied by the
   database owner as its own migration unit when that task is executed,
   never by this planning document.
+
+---
+
+# Pre-Phase 12 Owner Alignment Addendum: Public RFQ, Public Sample Requests & Buyer Journey
+
+Tasks for `spec.md` FR-069–FR-083 only, per `plan.md`'s addendum sections
+A–F (corrected 2026-09-03: canonical route is `/request-a-quote`, two
+separate new migrations). **Not numbered into the Phase 0–13 sequence** —
+no Phase 11.5, 12A, or 14 is created, and no existing phase above is
+renumbered or edited. Task IDs use the `OA-T` namespace throughout. This
+block must be complete, with its own gate passed, before Phase 12 begins.
+
+As with every phase above: no task here authored, executed, or applied a
+database migration, wrote application source code, or ran a test — this is
+the task breakdown only. `OA-T01` and `OA-T02` describe the two required
+migrations at a conceptual/content level (what they must contain, in what
+order, with what approval status); the SQL itself is authored, reviewed,
+and applied exactly as `P1-T04` already establishes as this project's
+convention.
+
+- [x] OA-T01 Author Migration A — reconcile the already-applied `inquiries` delta
+  - **Goal**: Add one new file, `specs/001-platform-implementation-spec/migrations/PP12-T01_inquiries_public_rfq_sample_reconciliation.sql`, that represents — as an idempotent, already-applied fact — the live `inquiries_product_needs_user` CHECK constraint change (`PRODUCT` still requires `user_id`; `GENERAL`/`SAMPLE_REQUEST` may have it NULL) and the new `uq_inquiries_active_sample_anon_email_coffee` partial unique index on `lower(btrim(email)), coffee_id`, scoped to `type = 'SAMPLE_REQUEST' AND user_id IS NULL AND status IN ('NEW','RECEIVED','CONTACTED','SAMPLE_SENT','DELIVERED')`.
+  - **Dependencies**: none — this is the first task in the addendum.
+  - **Files/modules**: `specs/001-platform-implementation-spec/migrations/PP12-T01_inquiries_public_rfq_sample_reconciliation.sql` (new). No existing migration file is modified, renamed, or moved.
+  - **KEEP**: `uq_inquiries_active_sample_user_coffee` untouched — the file must not `DROP`/`ADD` it, only reference it in its "explicitly not changed" note. `hydrate_inquiry_context()` and `validate_inquiry_status_transition()` untouched.
+  - **REFACTOR/MOVE/REMOVE**: none — this is a net-new file.
+  - **Supabase/DB contract**: **before writing the statements, re-read the live constraint's actual current definition and the live index's actual current definition directly from the database** (do not retype from `research.md`'s empirical description or from `docs/HILLS_SUPABASE_CURRENT_STATE.md`, which is confirmed stale on this one constraint) — verify the existing objects' real text rather than silently assuming a same-named object already matches what is intended. Statements: `BEGIN;` → `ALTER TABLE public.inquiries DROP CONSTRAINT IF EXISTS inquiries_product_needs_user` → `ADD CONSTRAINT inquiries_product_needs_user CHECK (...)` with the verified final form → `CREATE UNIQUE INDEX IF NOT EXISTS uq_inquiries_active_sample_anon_email_coffee ON public.inquiries (lower(btrim(email)), coffee_id) WHERE type = 'SAMPLE_REQUEST' AND user_id IS NULL AND status IN ('NEW','RECEIVED','CONTACTED','SAMPLE_SENT','DELIVERED')` → `COMMIT;`. Both forms must be idempotent so the file is safe to run against the current (already-patched) database and reproduces the identical end state on a clean database applying the full migration sequence from scratch.
+  - **Auth/security**: none — no RLS, role, or grant change in this file.
+  - **Realtime**: none — `inquiries` remains in the Realtime publication unchanged; this file adds no trigger.
+  - **EN/AR/RTL**: none (database-only task).
+  - **Tests required**: the four empirical probe cases from `research.md` #11, tagged `[QA-...]`/disposable and cleaned up immediately: `SAMPLE_REQUEST` + `user_id=NULL` accepted; `PRODUCT` + `user_id=NULL` rejected (`23514`); a normalized-email+coffee duplicate while active rejected (`23505` on the new index); the same pair accepted again once the first request is `CLOSED`. Also regenerate `src/lib/supabase/types.generated.ts` (or whichever file is tooling-generated) rather than hand-edit it, and confirm `docs/HILLS_SUPABASE_CURRENT_STATE.md`'s discrepancy on this constraint is resolved by the regeneration, not by manual retyping.
+  - **Runtime acceptance condition**: `spec.md` FR-083, owner requirement items 1–4 (constraint updated, both indexes correctly scoped, no new table/column/enum, no status-transition-function change) all hold, with the four probe results as evidence.
+  - **Out of scope**: creating `public.submit_public_inquiry` (OA-T02); any change to `uq_inquiries_active_sample_user_coffee`, `hydrate_inquiry_context()`, or `validate_inquiry_status_transition()`.
+
+- [x] OA-T02 Author Migration B — `public.submit_public_inquiry(...)` security migration
+  - **Goal**: Add a second, separate new file, `specs/001-platform-implementation-spec/migrations/PP12-T02_submit_public_inquiry_function.sql`, creating the one narrow, `anon`-callable write boundary the rest of this addendum depends on, per `data-model.md`'s "New database object" contract and `contracts/public-inquiry-actions.md`.
+  - **Dependencies**: OA-T01 (Migration B's function inserts rows that must satisfy Migration A's constraint/index; on a clean database from scratch, A must run before B — even though on the current live database A's delta is already present).
+  - **Files/modules**: `specs/001-platform-implementation-spec/migrations/PP12-T02_submit_public_inquiry_function.sql` (new, distinct file from OA-T01's — never merged into one file, never touching an existing migration).
+  - **KEEP**: `hydrate_inquiry_context()` exactly as-is — the new function inserts into `inquiries` and lets that existing trigger derive `coffee_id`/snapshots/`user_id`-when-authenticated, rather than re-implementing any of that logic.
+  - **REFACTOR/MOVE/REMOVE**: none — net-new file.
+  - **Supabase/DB contract**: `CREATE FUNCTION public.submit_public_inquiry(p_full_name text, p_email text, p_phone text, p_message text, p_offer_id uuid DEFAULT NULL, p_address text DEFAULT NULL, p_country_code text DEFAULT NULL, p_subject text DEFAULT NULL) RETURNS ... LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public', 'auth'` (the exact pinned `search_path` `admin_list_users()` already uses). Body: if `p_offer_id IS NULL` build `type='GENERAL'` (require name/email/phone/message only); else build `type='SAMPLE_REQUEST'` (additionally require `p_address`/`p_country_code`, raising a validation exception if missing rather than silently proceeding); always `status='NEW'`; never set `user_id`; never accept a snapshot column as a parameter; perform the per-normalized-email rate check (`COUNT(*)` against `public.inquiries` for the same `lower(btrim(p_email))` within a short window — no new table) before the `INSERT`; return `request_code`/`id`. Owner: `postgres` (matches `admin_list_users()`/`hydrate_inquiry_context()`). `REVOKE ALL ON FUNCTION ... FROM PUBLIC; REVOKE ALL ... FROM authenticated; GRANT EXECUTE ... TO anon;` — mirroring `P1-T02`'s exact `REVOKE`/`GRANT` shape, minimum role only. No RLS policy is added to `public.inquiries` in this file or anywhere else.
+  - **Auth/security**: this task is the addendum's entire security boundary — pinned `search_path` (prevents search-path hijacking), strict parameter allow-list (no `user_id`/`status`/`type`/snapshot parameter exists to be abused), `SECURITY DEFINER` scoped to exactly one function rather than a broadened table-level policy. The file must include, in comments (mirroring `P1-T04`'s structure): a header stating purpose and the FR it implements (FR-081), a "explicitly NOT changed" section naming `hydrate_inquiry_context()`/`validate_inquiry_status_transition()`/`uq_inquiries_active_sample_user_coffee`/every other RLS policy, a **post-application verification** section naming the exact checks to re-run (the OA-T01 probe cases, now through the function; confirming `anon` can call the function but a raw `anon` `INSERT` into `inquiries` still fails), and a **commented-out rollback** (`DROP FUNCTION public.submit_public_inquiry(...)`, restoring the pre-migration state exactly — nothing else needs reverting since no policy/trigger was touched). **Owner approval status differs from OA-T01**: this is genuinely new schema and needs explicit owner approval before being applied, exactly like `P1-T04`'s pending status — the file must say so, unlike OA-T01's file, which documents an already-approved, already-live fact.
+  - **Realtime**: none — this function does not create a trigger or touch the Realtime publication.
+  - **EN/AR/RTL**: none (database-only task).
+  - **Tests required**: call the function as `anon` for both a `GENERAL` and a `SAMPLE_REQUEST` shape and confirm success; call it with a missing required field and confirm a clean rejection (not a raw exception); call it twice with the same normalized email + coffee while active and confirm the second raises the `uq_inquiries_active_sample_anon_email_coffee` violation; attempt a raw `anon`-key `INSERT` into `public.inquiries` directly (bypassing the function) and confirm RLS still denies it, proving the function — not a policy — is the only anonymous write path.
+  - **Runtime acceptance condition**: `spec.md` FR-081 and the "PUBLIC WRITE ARCHITECTURE" requirements (allow-listed fields, forced type/status, no anonymous `user_id` control, no arbitrary snapshot fields, coffee context validated for `SAMPLE_REQUEST`, no broad anonymous INSERT policy, service-role key never involved) all hold, evidenced by the tests above.
+  - **Out of scope**: the Next.js server actions that call this function (OA-T03); any rate-limiting beyond the per-email check described above (per-IP limiting is application-layer, OA-T04).
+
+- [x] OA-T03 Build the safe Next.js public-inquiry server boundary
+  - **Goal**: Add `src/actions/public-inquiries.ts` with two server actions, `submitPublicRfq` and `submitPublicSampleRequest`, per `contracts/public-inquiry-actions.md` — each validates and normalizes its own input with Zod, calls `public.submit_public_inquiry` through the ordinary anon-key `createSupabaseServerClient()` (never a service-role client), maps every outcome onto the closed `ActionResult` vocabulary, and returns the new `requestCode` on success.
+  - **Dependencies**: OA-T02 (the function must exist to call).
+  - **Files/modules**: `src/actions/public-inquiries.ts` (new).
+  - **KEEP**: `src/actions/inquiries.ts` (`createProductInquiry`, `createSampleRequestInquiry`) completely unchanged — this is a sibling file, not a modification of the authenticated actions.
+  - **REFACTOR/MOVE/REMOVE**: none.
+  - **Supabase/DB contract**: calls `public.submit_public_inquiry` only; no direct `.from("inquiries")` write anywhere in this file.
+  - **Auth/security**: no `requireVerifiedUser()`/`requireAdmin()` call in either action (that is the entire point) — but every field the client can influence passes through Zod validation and normalization (trim, lower-case email) before being passed to the RPC; the service-role key is never imported into this file or any file it can reach from a client bundle.
+  - **Realtime**: none.
+  - **EN/AR/RTL**: every `messageKey` returned resolves in `account.responses` (reusing `validation`, `checkRequestFields`, `activeSampleExists`, `offerUnavailable`, `configuration`, `requestNotSaved` where the meaning genuinely matches the authenticated flow's equivalent case; adding new keys — e.g. a distinct success message for the anonymous case and a `tooManyRequests` key for `RATE_LIMITED` — to both `messages/en.json` and `messages/ar.json` where no existing key fits) — no `locale === "ar"` branch anywhere in this file.
+  - **Tests required**: unit tests mirroring `src/lib/inquiries/sample-request.test.ts`'s style for the new Zod schemas (missing field, whitespace-only field, malformed email, oversized message) — field errors reported per field, not collapsed into one generic message.
+  - **Runtime acceptance condition**: `spec.md` FR-069, FR-072 hold; a raw Postgres/Supabase error string never reaches a returned `messageKey` (FR-060) — every exception the RPC can raise (missing required field, invalid offer, duplicate) is mapped to a named domain code before it leaves this file.
+  - **Out of scope**: the honeypot field and rate-limit calls themselves (OA-T04 adds them into this same file); the UI forms that call these actions (OA-T05/OA-T06).
+
+- [x] OA-T04 Wire in anti-abuse: honeypot + per-IP + per-email rate limiting
+  - **Goal**: Add `src/lib/rate-limit/public-inquiries.ts` (an in-process, per-IP sliding-window helper reading the proxy's forwarded-for header via `headers()`) and wire both new actions in `public-inquiries.ts` to check, in order: honeypot field empty → per-IP limit → per-normalized-email limit (the latter already enforced inside `submit_public_inquiry` per OA-T02, so this action-level check is a fast-fail before even calling the database). Both new form components get the identical hidden `website` field already used by `src/actions/inquiries.ts`.
+  - **Dependencies**: OA-T03 (adds checks into the actions it created).
+  - **Files/modules**: `src/lib/rate-limit/public-inquiries.ts` (new), `src/actions/public-inquiries.ts` (extended).
+  - **KEEP**: the existing honeypot pattern (`website: z.string().max(0, "invalidValue").optional()`) in `src/actions/inquiries.ts` — reused verbatim, not reinvented.
+  - **REFACTOR/MOVE/REMOVE**: none.
+  - **Supabase/DB contract**: none new — the per-email check already lives in OA-T02's function; this task adds no schema.
+  - **Auth/security**: a failed honeypot check and a failed rate-limit check must be indistinguishable in the response (both map to the closed `VALIDATION`/`RATE_LIMITED` codes with no field-specific detail that would let a script determine which control it tripped).
+  - **Realtime**: none.
+  - **EN/AR/RTL**: the `RATE_LIMITED` messageKey (new, both languages) reads as a generic "try again shortly," never naming IP or email.
+  - **Tests required**: fill the honeypot → rejected, no row created (assert via a direct count query, not just the response shape); submit past the per-IP threshold from a fixed test IP → `RATE_LIMITED` on the excess attempts only; submit past the per-email threshold with varying IPs → `RATE_LIMITED` from the database-level check.
+  - **Runtime acceptance condition**: `spec.md`'s anti-abuse clarification (honeypot + server-side per-IP/email rate limiting, no CAPTCHA/Turnstile) holds exactly as specified — no third-party dependency appears in `package.json`.
+  - **Out of scope**: any CAPTCHA/Turnstile integration; a durable, cross-instance per-IP store (flagged as a known, disclosed limitation in `research.md` #16, not silently built here).
+
+- [x] OA-T05 [P] Public GENERAL RFQ: extend `/request-a-quote` with the anonymous branch
+  - **Goal**: Add a third branch to `src/app/[locale]/(site)/request-a-quote/page.tsx` — rendered only when there is no `viewer` — that replaces today's "sign in to continue" prompt with a new form component calling `submitPublicRfq` (full name, email, phone, message only; no offer/coffee selection). On success, show an on-screen confirmation with the request code; no confirmation email is sent. The page's `generateMetadata`'s `robots: { index: false, follow: true }` override is removed for the non-CMS-override case, since the page is no longer authenticated-only.
+  - **Dependencies**: OA-T03, OA-T04.
+  - **Files/modules**: `src/app/[locale]/(site)/request-a-quote/page.tsx` (extended), `src/components/inquiries/public-rfq-form.tsx` (new), `src/app/sitemap.ts` (add `/request-a-quote` to `staticPaths` — it is not there today), `tests/e2e/helpers.ts` (add `/request-a-quote` to `PUBLIC_ROUTES`).
+  - **KEEP**: the page's existing `viewer && offers.length` (→ `RequestQuoteForm`) and `viewer` with no offers (→ empty state) branches, exactly as-is; `RequestQuoteForm`/`createProductInquiry` untouched; `src/lib/auth/redirects.ts`'s `knownRoots` already contains `/request-a-quote` — confirmed unchanged, no edit needed.
+  - **REFACTOR/MOVE/REMOVE**: replace only the anonymous branch's rendered content (the sign-in prompt); nothing else in the file changes shape.
+  - **Supabase/DB contract**: none new beyond calling `submitPublicRfq` (OA-T03).
+  - **Auth/security**: no gate on the new branch — confirmed by its absence, not by a weakened check; the signed-in branches' `requireVerifiedUser()` call is untouched.
+  - **Realtime**: none.
+  - **EN/AR/RTL**: extend the existing `quote` namespace in `messages/en.json`/`messages/ar.json` with new anonymous-branch copy — the current `quote.intro` ("Sign in with a verified email to send a tracked request to the coffee team.") is written for the old sign-in-only framing and does not fit an anonymous-accessible page, so a new intro string is needed for the no-`viewer` case rather than reusing that one; form field labels/errors added with the same parity discipline as every other namespace. "Request an Offer" as CTA/copy wording, wherever it appears, links to `/request-a-quote` — never a second URL.
+  - **Tests required**: Playwright — visit `/request-a-quote` (and `/ar/request-a-quote`) signed out, submit with only name/email/phone/message, confirm on-screen confirmation with a request code and no account/session created; separately, confirm the signed-in `RequestQuoteForm` branch still renders and still works unmodified when signed in.
+  - **Runtime acceptance condition**: `spec.md` FR-069, FR-070, FR-072, FR-075, FR-077, FR-079 (RFQ half) hold; `/request-a-quote` now appears in `sitemap.xml` with a correct canonical URL and EN/AR alternates (FR-061).
+  - **Out of scope**: any new dedicated route; any change to the `PRODUCT`/signed-in inquiry flow.
+
+- [x] OA-T06 [P] Public Sample Request: anonymous branch on the coffee/offer detail page
+  - **Goal**: Extend `InquiryPanel`'s existing `!signedIn` branch (`src/components/inquiries/inquiry-panel.tsx`) so its "Request sample" control opens a new, working, anonymous sample-request dialog calling `submitPublicSampleRequest` (full name, email, phone, delivery address, country, plus the specific `offerId` already known to the panel) — instead of today's link to `/sign-in`. The panel's "Send inquiry"/`PRODUCT` control, and its entire signed-in branch, are untouched.
+  - **Dependencies**: OA-T03, OA-T04.
+  - **Files/modules**: `src/components/inquiries/inquiry-panel.tsx` (extended — anonymous sample branch only), `src/components/inquiries/public-sample-request-form.tsx` (new, built on the existing `ModalDialog` primitive so focus trap/restore/Escape/scroll-lock are inherited, not reimplemented).
+  - **KEEP**: the "Send inquiry" anonymous link to `/sign-in` exactly as-is; the entire `signedIn` branch (`createProductInquiry`/`createSampleRequestInquiry` calls) exactly as-is.
+  - **REFACTOR/MOVE/REMOVE**: none beyond the one anonymous sample-link replacement.
+  - **Supabase/DB contract**: none new beyond calling `submitPublicSampleRequest` (OA-T03), which relies on `hydrate_inquiry_context()` (unchanged) to resolve `coffee_id` from the trusted `offerId` already passed to `InquiryPanel` — never a client-supplied coffee id.
+  - **Auth/security**: no gate on this branch, by design; the existing authenticated identity rule (`user_id` + coffee) is never consulted by this path, and a signed-in verified customer continues to see and use only the existing authenticated branch.
+  - **Realtime**: none.
+  - **EN/AR/RTL**: new dialog copy added to the message catalogue (both languages) — required-field labels distinct from the RFQ form's (this one additionally requires address/country).
+  - **Tests required**: Playwright — anonymous visitor on a coffee/offer detail page → "Request sample" → submit name/email/phone/address/country → confirmation with a request code; same normalized email + same coffee again while active → `DUPLICATE_SAMPLE` with the existing code; a **different** coffee → succeeds independently; after Admin closes the first request → a new request for that same email+coffee succeeds; the offer/coffee becoming unavailable between page load and submission → rejected (`NOT_FOUND`), not created against a stale offer.
+  - **Runtime acceptance condition**: `spec.md` FR-071, FR-073, FR-074, FR-076, FR-079 (sample half) hold — active states exactly `NEW`/`RECEIVED`/`CONTACTED`/`SAMPLE_SENT`/`DELIVERED`; `CLOSED` frees a new request; no quantity/order/reservation/shipping/checkout field or side effect anywhere.
+  - **Out of scope**: any change to the authenticated sample-request flow or its `user_id`+coffee duplicate rule.
+
+- [x] OA-T07 Owner content/buyer-journey alignment on existing pages only
+  - **Goal**: Audit Home, About, and Contact as they exist today; add only the owner-supplied copy/positioning that is genuinely missing — Dubai-first positioning, "Source a Coffee," "Buy Available Lots," "Trade With Hills" (as non-executable positioning/navigation only), and traceability/quality/sourcing-proof content — as sections on those existing pages. Every "Request an Offer" CTA added anywhere links to `/request-a-quote`.
+  - **Dependencies**: OA-T05 (a CTA should not be added pointing anonymous visitors at `/request-a-quote` until its anonymous branch actually works).
+  - **Files/modules**: `src/app/[locale]/(site)/page.tsx` (home), `about/page.tsx`, `contact/page.tsx` — sections only, no new files unless a genuinely new section component is needed for one piece of copy.
+  - **KEEP**: every existing section on these three pages exactly as-is; this task only adds, it does not restructure or remove.
+  - **REFACTOR/MOVE/REMOVE**: none.
+  - **Supabase/DB contract**: none — this is a content/copy task, not a data-layer change; if a page's CMS override already covers a piece of this content, that override is respected and not duplicated in the static fallback.
+  - **Auth/security**: FR-082 applies to every new section — "Buy Available Lots" and "Trade With Hills" are copy/navigation only; no cart, checkout, payment, seller-onboarding, or custody control is added anywhere, ever.
+  - **Realtime**: none.
+  - **EN/AR/RTL**: every new section's copy is written fresh into `messages/en.json`/`messages/ar.json` (never a `locale === "ar"` ternary), in both languages, with real owner-supplied copy only — an honest absence, not invented text, where the owner has not yet supplied copy for a given item.
+  - **Tests required**: message-parity test extended to cover the new keys; a visual check in both themes and both locales that no new section breaks layout at 375/768/1440.
+  - **Runtime acceptance condition**: the content/journey audit table in `plan.md` section E is satisfied item-by-item; zero new routes were created to satisfy it.
+  - **Out of scope**: any dedicated new marketing route for "Source a Coffee," "Buy Available Lots," or "Trade With Hills" — explicitly forbidden by the owner's page-structure decision.
+
+- [x] OA-T08 EN/AR, RTL, theme, responsive, and accessibility pass on both changed surfaces
+  - **Goal**: Run the same discipline already applied to every other public surface in this project against exactly the two surfaces this addendum changed — `/request-a-quote`'s new anonymous branch and the coffee/offer detail page's new anonymous sample dialog — plus the content sections from OA-T07: EN/AR parity, correct RTL (including the request code staying `dir="ltr"` inside RTL, matching the existing authenticated pattern), light/dark contrast, 375/768/1024/1280/1440 responsiveness, reduced-motion behavior (the new forms and dialog must not introduce any motion beyond the existing `SectionReveal`/`ImageReveal`/`ModalDialog` primitives), and WCAG 2.2 AA (labels, `aria-invalid`, focus order, 44×44px targets, visible focus in both themes).
+  - **Dependencies**: OA-T05, OA-T06, OA-T07.
+  - **Files/modules**: no new files expected — this task fixes whatever the audit below finds, in whichever of OA-T05/T06/T07's files the finding lives in.
+  - **KEEP**: every already-correct primitive reused by the new forms/dialog (`ModalDialog`, `SectionReveal`, `ImageReveal`, the existing `AdminField`-equivalent public form field pattern) — this task does not rebuild anything already proven.
+  - **REFACTOR/MOVE/REMOVE**: fix defects found by the audit only; no unrelated refactor.
+  - **Supabase/DB contract**: none.
+  - **Auth/security**: none beyond confirming the anonymous branches remain visually and behaviorally distinct from a "not found"/error state (never confusing "no session" with "does not exist").
+  - **Realtime**: none.
+  - **EN/AR/RTL**: this task's entire purpose.
+  - **Tests required**: axe-core scan of both changed surfaces in both locales/themes; a keyboard-only script for the new sample-request dialog (open, tab-cycle stays inside, Escape closes, focus restores to the trigger) mirroring `P7-T05`'s existing script for the authenticated dialog; a `prefers-reduced-motion` pass confirming both new surfaces remain fully visible/reachable with motion removed.
+  - **Runtime acceptance condition**: `spec.md` FR-052 through FR-059 hold for both changed surfaces specifically — zero missing/mismatched translation key, zero contrast failure, zero horizontal overflow, zero focus-trap defect.
+  - **Out of scope**: any accessibility work on surfaces this addendum did not touch (already covered by Phase 11's closed gate).
+
+- [x] OA-T09 Security regression: anonymous, Verified USER, and Admin
+  - **Goal**: Prove the addendum's authorization boundary holds exactly as specified, across all three affected personas, with real evidence — not by inspecting source.
+  - **Dependencies**: OA-T01 through OA-T08.
+  - **Files/modules**: `tests/e2e/**` (new assertions extending the existing anonymous/authenticated suites, not a parallel test framework).
+  - **KEEP**: every existing passing assertion in the suites being extended — this task adds cases, it does not loosen any existing one.
+  - **REFACTOR/MOVE/REMOVE**: none.
+  - **Supabase/DB contract**: a direct `anon`-key `INSERT` attempt against `public.inquiries`, bypassing `submit_public_inquiry` entirely, confirmed still denied by RLS (re-run from OA-T02, now as a full regression check rather than a one-time migration-authoring probe).
+  - **Auth/security**: **Anonymous** — protected Hills price hidden on every surface this addendum touches; no account/favorites/private-inventory/marketplace-trading capability granted by either new form; direct table INSERT still denied. **Verified USER** — protected price, sample-request behavior, and favorites/account all unchanged (re-run the existing Phase 4/6/7 suites unmodified as the proof). **Admin** — the `GENERAL` RFQ and the anonymous `SAMPLE_REQUEST` both appear in the existing Lead Inbox using existing fields/filters/status controls, with zero new Admin UI; the existing status-transition workflow is unchanged.
+  - **Realtime**: none beyond confirming no new subscription was introduced.
+  - **EN/AR/RTL**: security-relevant messages (denial, rate-limit, duplicate) checked in both languages.
+  - **Tests required**: the full list above, each as its own assertion with an attached artifact.
+  - **Runtime acceptance condition**: `spec.md`'s FR-030/FR-031 (protected pricing), owner decisions 3–5 (no capability leak; Verified USER unchanged), and FR-080 (Admin needs no new UI) all hold with evidence.
+  - **Out of scope**: any change to authorization semantics anywhere in the product — this task only proves the existing boundary was not moved.
+
+- [x] OA-T10 Full functional acceptance matrix
+  - **Goal**: Run the complete scenario list from `quickstart.md`'s "Pre-Phase 12 Owner Alignment Addendum: validation" section end-to-end, producing one artifact per row.
+  - **Dependencies**: OA-T01 through OA-T09.
+  - **Files/modules**: `tests/e2e/**`.
+  - **KEEP**: the full existing suite (unit 139, integration 105, Phase 7/9/10/11 Playwright suites) passing unmodified — this addendum's gate is additive to Phase 11's already-closed one, never a replacement for it.
+  - **REFACTOR/MOVE/REMOVE**: none.
+  - **Supabase/DB contract**: all fixture rows created during this run are tagged `[QA-...]`/disposable and removed afterward; the owner-approved persistent Phase 6 QA catalog rows are never touched.
+  - **Auth/security**: covered by OA-T09; this task's focus is functional correctness (duplicate rules, confirmation codes, field requirements), not the authorization boundary itself.
+  - **Realtime**: none beyond what OA-T09 already covers.
+  - **EN/AR/RTL**, light/dark, mobile: every scenario run across EN/AR, light/dark, and at minimum 375/1280 widths, per `quickstart.md`'s table.
+  - **Tests required**: anonymous `GENERAL` RFQ success; anonymous `SAMPLE_REQUEST` success; duplicate active anonymous sample blocked with the existing code returned; same email + a **different** coffee allowed; a new sample after `CLOSED` allowed; `PRODUCT` without a user still denied; honeypot rejected silently; per-IP and per-email rate limits both trigger `RATE_LIMITED`; the on-screen request-code confirmation renders correctly in both languages; no protected data (price, account, favorites, marketplace control) leaks anywhere in HTML/response/error text; console/pageerror clean on both changed surfaces; the full existing regression suite named above passes unmodified.
+  - **Runtime acceptance condition**: every row in `quickstart.md`'s addendum section has an attached artifact, per Constitution Principle XIV — none is considered proven by file existence or by this task list being checked off.
+  - **Out of scope**: any new capability not already specified in `spec.md`'s addendum section.
+
+- [x] OA-T11 **PRE-PHASE 12 OWNER ALIGNMENT ACCEPTANCE GATE**
+  - **Goal**: Confirm the entire addendum — both migrations, the server boundary, anti-abuse, both public flows, the content alignment, and the full regression/acceptance matrix — is correct and evidenced before Phase 12 begins.
+  - **Dependencies**: OA-T01 through OA-T10.
+  - **Runtime acceptance condition** (per `plan.md`'s addendum section F): all conditions in OA-T09 and OA-T10 hold with recorded evidence; Migration A's already-applied status and Migration B's pending-owner-approval status are both correctly reflected in their respective files; `/request-a-quote` is the only RFQ route in the product.
+  - **Out of scope**: any Phase 12 task beginning before this gate passes. This gate does not itself constitute Phase 12 work and does not renumber or rename anything in the Phase 0–13 sequence above.

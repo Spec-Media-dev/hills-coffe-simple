@@ -13,6 +13,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/coffee-origins",
     "/knowledge",
     "/contact",
+    // Public since the Owner Alignment addendum: an anonymous visitor can
+    // complete a real RFQ here, so it is indexable and belongs in the map.
+    "/request-a-quote",
   ];
   const cmsPaths = new Set([
     "/about",

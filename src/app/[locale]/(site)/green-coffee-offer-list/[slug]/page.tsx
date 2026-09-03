@@ -51,6 +51,7 @@ export default async function CoffeePage({
   const actions = await getTranslations("actions");
   const catalog = await getTranslations("catalog");
   const inquiry = await getTranslations("inquiry");
+  const publicInquiry = await getTranslations("publicInquiry");
   const viewer = await getViewer();
   const prices: Map<string, { minBags: number; pricePerKgUsd: number }[]> =
     viewer?.emailVerified
@@ -92,6 +93,11 @@ export default async function CoffeePage({
     sampleSend: inquiry("sampleSend"),
     verify: inquiry("verify"),
     close: inquiry("close"),
+    // The anonymous sample dialog's own heading/description, kept in the
+    // public namespace so it reads to a visitor with no account rather than
+    // reusing the signed-in dialog's wording.
+    publicSampleTitle: publicInquiry("sampleTitle"),
+    publicSampleBody: publicInquiry("sampleIntro"),
   };
   return (
     <>
