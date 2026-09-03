@@ -1,11 +1,15 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { SafeMarkdown } from "@/components/content/safe-markdown";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import type { Locale } from "@/i18n/routing";
-import { getArticleBySlug } from "@/lib/data/editorial";
+import {
+  getArticleBySlug,
+  resolveArticleSlugForLocale,
+} from "@/lib/data/editorial";
 import { getSiteSettings } from "@/lib/data/site-content";
 import { env } from "@/lib/env";
 import { articleJsonLd } from "@/lib/seo/article";
@@ -21,6 +25,15 @@ export async function generateMetadata({
     ? localizedMetadata({
         locale: locale as Locale,
         path: `/knowledge/${slug}`,
+        // Each language links to the slug it actually serves.
+        paths: {
+          en: article.slugByLocale.en
+            ? `/knowledge/${article.slugByLocale.en}`
+            : undefined,
+          ar: article.slugByLocale.ar
+            ? `/knowledge/${article.slugByLocale.ar}`
+            : undefined,
+        },
         title: article.seoTitle || article.title,
         description: article.seoDescription || article.excerpt || undefined,
       })
@@ -35,7 +48,25 @@ export default async function ArticlePage({
     getSiteSettings(locale as Locale),
     getTranslations("nav"),
   ]);
-  if (!article) notFound();
+  if (!article) {
+    /*
+     * The slug may belong to this article in another language.
+     *
+     * Article slugs are per-translation, so switching language carried the
+     * English slug into `/ar/knowledge/...` and 404'd. Rather than teach the
+     * shared language switcher about every route's slug scheme, the route
+     * resolves its own: if some article owns this slug in any locale, send the
+     * reader to the slug this locale actually serves. This also repairs stale
+     * and shared links, and works without JavaScript.
+     *
+     * When nothing owns the slug — or the article has no translation here —
+     * the original 404 stands; no URL is invented.
+     */
+    const localized = await resolveArticleSlugForLocale(slug, locale as Locale);
+    if (localized && localized !== slug)
+      redirect({ href: `/knowledge/${localized}`, locale: locale as Locale });
+    notFound();
+  }
   const jsonLd = articleJsonLd({
     article,
     locale: locale as Locale,

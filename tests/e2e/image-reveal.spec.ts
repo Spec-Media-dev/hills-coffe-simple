@@ -131,8 +131,23 @@ test.describe("ImageReveal renders its image in every engine", () => {
             if (message.type() === "error") {
               const text = message.text();
               // A 404 on the document itself is not an application error.
-              if (!/Failed to load resource/.test(text))
-                consoleErrors.push(`console: ${text}`);
+              if (/Failed to load resource/.test(text)) return;
+              /*
+               * Nor is Firefox's cookie-policy notice for `__cf_bm`.
+               *
+               * Supabase storage sits behind Cloudflare, which sets that
+               * bot-management cookie on the image response. Firefox rejects
+               * it as a third-party cookie for that domain and reports the
+               * rejection as a console *error*; Chromium says nothing. It is
+               * a cookie we do not set, cannot control, and which has no
+               * effect on the page — the images it is attached to decode
+               * fine, which the naturalWidth assertions above already prove.
+               *
+               * Deliberately matched narrowly on that one cookie name so a
+               * genuine cross-origin or CSP error still fails this test.
+               */
+              if (/Cookie .*__cf_bm.* has been rejected/.test(text)) return;
+              consoleErrors.push(`console: ${text}`);
             }
           });
 
@@ -142,7 +157,9 @@ test.describe("ImageReveal renders its image in every engine", () => {
 
           const states = await readReveals(page);
           const label = `${viewport.name}-${locale}-${theme}-${testInfo.project.name}`;
-          expect(states.length, `${label}: no reveals found`).toBeGreaterThan(0);
+          expect(states.length, `${label}: no reveals found`).toBeGreaterThan(
+            0,
+          );
           expect(describeFailures(states, label)).toBe("");
 
           // Every revealed image must also have decoded to real content.
@@ -161,7 +178,9 @@ test.describe("ImageReveal renders its image in every engine", () => {
           expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
         });
 
-  test("every other page using the primitive reveals too", async ({ page }, testInfo) => {
+  test("every other page using the primitive reveals too", async ({
+    page,
+  }, testInfo) => {
     test.setTimeout(120_000);
     // The primitive is shared, so a fix that only worked on the homepage
     // would be a patch rather than a fix.
@@ -170,9 +189,9 @@ test.describe("ImageReveal renders its image in every engine", () => {
       await page.goto(path);
       await scrollThrough(page);
       const states = await readReveals(page);
-      expect(
-        describeFailures(states, `${path} ${testInfo.project.name}`),
-      ).toBe("");
+      expect(describeFailures(states, `${path} ${testInfo.project.name}`)).toBe(
+        "",
+      );
     }
   });
 
@@ -196,7 +215,10 @@ test.describe("ImageReveal renders its image in every engine", () => {
     await scrollThrough(page);
     const afterScroll = await readReveals(page);
     expect(
-      describeFailures(afterScroll, `reduced-motion scrolled ${testInfo.project.name}`),
+      describeFailures(
+        afterScroll,
+        `reduced-motion scrolled ${testInfo.project.name}`,
+      ),
     ).toBe("");
     await context.close();
   });
@@ -207,7 +229,9 @@ test.describe("ImageReveal renders its image in every engine", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/");
     const closedAtStart = await page.evaluate(() => {
-      const clips = [...document.querySelectorAll('[data-motion="image-clip"]')];
+      const clips = [
+        ...document.querySelectorAll('[data-motion="image-clip"]'),
+      ];
       return clips.some((clip) =>
         /100%/.test(getComputedStyle(clip as HTMLElement).clipPath),
       );

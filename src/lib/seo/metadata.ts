@@ -11,17 +11,29 @@ export function localizedUrl(locale: Locale, path = "") {
 export function localizedMetadata({
   locale,
   path,
+  paths,
   title,
   description,
   robots,
 }: {
   locale: Locale;
   path: string;
+  /**
+   * Per-locale paths, for routes whose URL is not the same in every language.
+   *
+   * Most routes are the same path under a different prefix, so `path` alone is
+   * right. A Knowledge article is not: its slug lives in the translation row,
+   * so `/knowledge/green-coffee-complete-guide` and
+   * `/ar/knowledge/dalil-alqahwa-al-khadra` are the same article. Without this
+   * the `hreflang` alternates pointed at a URL that 404s.
+   */
+  paths?: Partial<Record<Locale, string>>;
   title: string;
   description?: string;
   robots?: Metadata["robots"];
 }): Metadata {
-  const canonical = localizedUrl(locale, path);
+  const pathFor = (target: Locale) => paths?.[target] ?? path;
+  const canonical = localizedUrl(locale, pathFor(locale));
   const alternateLocale = locale === "en" ? "ar_EG" : "en_US";
   return {
     title,
@@ -30,9 +42,9 @@ export function localizedMetadata({
     alternates: {
       canonical,
       languages: {
-        en: localizedUrl("en", path),
-        ar: localizedUrl("ar", path),
-        "x-default": localizedUrl("en", path),
+        en: localizedUrl("en", pathFor("en")),
+        ar: localizedUrl("ar", pathFor("ar")),
+        "x-default": localizedUrl("en", pathFor("en")),
       },
     },
     openGraph: {

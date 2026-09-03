@@ -312,14 +312,26 @@ export async function getArticles(locale: Locale) {
   }
 
   return live.flatMap((row) => {
-    const t = pickTranslation(
-      (translationsQ.data ?? []).filter((x) => x.article_id === row.id),
-      locale,
+    const rowTranslations = (translationsQ.data ?? []).filter(
+      (x) => x.article_id === row.id,
     );
+    const t = pickTranslation(rowTranslations, locale);
+    /*
+     * Every locale's slug for this article, from translations already loaded
+     * above — no extra query. An article's slug is per-translation, so the
+     * English and Arabic URLs for the same article genuinely differ, and
+     * anything that needs to cross between them (hreflang, the language
+     * switcher) needs the counterpart rather than the current one.
+     */
+    const slugByLocale: Partial<Record<Locale, string>> = {};
+    for (const translation of rowTranslations)
+      if (translation.slug)
+        slugByLocale[translation.locale as Locale] = String(translation.slug);
     return t.translation
       ? [
           {
             ...row,
+            slugByLocale,
             slug: t.translation.slug,
             title: t.translation.title,
             excerpt: t.translation.excerpt,
@@ -337,4 +349,28 @@ export async function getArticles(locale: Locale) {
 }
 export async function getArticleBySlug(slug: string, locale: Locale) {
   return (await getArticles(locale)).find((x) => x.slug === slug) ?? null;
+}
+
+/**
+ * Finds the slug this article uses in `locale`, given its slug in any locale.
+ *
+ * Switching language on an article detail page previously kept the current
+ * slug and only swapped the locale prefix, so an article whose Arabic
+ * translation has its own slug 404'd. This resolves the counterpart from the
+ * translation rows instead.
+ *
+ * Returns `null` when no article owns that slug, and when the article exists
+ * but has no translation in the requested locale — both cases leave the caller
+ * free to keep the project's existing fallback rather than invent a URL.
+ */
+export async function resolveArticleSlugForLocale(
+  slug: string,
+  locale: Locale,
+): Promise<string | null> {
+  // Any locale is fine for the lookup: `slugByLocale` carries them all.
+  const articles = await getArticles(locale);
+  const match = articles.find((article) =>
+    Object.values(article.slugByLocale).includes(slug),
+  );
+  return match?.slugByLocale[locale] ?? null;
 }

@@ -105,6 +105,21 @@ const coffeeSchema = z.object({
   nameAr: z.string().trim().min(1, "required").max(200, "tooLong"),
   descriptionEn: optionalText(1000),
   descriptionAr: optionalText(1000),
+  // Both columns already exist and already drive the home page's Current
+  // highlights band; only the Admin control was missing. Same string-enum
+  // shape the offer form's visibility uses, so a form post cannot smuggle a
+  // non-boolean through.
+  isFeatured: z.enum(["true", "false"], { message: "required" }),
+  // `featured_sort_order` is NOT NULL with a default of 0, so an empty box
+  // means "no explicit order" rather than an error.
+  featuredSortOrder: z.preprocess(
+    (value) => (value === "" || value === undefined ? 0 : value),
+    z.coerce
+      .number({ message: "invalidNumber" })
+      .int("invalidNumber")
+      .min(0, "mustNotBeNegative")
+      .max(9999, "tooLarge"),
+  ),
 });
 
 export async function saveCoffeeAction(
@@ -160,6 +175,8 @@ export async function saveCoffeeAction(
     processing_method_id: input.processingMethodId,
     grade: input.grade,
     status: input.status,
+    is_featured: input.isFeatured === "true",
+    featured_sort_order: input.featuredSortOrder,
     published_at:
       input.status === "PUBLISHED" ? new Date().toISOString() : null,
     updated_by: adminId,

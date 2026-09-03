@@ -812,7 +812,14 @@
       "variety": "الأصناف",
       "visibility": "الظهور",
       "visible": "ظاهر",
-      "warehouse": "المخزن"
+      "warehouse": "المخزن",
+      "featured": "إظهار كمحصول مميز",
+      "selectFeatured": "اختر",
+      "optionYes": "نعم",
+      "optionNo": "لا",
+      "featuredHint": "تظهر المحاصيل المميزة في قسم أبرز المحاصيل على الصفحة الرئيسية.",
+      "featuredOrder": "ترتيب العرض",
+      "featuredOrderHint": "الأرقام الأقل تظهر أولاً. يُطبَّق فقط عندما يكون الإظهار كمحصول مميز \"نعم\"."
     },
     "leads": {
       "actionsSection": "تحديث الحالة",

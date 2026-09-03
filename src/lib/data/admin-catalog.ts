@@ -249,6 +249,8 @@ export type AdminCoffeeRecord = {
   processingMethodId: string | null;
   grade: string | null;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  isFeatured: boolean;
+  featuredSortOrder: number;
   nameEn: string;
   nameAr: string;
   descriptionEn: string;
@@ -274,7 +276,7 @@ export async function getAdminCoffee(
   const { data: coffee } = await db
     .from("coffees")
     .select(
-      "id,slug,coffee_type_id,origin_id,region_id,processing_method_id,grade,status",
+      "id,slug,coffee_type_id,origin_id,region_id,processing_method_id,grade,status,is_featured,featured_sort_order",
     )
     .eq("id", coffeeId)
     .is("deleted_at", null)
@@ -367,6 +369,8 @@ export async function getAdminCoffee(
       : null,
     grade: coffee.grade ? String(coffee.grade) : null,
     status: coffee.status as AdminCoffeeRecord["status"],
+    isFeatured: Boolean(coffee.is_featured),
+    featuredSortOrder: Number(coffee.featured_sort_order ?? 0),
     nameEn: String(en?.name ?? ""),
     nameAr: String(ar?.name ?? ""),
     descriptionEn: String(en?.short_description ?? ""),

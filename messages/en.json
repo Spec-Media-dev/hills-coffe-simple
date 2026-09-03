@@ -812,7 +812,14 @@
       "variety": "Varieties",
       "visibility": "Visibility",
       "visible": "Visible",
-      "warehouse": "Warehouse"
+      "warehouse": "Warehouse",
+      "featured": "Show as featured",
+      "selectFeatured": "Select",
+      "optionYes": "Yes",
+      "optionNo": "No",
+      "featuredHint": "Featured coffees appear in Current highlights on the home page.",
+      "featuredOrder": "Featured order",
+      "featuredOrderHint": "Lower numbers appear first. Only applies while Show as featured is Yes."
     },
     "leads": {
       "actionsSection": "Update status",

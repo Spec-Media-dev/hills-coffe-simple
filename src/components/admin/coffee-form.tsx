@@ -34,6 +34,9 @@ export function CoffeeForm({
   const t = useTranslations("admin.catalog");
   const [originId, setOriginId] = useState(record?.originId ?? "");
   const [regionId, setRegionId] = useState(record?.regionId ?? "");
+  const [isFeatured, setIsFeatured] = useState(
+    record?.isFeatured ? "true" : "false",
+  );
 
   const regionsForOrigin = options.regions.filter(
     (region) => region.originId === originId,
@@ -78,6 +81,53 @@ export function CoffeeForm({
           label={t("grade")}
           defaultValue={record?.grade}
         />
+      </fieldset>
+
+      {/*
+       * `is_featured` and `featured_sort_order` already existed on `coffees`
+       * and already drove the home page's Current highlights band; the only
+       * thing missing was a way to set them outside the Supabase table editor.
+       */}
+      <fieldset className={sectionClass}>
+        <legend className="px-1 text-xs font-bold tracking-wider text-muted-foreground uppercase">
+          {t("featured")}
+        </legend>
+        <p className="text-xs leading-5 text-muted-foreground md:col-span-2 xl:col-span-3">
+          {t("featuredHint")}
+        </p>
+        <AdminSelect
+          name="isFeatured"
+          label={t("featured")}
+          placeholder={t("selectFeatured")}
+          value={isFeatured}
+          onValueChange={setIsFeatured}
+          options={[
+            { id: "true", label: t("optionYes") },
+            { id: "false", label: t("optionNo") },
+          ]}
+        />
+        {/*
+         * De-emphasised rather than `disabled` when not featured: a disabled
+         * input is omitted from the form post, so unfeaturing a coffee would
+         * silently reset its stored order to the column default. The value
+         * stays submittable and simply reads as inactive.
+         */}
+        <div
+          className={
+            isFeatured === "true" ? undefined : "opacity-55 transition-opacity"
+          }
+        >
+          <AdminField
+            name="featuredSortOrder"
+            label={t("featuredOrder")}
+            hint={t("featuredOrderHint")}
+            type="number"
+            min="0"
+            step="1"
+            dir="ltr"
+            defaultValue={record?.featuredSortOrder ?? 0}
+          />
+        </div>
       </fieldset>
 
       <fieldset className={sectionClass}>
