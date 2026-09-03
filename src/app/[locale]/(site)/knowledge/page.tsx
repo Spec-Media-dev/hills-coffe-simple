@@ -69,7 +69,10 @@ export default async function KnowledgePage({
                     {articles[0].title}
                   </h2>
                   {articles[0].excerpt ? (
-                    <p className="mt-6 max-w-xl leading-7 text-[#33483f]">
+                    // #33483f measured 3.42:1 on the gold band, below AA.
+                    // #17251c is what the other gold bands already use and
+                    // measures 5.55:1.
+                    <p className="mt-6 max-w-xl leading-7 text-[#17251c]">
                       {articles[0].excerpt}
                     </p>
                   ) : null}

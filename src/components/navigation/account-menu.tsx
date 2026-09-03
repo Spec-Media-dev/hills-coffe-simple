@@ -98,7 +98,17 @@ export function AccountMenu({
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         aria-label={labels.open}
-        className="flex h-11 min-h-11 items-center gap-2 rounded-full border border-border bg-card ps-1 pe-3 transition hover:border-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        /*
+         * Below `sm` this collapses to a 44px circle carrying just the avatar.
+         * The signed-in header has one control more than the signed-out one
+         * (the sign-in link is `hidden sm:flex`), and at 360px the full pill
+         * pushed the row to 388px inside a 340px container — in Arabic that
+         * clipped the whole control group off the leading edge. Nothing is
+         * hidden here: the menu is still present, still a 44px target, and
+         * still opens the same panel. Only the name and chevron — both
+         * redundant beside an avatar — wait for room.
+         */
+        className="flex h-11 min-h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition hover:border-gold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:w-auto sm:justify-start sm:gap-2 sm:ps-1 sm:pe-3"
       >
         <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-xs font-bold text-gold-bright">
           {avatarUrl ? (
@@ -117,7 +127,10 @@ export function AccountMenu({
         <span className="hidden max-w-[9rem] truncate text-xs font-bold sm:inline">
           {name}
         </span>
-        <ChevronDown className="size-4 shrink-0" aria-hidden="true" />
+        <ChevronDown
+          className="hidden size-4 shrink-0 sm:block"
+          aria-hidden="true"
+        />
       </button>
 
       {open ? (

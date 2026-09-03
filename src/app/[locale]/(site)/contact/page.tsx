@@ -11,6 +11,7 @@ import {
   getSiteSettings,
   getWarehouses,
 } from "@/lib/data/site-content";
+import { getViewer } from "@/lib/auth/session";
 import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 
@@ -36,10 +37,14 @@ export default async function ContactPage({
   setRequestLocale(locale);
   const t = await getTranslations("contact");
   const actions = await getTranslations("actions");
-  const [page, settings, warehouses] = await Promise.all([
+  const nav = await getTranslations("nav");
+  const [page, settings, warehouses, viewer] = await Promise.all([
     getSitePage("contact", locale as Locale),
     getSiteSettings(locale as Locale),
     getWarehouses(locale as Locale),
+    // Display state only: `getViewer()` returns `Viewer | null` and has no
+    // side effects, so a public page can ask "is anyone signed in?" safely.
+    getViewer(),
   ]);
   return (
     <>
@@ -95,20 +100,43 @@ export default async function ContactPage({
             </div>
           </SectionReveal>
           <SectionReveal className="bg-primary p-7 text-primary-foreground md:p-10">
-            <p className="text-xl leading-8">{t("intro")}</p>
+            {/* This card used to repeat `contact.intro` word for word, which
+                the hero above already shows. It now carries its own line. */}
+            <h2 className="font-heading text-3xl leading-tight font-bold">
+              {t("ctaTitle")}
+            </h2>
+            <p className="mt-4 text-base leading-7 text-white/72">
+              {t("ctaBody")}
+            </p>
             <div className="mt-8 flex flex-wrap gap-3">
+              {/* Requesting an offer is the primary commercial action here,
+                  for everyone — it does not depend on having an account. */}
               <Link
-                href="/sign-in"
-                className="rounded-full bg-highlight px-6 py-3 text-sm font-bold text-white"
+                href="/request-a-quote"
+                className="rounded-full bg-gold px-6 py-3 text-sm font-bold text-[#0b241d] transition-colors hover:bg-gold-bright"
               >
-                {actions("signin")}
+                {actions("requestOffer")}
               </Link>
-              <Link
-                href="/sign-up"
-                className="rounded-full border border-white/25 px-6 py-3 text-sm font-bold"
-              >
-                {actions("inquire")}
-              </Link>
+              {/*
+               * The secondary action follows the session. Telling someone who
+               * is already signed in to sign in was the defect; sending them
+               * to their account is the useful equivalent.
+               */}
+              {viewer ? (
+                <Link
+                  href="/account"
+                  className="rounded-full border border-white/25 px-6 py-3 text-sm font-bold transition-colors hover:bg-white/10"
+                >
+                  {nav("account")}
+                </Link>
+              ) : (
+                <Link
+                  href="/sign-in"
+                  className="rounded-full border border-white/25 px-6 py-3 text-sm font-bold transition-colors hover:bg-white/10"
+                >
+                  {actions("signin")}
+                </Link>
+              )}
             </div>
           </SectionReveal>
           <ImageReveal className="relative min-h-[22rem] bg-muted">
@@ -124,7 +152,7 @@ export default async function ContactPage({
       </section>
       <WarehouseSection
         warehouses={warehouses}
-        title={t("details")}
+        title={t("warehouses")}
         intro={t("eyebrow")}
         empty={t("warehousesEmpty")}
       />

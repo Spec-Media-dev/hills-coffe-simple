@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronDown, MapPin, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
@@ -63,11 +63,19 @@ export function CatalogMegaMenu({
       </button>
       <AnimatePresence>
         {open ? (
-          <MegaMenuReveal className="absolute top-[calc(100%-1px)] start-1/2 z-50 w-[min(760px,calc(100vw-3rem))] -translate-x-1/2">
+          /*
+           * `start-1/2` is logical — it resolves to `right: 50%` under RTL —
+           * but `translate-x` is physical and always moves left. Together they
+           * cancel in LTR and compound in RTL, which put the Arabic panel 760px
+           * from its trigger with its leading edge at roughly -204px, off the
+           * side of the page. The RTL override flips the translate so the two
+           * agree in both directions.
+           */
+          <MegaMenuReveal className="absolute top-[calc(100%-1px)] start-1/2 z-50 w-[min(720px,calc(100vw-3rem))] -translate-x-1/2 rtl:translate-x-1/2">
             <nav
               id="catalog-mega-menu"
               aria-label={labels.trigger}
-              className="grid grid-cols-[1.05fr_.95fr] overflow-hidden border border-border bg-card shadow-[0_28px_80px_rgb(23_60_50/.2)]"
+              className="grid grid-cols-[1.22fr_1fr] overflow-hidden border border-border bg-card shadow-[0_28px_80px_rgb(23_60_50/.2)]"
             >
               <div className="bg-primary p-7 text-primary-foreground">
                 <p className="eyebrow !text-gold-contrast">{labels.trigger}</p>
@@ -94,42 +102,45 @@ export function CatalogMegaMenu({
                   {labels.pricing}
                 </p>
               </div>
-              <div className="grid content-start p-4 text-sm">
+              {/* Rows are flush to the panel edge and share the left column's
+                  vertical rhythm, so the two halves read as one object. */}
+              <div className="grid content-start py-5 text-sm">
                 <Link
                   href="/coffee-origins"
                   onClick={() => setOpen(false)}
-                  className="border-b border-border px-4 py-4 font-bold hover:bg-muted"
+                  className="border-b border-border px-6 py-4 font-bold transition-colors hover:bg-muted focus-visible:bg-muted"
                 >
                   {labels.origins}
                 </Link>
-                <Link
-                  href="/green-coffee-offer-list?location=EGYPT"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 border-b border-border px-4 py-4 hover:bg-muted"
-                >
-                  <MapPin
-                    className="size-4 text-highlight"
-                    aria-hidden="true"
-                  />
-                  {labels.egypt}
-                </Link>
-                <Link
-                  href="/green-coffee-offer-list?location=DUBAI"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 border-b border-border px-4 py-4 hover:bg-muted"
-                >
-                  <MapPin
-                    className="size-4 text-highlight"
-                    aria-hidden="true"
-                  />
-                  {labels.dubai}
-                </Link>
+                {[
+                  { href: "?location=EGYPT", label: labels.egypt },
+                  { href: "?location=DUBAI", label: labels.dubai },
+                ].map((entry) => (
+                  <Link
+                    key={entry.href}
+                    href={`/green-coffee-offer-list${entry.href}`}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 border-b border-border px-6 py-4 transition-colors hover:bg-muted focus-visible:bg-muted"
+                  >
+                    <MapPin
+                      className="size-4 shrink-0 text-highlight"
+                      aria-hidden="true"
+                    />
+                    {entry.label}
+                  </Link>
+                ))}
                 <Link
                   href="/green-coffee-offer-list"
                   onClick={() => setOpen(false)}
-                  className="mt-3 bg-gold px-4 py-3 font-bold text-[#17251c] hover:bg-gold-bright"
+                  className="mx-6 mt-5 flex items-center justify-between gap-3 bg-gold px-4 py-3 font-bold text-[#17251c] transition-colors hover:bg-gold-bright"
                 >
-                  {labels.all} →
+                  {labels.all}
+                  {/* An icon, not a literal "→": the character cannot mirror,
+                      so in Arabic it pointed the wrong way. */}
+                  <ArrowRight
+                    className="size-4 shrink-0 rtl:-scale-x-100"
+                    aria-hidden="true"
+                  />
                 </Link>
               </div>
             </nav>

@@ -92,12 +92,40 @@ export async function findBrokenImages(page: Page): Promise<string[]> {
  */
 export async function findLowContrastText(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const luminance = (color: string) => {
-      const parts = color.match(/[\d.]+/g)?.map(Number) ?? [];
-      if (parts.length < 3) return null;
-      const [r, g, b] = parts;
-      // A fully transparent layer paints nothing.
-      if (parts.length > 3 && parts[3] === 0) return null;
+    /*
+     * Colours are resolved by painting them, not by parsing them.
+     *
+     * The previous implementation pulled the first three numbers out of the
+     * computed colour string and treated them as 0-255 RGB. Tailwind v4 emits
+     * `oklab(0.999994 0.0000456 0.0000201 / 0.55)` for `text-white/55`, so
+     * those three numbers were read as rgb(1, 0, 0) — near-black — and white
+     * text on a dark ground was reported at 1.73:1. It also ignored alpha
+     * entirely, so translucent text was scored as if it were opaque.
+     *
+     * Painting the colour onto a 1x1 canvas over its own background hands the
+     * compositing and the colour-space conversion to the browser, which gets
+     * `oklab`, `oklch`, `color-mix` and alpha right by construction.
+     */
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return [];
+
+    const composite = (
+      color: string,
+      base: string,
+    ): [number, number, number] => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, 1, 1);
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      return [r, g, b];
+    };
+
+    const luminance = ([r, g, b]: [number, number, number]) => {
       const channel = (value: number) => {
         const c = value / 255;
         return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -105,15 +133,17 @@ export async function findLowContrastText(page: Page): Promise<string[]> {
       return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
     };
 
-    const backgroundOf = (element: Element): number | null => {
+    /** The nearest ancestor that actually paints something opaque. */
+    const backgroundOf = (element: Element): string => {
       let node: Element | null = element;
       while (node) {
         const value = getComputedStyle(node).backgroundColor;
-        const lum = luminance(value);
-        if (lum !== null) return lum;
+        const parts = value.match(/[\d.]+/g)?.map(Number) ?? [];
+        const alpha = parts.length > 3 ? parts[3] : 1;
+        if (value && value !== "transparent" && alpha === 1) return value;
         node = node.parentElement;
       }
-      return luminance(getComputedStyle(document.body).backgroundColor);
+      return getComputedStyle(document.body).backgroundColor || "#ffffff";
     };
 
     const problems: string[] = [];
@@ -128,9 +158,9 @@ export async function findLowContrastText(page: Page): Promise<string[]> {
       const style = getComputedStyle(el);
       if (style.visibility === "hidden" || Number(style.opacity) === 0)
         continue;
-      const fg = luminance(style.color);
-      const bg = backgroundOf(el);
-      if (fg === null || bg === null) continue;
+      const base = backgroundOf(el);
+      const fg = luminance(composite(style.color, base));
+      const bg = luminance(composite(base, "#ffffff"));
       const ratio = (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
       if (ratio < 3)
         problems.push(

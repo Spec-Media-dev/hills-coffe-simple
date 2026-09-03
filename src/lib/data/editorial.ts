@@ -149,6 +149,86 @@ export async function getPublicOriginMedia(originId: string, locale: Locale) {
   });
 }
 
+/**
+ * One representative image per origin, for a list of origins at once.
+ *
+ * The origins index needs a picture for every row. Calling
+ * `getPublicOriginMedia()` per origin would work and is exactly what the
+ * detail page does, but it costs three round trips per origin — twenty
+ * origins would mean sixty queries to render one page. This does the same
+ * three queries with `in (...)` and buckets the result by origin.
+ *
+ * It is additive on purpose: `getPublicOriginMedia()` is untouched and the
+ * detail page still uses it. It reads the same three tables that function
+ * already reads publicly, so it exposes nothing new — it only exposes it
+ * more cheaply.
+ *
+ * "Representative" means the row tagged HERO, falling back to the lowest
+ * `sort_order`, which mirrors how the detail page picks its hero.
+ */
+export async function getPublicOriginHeroMedia(
+  originIds: string[],
+  locale: Locale,
+): Promise<Map<string, { url: string; alt: string }>> {
+  const out = new Map<string, { url: string; alt: string }>();
+  if (!isSupabaseConfigured() || !originIds.length) return out;
+  const db = await createSupabaseServerClient();
+
+  const linksQ = await db
+    .from("origin_media")
+    .select("origin_id,media_id,role,sort_order")
+    .in("origin_id", originIds)
+    .order("sort_order");
+  const links = linksQ.data ?? [];
+  const ids = [...new Set(links.map((link) => String(link.media_id)))];
+  if (linksQ.error || !ids.length) return out;
+
+  const [mediaQ, translationsQ] = await Promise.all([
+    db
+      .from("media")
+      .select("id,storage_bucket,storage_path,width,height")
+      .in("id", ids)
+      .is("deleted_at", null),
+    db
+      .from("media_translations")
+      .select("media_id,locale,alt_text")
+      .in("media_id", ids),
+  ]);
+  if (mediaQ.error || translationsQ.error) return out;
+
+  const { url } = getSupabaseConfig();
+  const media = new Map(
+    (mediaQ.data ?? []).map((item) => [String(item.id), item]),
+  );
+
+  // Links arrive ordered by sort_order, so the first usable row for an origin
+  // is already its fallback; a HERO row replaces whatever came before it.
+  const chosen = new Map<string, (typeof links)[number]>();
+  for (const link of links) {
+    const key = String(link.origin_id);
+    const current = chosen.get(key);
+    if (!current || (link.role === "HERO" && current.role !== "HERO"))
+      chosen.set(key, link);
+  }
+
+  for (const [originId, link] of chosen) {
+    const item = media.get(String(link.media_id));
+    if (!item?.width || !item.height) continue;
+    const translations = (translationsQ.data ?? []).filter(
+      (entry) => String(entry.media_id) === String(link.media_id),
+    );
+    const alt =
+      translations.find((entry) => entry.locale === locale)?.alt_text ??
+      translations.find((entry) => entry.locale === "en")?.alt_text ??
+      "";
+    out.set(originId, {
+      url: storagePublicUrl(url, item.storage_bucket, item.storage_path),
+      alt: String(alt),
+    });
+  }
+  return out;
+}
+
 export type ArticleMedia = {
   url: string;
   width: number;

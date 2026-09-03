@@ -41,7 +41,7 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header sticky top-0 z-40 border-b border-border/75 bg-background/92 backdrop-blur-xl">
-      <div className="site-container flex h-20 items-center justify-between gap-5">
+      <div className="site-container flex h-20 items-center justify-between gap-3 sm:gap-5">
         <Link
           href="/"
           className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -51,6 +51,7 @@ export async function SiteHeader() {
             priority
             label={brand("logoAlt")}
             logo={logo}
+            className="px-2 sm:px-3"
           />
         </Link>
         <nav
@@ -85,7 +86,7 @@ export async function SiteHeader() {
             <NavUnderline>{t("contact")}</NavUnderline>
           </Link>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
             href="/green-coffee-offer-list"
             className="hidden size-11 place-items-center rounded-full border border-border transition hover:border-gold hover:text-gold sm:grid"
