@@ -33,7 +33,8 @@
     "pricing": "Sign in to view pricing",
     "signin": "Sign in",
     "signout": "Sign out",
-    "view": "View coffee"
+    "view": "View coffee",
+    "requestOffer": "Request an offer"
   },
   "home": {
     "eyebrow": "Independent green coffee partner",
@@ -81,7 +82,48 @@
     "accessTitle": "Public catalogue, protected pricing",
     "accessBody": "Anyone can browse the catalogue and send a request. Contract pricing, saved coffees, and your request history live behind a verified account.",
     "browseLots": "Buy available lots",
-    "requestOffer": "Request an offer"
+    "heroEyebrow": "Dubai-based green coffee sourcing",
+    "heroTitle": "Buy coffee with a clearer line back to origin.",
+    "heroIntro": "Specialty-grade green coffee for roasters, HORECA operators, private labels and traders across the Arab region.",
+    "heroPrimary": "Request samples & pricing",
+    "heroHubLabel": "Sourcing hub",
+    "heroHubValue": "Dubai",
+    "heroOpsLabel": "Regional operations",
+    "heroOpsValue": "Egypt",
+    "heroTraceLabel": "Every lot",
+    "heroTraceValue": "Traceable to origin",
+    "heroSampleLabel": "Before commitment",
+    "heroSampleValue": "Samples first",
+    "pathsEyebrow": "Start with your requirement",
+    "pathsTitle": "One business. Three clear ways to buy.",
+    "path1Name": "Source a coffee",
+    "path1Who": "When you know the profile, not the lot",
+    "path1What": "Tell us the cup profile, process, volume, delivery market and timing. We come back with the right offer or a sourcing route.",
+    "path1Action": "Start a request",
+    "path2Name": "Buy available lots",
+    "path2Who": "When you want what is in store now",
+    "path2What": "Origin, process, grade, crop, minimum quantity and availability are published for every lot. Request a sample or a commercial quote.",
+    "path2Action": "Explore available lots",
+    "path3Name": "Trade with Hills",
+    "path3Who": "For approved commercial members",
+    "path3What": "Allocated inventory, storage, resale and settlement under agreed commercial controls. It is a private workspace, not a public exchange.",
+    "path3Badge": "Authorized access",
+    "path3Access": "Need access? Tell us about your business",
+    "traceEyebrow": "Evidence before persuasion",
+    "fOrigin": "Origin",
+    "fRegion": "Growing region",
+    "fProcess": "Processing method",
+    "fVariety": "Variety",
+    "fGrade": "Grade",
+    "fScore": "Cup score",
+    "fCrop": "Crop availability",
+    "fWarehouse": "Storage point",
+    "fReference": "Lot reference",
+    "fBags": "Bags and bag weight",
+    "fCerts": "Certifications",
+    "traceStatCoffees": "coffees published",
+    "traceStatOrigins": "origins on record",
+    "tradeEyebrowWorking": "How Hills works"
   },
   "footer": {
     "statement": "Green coffee selected globally, supported locally.",
@@ -172,7 +214,10 @@
     "warehousesEmpty": "No warehouse locations are published yet.",
     "hours": "Sunday–Thursday · 9:00–17:00",
     "metaTitle": "Contact Hills Coffee",
-    "metaDescription": "Contact the Hills Coffee team or find our published warehouse locations."
+    "metaDescription": "Contact the Hills Coffee team or find our published warehouse locations.",
+    "ctaTitle": "Tell us what you need.",
+    "ctaBody": "An offer request goes straight to the sourcing team, and you get a reference code back immediately.",
+    "warehouses": "Where we hold stock"
   },
   "auth": {
     "signinTitle": "Welcome back",
@@ -1183,7 +1228,10 @@
     "bags": "bags",
     "pricingSignIn": "Sign in to view pricing",
     "viewCoffee": "View coffee",
-    "cultivationProcessing": "Cultivation and processing"
+    "cultivationProcessing": "Cultivation and processing",
+    "statOrigins": "Origins",
+    "statCoffees": "Published coffees",
+    "statContinents": "Continents"
   },
   "inquiryStatus": {
     "NEW": "Submitted",

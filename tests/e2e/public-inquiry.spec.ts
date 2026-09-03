@@ -36,7 +36,10 @@ async function openSampleDialog(page: Page, path = "/green-coffee-offer-list") {
   await page.goto(path);
   await page.locator('a[href*="/green-coffee-offer-list/"]').first().click();
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: /request sample|اطلب عينة/i }).first().click();
+  await page
+    .getByRole("button", { name: /request sample|اطلب عينة/i })
+    .first()
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
 }
 
@@ -96,10 +99,15 @@ test.describe("anonymous public RFQ", () => {
     await page.goto("/request-a-quote");
     await page.locator('form button[type="submit"]').click();
     await expect(page.locator('[aria-invalid="true"]').first()).toBeVisible();
-    expect(await page.locator('[aria-invalid="true"]').count()).toBeGreaterThan(1);
+    expect(await page.locator('[aria-invalid="true"]').count()).toBeGreaterThan(
+      1,
+    );
     await expect(page.locator("form").getByRole("alert")).toBeVisible();
     // `noValidate` is what keeps the browser's own popup out of the way.
-    await expect(page.locator("form").first()).toHaveAttribute("novalidate", "");
+    await expect(page.locator("form").first()).toHaveAttribute(
+      "novalidate",
+      "",
+    );
   });
 
   test("keeps what was typed when the server rejects the submission", async ({
@@ -157,9 +165,10 @@ test.describe("anonymous public sample request", () => {
     await openSampleDialog(page);
     await fillSample(page, email);
     await page.getByRole("dialog").locator('button[type="submit"]').click();
-    await expect(
-      page.getByRole("dialog").getByRole("status"),
-    ).toContainText(REQUEST_CODE, { timeout: 30_000 });
+    await expect(page.getByRole("dialog").getByRole("status")).toContainText(
+      REQUEST_CODE,
+      { timeout: 30_000 },
+    );
 
     // Same person, same coffee, straight away.
     await openSampleDialog(page);
@@ -212,7 +221,10 @@ test.describe("anonymous public sample request", () => {
       .first()
       .locator("xpath=..");
     const signIn = controls.locator('a[href*="/sign-in"]');
-    await expect(signIn, "the PRODUCT control must still be a sign-in link").toBeVisible();
+    await expect(
+      signIn,
+      "the PRODUCT control must still be a sign-in link",
+    ).toBeVisible();
     // Still a link, never a form: the authenticated-only path is unchanged.
     await expect(signIn).toHaveCount(1);
   });
@@ -330,7 +342,10 @@ test.describe("anonymous submissions are throttled per address", () => {
 
     await page.goto("/green-coffee-offer-list");
     await page.locator('a[href*="/green-coffee-offer-list/"]').first().click();
-    await page.getByRole("button", { name: /request sample/i }).first().click();
+    await page
+      .getByRole("button", { name: /request sample/i })
+      .first()
+      .click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -470,18 +485,33 @@ test.describe("protected pricing never reaches an anonymous visitor", () => {
 });
 
 /**
- * Returns a short excerpt around a match, or null when the value is absent.
+ * CSS lengths, durations and angles that happen to equal a price.
  *
- * Matching is bounded by non-digits so `12.5` does not "leak" every time the
- * string 112.55 appears in a hash, a timestamp or a CSS length — a false
- * positive here would be as damaging to trust in this suite as a false pass.
+ * A tariff of $5.25/kg is also a plausible `5.25rem`, and the home hero's own
+ * type scale contains `clamp(2.75rem, 5.2vw, 5.25rem)`. Treating that as a
+ * leaked price would be a false alarm, and a scan that cries wolf gets muted —
+ * which is how a real leak eventually ships.
+ */
+const CSS_UNIT =
+  /^(?:rem|em|px|vw|vh|vmin|vmax|ch|ex|pt|pc|cm|mm|in|q|fr|deg|rad|turn|ms|s|%)\b/i;
+
+/**
+ * Returns a short excerpt around a genuine match, or null when the value is
+ * absent.
+ *
+ * Bounded by non-digits so `12.5` does not "leak" every time `112.55` appears
+ * in a hash or a timestamp, and unit-suffixed occurrences are skipped rather
+ * than the whole stylesheet being excluded — a price serialised into CSS would
+ * still be caught, only `5.25rem` is forgiven. A false positive here would be
+ * as damaging to trust in this suite as a false pass.
  */
 function leakContext(haystack: string, needle: string): string | null {
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-  const match = new RegExp(String.raw`(?<![\d.])${escaped}(?![\d])`).exec(
-    haystack,
-  );
-  return match
-    ? haystack.slice(Math.max(0, match.index - 60), match.index + 60)
-    : null;
+  const pattern = new RegExp(String.raw`(?<![\d.])${escaped}(?![\d])`, "g");
+  for (const match of haystack.matchAll(pattern)) {
+    const after = haystack.slice(match.index + needle.length).trimStart();
+    if (CSS_UNIT.test(after)) continue;
+    return haystack.slice(Math.max(0, match.index - 60), match.index + 60);
+  }
+  return null;
 }

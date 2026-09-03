@@ -309,6 +309,85 @@ export async function getCoffeeBySlug(slug: string, locale: Locale) {
   return offers.length ? { ...offers[0], offers } : null;
 }
 
+/**
+ * One representative image per coffee, for a small set of coffees at once.
+ *
+ * The home page's featured band shows at most four coffees. Calling
+ * `getPublicCoffeeMedia()` per coffee is what the detail page does and is
+ * right there, but it costs three round trips each; this does the same three
+ * queries with `in (...)` and buckets the result by coffee.
+ *
+ * Additive on purpose: `getPublicCoffeeMedia()` is untouched and the detail
+ * page still uses it. It reads the same three tables that function already
+ * reads publicly — no new exposure, and no price column is involved at any
+ * point.
+ *
+ * "Representative" means the row tagged HERO, falling back to the lowest
+ * `sort_order`, matching how the detail page picks its main image.
+ */
+export async function getPublicCoffeeHeroMedia(
+  coffeeIds: string[],
+  locale: Locale,
+): Promise<Map<string, { url: string; alt: string }>> {
+  const out = new Map<string, { url: string; alt: string }>();
+  if (!isSupabaseConfigured() || !coffeeIds.length) return out;
+  const db = await createSupabaseServerClient();
+
+  const linksQ = await db
+    .from("coffee_media")
+    .select("coffee_id,media_id,role,sort_order")
+    .in("coffee_id", coffeeIds)
+    .order("sort_order");
+  const links = linksQ.data ?? [];
+  const ids = [...new Set(links.map((link) => String(link.media_id)))];
+  if (linksQ.error || !ids.length) return out;
+
+  const [mediaQ, translationsQ] = await Promise.all([
+    db
+      .from("media")
+      .select("id,storage_bucket,storage_path,width,height")
+      .in("id", ids)
+      .is("deleted_at", null),
+    db
+      .from("media_translations")
+      .select("media_id,locale,alt_text")
+      .in("media_id", ids),
+  ]);
+  if (mediaQ.error || translationsQ.error) return out;
+
+  const { url } = getSupabaseConfig();
+  const media = new Map(
+    (mediaQ.data ?? []).map((item) => [String(item.id), item]),
+  );
+
+  // Links arrive ordered by sort_order, so the first usable row for a coffee
+  // is already its fallback; a HERO row replaces whatever came before it.
+  const chosen = new Map<string, (typeof links)[number]>();
+  for (const link of links) {
+    const key = String(link.coffee_id);
+    const current = chosen.get(key);
+    if (!current || (link.role === "HERO" && current.role !== "HERO"))
+      chosen.set(key, link);
+  }
+
+  for (const [coffeeId, link] of chosen) {
+    const item = media.get(String(link.media_id));
+    if (!item?.width || !item.height) continue;
+    const translations = (translationsQ.data ?? []).filter(
+      (entry) => String(entry.media_id) === String(link.media_id),
+    );
+    const alt =
+      translations.find((entry) => entry.locale === locale)?.alt_text ??
+      translations.find((entry) => entry.locale === "en")?.alt_text ??
+      "";
+    out.set(coffeeId, {
+      url: storagePublicUrl(url, item.storage_bucket, item.storage_path),
+      alt: String(alt),
+    });
+  }
+  return out;
+}
+
 export async function getPublicCoffeeMedia(coffeeId: string, locale: Locale) {
   if (!isSupabaseConfigured()) return [];
   const db = await createSupabaseServerClient();

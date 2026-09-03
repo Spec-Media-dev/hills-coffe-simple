@@ -57,7 +57,9 @@ export function LocaleSwitcher() {
         const { search, hash } = window.location;
         window.location.replace(`${target}${search}${hash}`);
       }}
-      className="flex h-10 items-center gap-2 rounded-full border border-border bg-background/70 px-3 text-xs font-bold uppercase tracking-wider transition hover:border-gold hover:text-gold"
+      // h-11 to match the theme toggle and menu button beside it: at h-10 this
+      // was a 40px target in a row where the project's floor is 44.
+      className="flex h-11 min-h-11 items-center gap-2 rounded-full border border-border bg-background/70 px-3 text-xs font-bold tracking-wider uppercase transition hover:border-gold hover:text-gold"
       aria-label={nextLocale === "ar" ? "العربية" : "English"}
     >
       <Languages className="size-4" aria-hidden="true" />
