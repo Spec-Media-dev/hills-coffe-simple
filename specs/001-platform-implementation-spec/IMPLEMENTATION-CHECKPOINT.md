@@ -539,3 +539,34 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
   - Fixture credentials file `tests/e2e/.p12-runs/current.json` purged after
     cleanup; re-created by re-running the seed.
 - **Phase 13 not started.**
+
+- **Phase 13 additions** (uncommitted, final official phase):
+  - SEO: `src/app/sitemap.ts` rewritten — `/about` added (it was absent
+    entirely), CMS `route_path` trailing slashes normalized so a published CMS
+    page can actually match the allow-list, per-entry `en`/`ar`/`x-default`
+    alternates, and `lastModified` only where a real row timestamp exists
+  - Filter indexation: `green-coffee-offer-list/page.tsx` `generateMetadata`
+    now returns `noindex, follow` with a canonical to the clean hub whenever any
+    of `q, origin, process, location, type, availability, certified, sort` is
+    present; `page` is deliberately excluded so pagination stays crawlable
+  - Structured data: new `src/lib/seo/collection.ts` (`collectionPageJsonLd`,
+    `originPlaceJsonLd`, `contactPageJsonLd`, `jsonLdScript`) wired into the
+    catalog (`CollectionPage` + `ItemList`), the origins hub, origin detail
+    (`Place`) and contact (`ContactPage`). No `Offer`, no price field anywhere
+  - Private noindex: `robots: { index: false, follow: false }` declared on the
+    `(site)/account`, `admin` and `(admin)` layouts, covering ten pages that had
+    no directive of their own
+  - Tests: `tests/e2e/seo-crawl.spec.ts` (crawl simulation driven off the
+    sitemap) and `src/lib/auth/redirect-fuzz.test.ts` (17 hostile redirect
+    inputs, both locales)
+  - Evidence: `evidence/phase-13-seo-performance-security-release.md`
+- **Phase 13 rollback**: revert the files above and delete the two new test
+  files plus `src/lib/seo/collection.ts`. Phase 13 applied **no migration, no
+  RLS change and no Auth change**, and mutated no row, so there is no data
+  state to undo. A rollback rehearsal against commit `b4a0b06` was performed in
+  an isolated `git worktree` — it built, started and served every public route.
+- **Phase 13 open item**: the production domain `https://www.hillscoffees.com`
+  is not yet connected, so DNS, HTTPS, live redirects, live crawl, Search
+  Console and indexation remain PENDING. The official P13-T05 acceptance asks
+  for a production-*like* rehearsal, which was completed, so this does not block
+  the gate. Service-role key rotation is required before production traffic.

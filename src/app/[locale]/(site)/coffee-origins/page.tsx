@@ -7,7 +7,8 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getOrigins, getPublicOriginHeroMedia } from "@/lib/data/editorial";
 import { publicContinentLabel } from "@/lib/public-labels";
-import { localizedMetadata } from "@/lib/seo/metadata";
+import { collectionPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
+import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 
 export async function generateMetadata({
@@ -45,8 +46,24 @@ export default async function OriginsPage({
     origins.map((origin) => origin.continent).filter(Boolean),
   ).size;
 
+  /* Mirrors the origin cards this page renders, in the order it renders them. */
+  const jsonLd = collectionPageJsonLd({
+    locale: locale as Locale,
+    canonical: localizedUrl(locale as Locale, "/coffee-origins"),
+    name: originsT("title"),
+    description: originsT("intro"),
+    items: origins.map((origin) => ({
+      name: origin.name,
+      url: localizedUrl(locale as Locale, `/coffee-origins/${origin.slug}`),
+    })),
+  });
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
       {/*
        * The masthead used to end in a half-page `origin-map-field` — an
        * aria-hidden 2:1 rectangle of faint dots carrying no information, which

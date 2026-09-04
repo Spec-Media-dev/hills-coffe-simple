@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { BrandMark } from "@/components/brand/mark";
 import { LocaleSwitcher } from "@/components/navigation/locale-switcher";
@@ -22,6 +23,20 @@ import { getSiteLogo } from "@/lib/data/site-logo";
  * taken the logo off the Admin sign-in screen, which was the one entry point
  * with no branding at all (§21).
  */
+
+/**
+ * Private area: never indexed, and its links never followed.
+ *
+ * Declared on the layout so every page beneath inherits it — several of them
+ * had no directive of their own. Anonymous visitors are already redirected
+ * before any of this renders, and robots.txt disallows the paths, but a URL can
+ * still be indexed from an external link without ever being fetched. The meta
+ * directive is the layer that answers that case.
+ */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default async function AdminEntryLayout({
   children,
 }: {

@@ -21,20 +21,61 @@ import {
 } from "@/lib/data/catalog-query";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { publicOfferStatusKey } from "@/lib/public-labels";
+import { collectionPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import type { OfferStatus } from "@/lib/supabase/types.generated";
 
+/**
+ * Catalog parameters that produce a *filtered view* of the same inventory.
+ *
+ * `page` is deliberately absent: paginated pages are genuinely different
+ * content and stay crawlable and self-canonical, which is what keeps deep lots
+ * reachable. Everything here, by contrast, is a re-slice of the same hub.
+ */
+const FILTER_PARAMS = [
+  "q",
+  "origin",
+  "process",
+  "location",
+  "type",
+  "availability",
+  "certified",
+  "sort",
+] as const;
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps<"/[locale]/green-coffee-offer-list">): Promise<Metadata> {
-  const { locale } = await params;
+  const [{ locale }, query] = await Promise.all([params, searchParams]);
   const meta = await getTranslations({ locale, namespace: "seo" });
-  return localizedMetadata({
+
+  /*
+   * Filter and search states must not become indexable pages.
+   *
+   * The catalog exposes eight filter parameters plus free text, so the number
+   * of reachable URLs is combinatorial while the content is one inventory
+   * viewed different ways. Left indexable they would compete with the hub for
+   * the same query and dilute it. `follow` is kept so the lots linked from a
+   * filtered view are still discovered, and the canonical points back at the
+   * clean hub so any equity a filtered URL attracts consolidates there.
+   *
+   * Shareability is untouched: the URLs still work, still render, and still
+   * carry their filters. Only their indexing instruction changes.
+   */
+  const filtered = FILTER_PARAMS.some((key) => {
+    const value = query[key];
+    return Array.isArray(value) ? value.length > 0 : Boolean(value);
+  });
+
+  const base = localizedMetadata({
     locale: locale as Locale,
     path: "/green-coffee-offer-list",
     title: meta("offerListTitle"),
     description: meta("offerListDescription"),
   });
+
+  return filtered ? { ...base, robots: { index: false, follow: true } } : base;
 }
 
 const first = (value: string | string[] | undefined) =>
@@ -111,21 +152,25 @@ export default async function OfferListPage({
     filters.certified,
   ].filter(Boolean).length;
 
-  // Structured data describes only what this page shows, and never a price.
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    numberOfItems: result.rows.length,
-    itemListElement: result.rows.map((item, index) => ({
-      "@type": "ListItem",
-      position: (result.page - 1) * result.pageSize + index + 1,
+  /*
+   * Structured data describes only what this page shows, and never a price.
+   * The list mirrors the rendered rows exactly; the CollectionPage anchors it
+   * to the *clean* hub URL rather than the filtered one, so a filtered view
+   * consolidates onto the canonical hub instead of declaring a second entity.
+   */
+  const jsonLd = collectionPageJsonLd({
+    locale: locale as Locale,
+    canonical: localizedUrl(locale as Locale, "/green-coffee-offer-list"),
+    name: t("title"),
+    description: t("intro"),
+    items: result.rows.map((item) => ({
+      name: item.name,
       url: localizedUrl(
         locale as Locale,
         `/green-coffee-offer-list/${item.slug}`,
       ),
-      name: item.name,
     })),
-  };
+  });
 
   const pageHref = (page: number) => {
     const qs = new URLSearchParams();
@@ -215,7 +260,7 @@ export default async function OfferListPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+          __html: jsonLdScript(jsonLd),
         }}
       />
       <section className="border-b border-border bg-primary py-14 text-primary-foreground md:py-20">

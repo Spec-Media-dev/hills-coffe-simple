@@ -12,7 +12,8 @@ import {
   getOriginRegions,
   getPublicOriginMedia,
 } from "@/lib/data/editorial";
-import { localizedMetadata } from "@/lib/seo/metadata";
+import { jsonLdScript, originPlaceJsonLd } from "@/lib/seo/collection";
+import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 import { publicContinentLabel } from "@/lib/public-labels";
 
@@ -56,8 +57,21 @@ export default async function OriginPage({
     pricing: originsT("pricingSignIn"),
     view: originsT("viewCoffee"),
   };
+  /* The country entity this page is about; only facts the row actually holds. */
+  const jsonLd = originPlaceJsonLd({
+    locale: locale as Locale,
+    canonical: localizedUrl(locale as Locale, `/coffee-origins/${origin.slug}`),
+    name: origin.name,
+    description: origin.summary,
+    continent: publicContinentLabel(origin.continent, locale as Locale),
+  });
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
       <section className="overflow-hidden bg-gold text-[#17251c]">
         <div className="site-container grid min-h-[42rem] gap-0 lg:grid-cols-[.9fr_1.1fr] lg:items-stretch">
           {heroMedia ? (
@@ -117,9 +131,7 @@ export default async function OriginPage({
           ) : null}
           {origin.cultivation ? (
             <div>
-              <h2 className="text-4xl">
-                {originsT("cultivationProcessing")}
-              </h2>
+              <h2 className="text-4xl">{originsT("cultivationProcessing")}</h2>
               <SafeMarkdown className="prose-hills mt-6">
                 {origin.cultivation}
               </SafeMarkdown>

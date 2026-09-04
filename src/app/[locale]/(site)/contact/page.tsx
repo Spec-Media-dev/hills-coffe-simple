@@ -12,7 +12,12 @@ import {
   getWarehouses,
 } from "@/lib/data/site-content";
 import { getViewer } from "@/lib/auth/session";
-import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
+import { contactPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
+import {
+  cmsMetadata,
+  localizedMetadata,
+  localizedUrl,
+} from "@/lib/seo/metadata";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 
 export async function generateMetadata({
@@ -46,8 +51,20 @@ export default async function ContactPage({
     // side effects, so a public page can ask "is anyone signed in?" safely.
     getViewer(),
   ]);
+  /* ContactPage pointing at the single Organization node, not a second copy. */
+  const jsonLd = contactPageJsonLd({
+    locale: locale as Locale,
+    canonical: localizedUrl(locale as Locale, "/contact"),
+    name: t("title"),
+    description: t("intro"),
+  });
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
       {page ? (
         <CmsPageView page={page} />
       ) : (

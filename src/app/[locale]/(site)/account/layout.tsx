@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -5,6 +6,20 @@ import type { Locale } from "@/i18n/routing";
 import { localizedPath } from "@/lib/auth/redirects";
 import { getViewer } from "@/lib/auth/session";
 import { hasRecoveryMarker } from "@/lib/auth/recovery";
+
+/**
+ * Private area: never indexed, and its links never followed.
+ *
+ * Declared on the layout so every page beneath inherits it — several of them
+ * had no directive of their own. Anonymous visitors are already redirected
+ * before any of this renders, and robots.txt disallows the paths, but a URL can
+ * still be indexed from an external link without ever being fetched. The meta
+ * directive is the layer that answers that case.
+ */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default async function AccountLayout({
   children,
   params,

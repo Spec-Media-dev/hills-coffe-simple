@@ -1132,7 +1132,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 13 — SEO, performance, security, and production-readiness audit
 
-- [ ] P13-T01 [P] Validate canonical host, redirects, sitemap, robots, and schema against the final hostname decision
+- [X] P13-T01 [P] Validate canonical host, redirects, sitemap, robots, and schema against the final hostname decision
   - **Goal**: Confirm `src/lib/seo/**`, `src/app/robots.ts`, `src/app/sitemap.ts` are correct against whatever production canonical host the business owner has now confirmed (or explicitly re-confirm the fail-fast behavior remains correct if the host is still undecided at this point).
   - **Dependencies**: Phase 12 complete; an owner decision on the production hostname (or explicit confirmation it remains pending).
   - **Files/modules**: `src/lib/seo/**`, `src/app/robots.ts`, `src/app/sitemap.ts`.
@@ -1146,7 +1146,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` SC-011 holds.
   - **Out of scope**: choosing the production hostname itself (a business decision, not this task's to make).
 
-- [ ] P13-T02 [P] Run the performance budget and Core Web Vitals review
+- [X] P13-T02 [P] Run the performance budget and Core Web Vitals review
   - **Goal**: Measure bundle size, image/font delivery, cache/query behavior, and Core Web Vitals against the "good" thresholds established in `plan.md`'s Technical Context, using whatever real or fixture data exists by this point.
   - **Dependencies**: Phase 12 complete.
   - **Files/modules**: image/font/cache configuration, any query identified as slow.
@@ -1160,7 +1160,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: recorded, dated LCP/CLS/INP/query evidence exists — not an assumed or historical number.
   - **Out of scope**: any late visual redesign motivated by a performance finding (fix the specific regression, not the design).
 
-- [ ] P13-T03 Run the security/OWASP-style boundary review and secret-exposure scan
+- [X] P13-T03 Run the security/OWASP-style boundary review and secret-exposure scan
   - **Goal**: Final review of RLS, service-role usage, headers, cookies, redirect allow-lists, and cache boundaries against the master plan's Security Plan table; confirm `SUPABASE_SERVICE_ROLE_KEY` never reaches a browser bundle or log.
   - **Dependencies**: Phase 12 complete.
   - **Files/modules**: the service-role module from Phase 5, `next.config.ts` headers, redirect configuration.
@@ -1174,7 +1174,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: zero findings, or every finding has a recorded fix or owner-approved exception.
   - **Out of scope**: any new security control not already specified in the Security Plan.
 
-- [ ] P13-T04 [P] Run the final no-price scan across every public route
+- [X] P13-T04 [P] Run the final no-price scan across every public route
   - **Goal**: A last, comprehensive scan of all public page HTML, structured data, metadata, and sitemap output for any price-shaped token, across the now-more-complete public surface from Phases 6 and 9.
   - **Dependencies**: Phase 12 complete.
   - **Files/modules**: none changed — a scan/report task.
@@ -1188,7 +1188,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: `spec.md` SC-008 holds with a final, dated scan result.
   - **Out of scope**: any fix beyond confirming the boundary holds (a finding here reopens the relevant earlier phase).
 
-- [ ] P13-T05 Perform the deployment smoke test, rollback rehearsal, and release checklist
+- [X] P13-T05 Perform the deployment smoke test, rollback rehearsal, and release checklist
   - **Goal**: Confirm the production build deploys cleanly, a rollback to the last known-good build is rehearsed and works, and every Final Acceptance Gate from `docs/CODEX_HILLS_MASTER_REBUILD_PLAN.md` has current, dated evidence attached (or an explicit, owner-approved exception).
   - **Dependencies**: P13-T01 through P13-T04.
   - **Files/modules**: deployment/environment documentation, the final execution report.
@@ -1202,7 +1202,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: every Final Acceptance Gate (Product/data, Architecture/runtime, Auth/security, UX/design, SEO/performance/quality) has current, dated evidence attached, per `plan.md` Phase 13.
   - **Out of scope**: any product-scope change, any URL/schema change without a fresh migration-approval cycle, any production DB/Auth-record action during the audit itself, lowering an acceptance threshold to force a pass.
 
-- [ ] P13-T06 **PHASE 13 ACCEPTANCE GATE — FINAL PROJECT GATE**
+- [X] P13-T06 **PHASE 13 ACCEPTANCE GATE — FINAL PROJECT GATE**
   - **Goal**: Confirm the entire 14-phase plan is complete, evidenced, and ready for a release decision.
   - **Dependencies**: P13-T01 through P13-T05, and every prior phase gate (P0-T04 through P12-T07) having already passed.
   - **Runtime acceptance condition** (per `plan.md` Phase 13 and `spec.md`'s Success Criteria in full): every SC-001 through SC-011 holds with recorded evidence; every Final Acceptance Gate has current evidence or an explicit owner-approved exception.
