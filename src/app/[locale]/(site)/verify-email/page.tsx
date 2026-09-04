@@ -34,11 +34,26 @@ export default async function VerifyEmailPage({
   if (viewer?.isBlocked)
     redirect(`/auth/reject?reason=blocked&locale=${locale}`);
 
-  // An already-verified visitor should never see a fake waiting state.
+  /*
+   * An already-verified visitor should never see a fake waiting state — but
+   * the destination has to come from a *customer* identity, because this is a
+   * public customer route.
+   *
+   * This previously sent a verified Administrator to `/admin`. Since
+   * `signUpAction` routes every new customer here, a browser that still held
+   * an Administrator session completed a public customer sign-up and landed
+   * inside the Admin workspace showing the Administrator's identity. The Admin
+   * guard was not at fault: the visitor genuinely was that Administrator. The
+   * fault was a public customer flow choosing a privileged destination from an
+   * identity it had not established.
+   *
+   * So only a verified customer is forwarded to their account. Any other role
+   * goes to the public home page: never `/admin`, never `/dashboard-admin`.
+   * The Admin workspace is reachable only by authenticating at
+   * `/dashboard-admin`.
+   */
   if (viewer?.emailVerified)
-    redirect(
-      localizedPath(locale, viewer.role === "ADMIN" ? "/admin" : "/account"),
-    );
+    redirect(localizedPath(locale, viewer.role === "USER" ? "/account" : "/"));
 
   const t = await getTranslations("auth.verify");
   const actions = await getTranslations("actions");

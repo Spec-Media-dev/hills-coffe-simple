@@ -1038,7 +1038,7 @@ change is made by this document** — it is the task breakdown only.
 
 ## Phase 12 — Authenticated E2E, visual regression, and staging acceptance
 
-- [ ] P12-T01 Provision the staging project and five-persona fixture dataset
+- [X] P12-T01 Provision the staging project and five-persona fixture dataset
   - **Goal**: Set up the approved staging Supabase project (never production) with the minimum dataset from the master plan's Test Data Strategy and the five personas (Anonymous, Unverified USER, Verified USER, Blocked USER, ADMIN), fixture-prefixed `E2E-HILLS-<run-id>`.
   - **Dependencies**: Phases 0–11 complete; an approved staging project and email-testing strategy from the business owner.
   - **Files/modules**: a new test-only seed/cleanup script, run outside the browser bundle using a CI secret (never a `NEXT_PUBLIC_` credential).
@@ -1052,7 +1052,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: the minimum dataset (3 origins with translations/media, populated taxonomy, 4–6 published coffees plus one draft/archived boundary record, Egypt/Dubai offers with price tiers, 2 published articles, CMS Home/About, a temporary logo asset, five personas, sample inquiries spanning each status plus a prior `CLOSED` same-coffee request) exists in staging.
   - **Out of scope**: any production account, any real (non-approved) email inbox automation.
 
-- [ ] P12-T02 [P] Build authenticated Playwright session fixtures
+- [X] P12-T02 [P] Build authenticated Playwright session fixtures
   - **Goal**: Real sign-in for each of the four non-anonymous personas as a reusable Playwright fixture — never a faked cookie or fabricated session.
   - **Dependencies**: P12-T01.
   - **Files/modules**: `tests/e2e/helpers.ts` (extended).
@@ -1066,7 +1066,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: four working, reusable authenticated fixtures exist alongside the existing anonymous baseline.
   - **Out of scope**: any change to the sign-in logic itself (already delivered in Phase 3).
 
-- [ ] P12-T03 Automate the full five-persona journey matrix
+- [X] P12-T03 Automate the full five-persona journey matrix
   - **Goal**: Automate every journey in the master plan's Persona Matrix that does not require a real inbox click — public discovery, price absent/present, favorites, sample request, account, sign-in, Admin entry/workspace, locale/theme/path preservation — for all five personas.
   - **Dependencies**: P12-T02.
   - **Files/modules**: `tests/e2e/**`, new persona-specific spec files.
@@ -1080,7 +1080,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: the full Persona Matrix passes for every automatable cell; any cell requiring a real inbox click is explicitly marked, not silently skipped or falsely passed.
   - **Out of scope**: the one manual email-click step (P12-T06's sign-off).
 
-- [ ] P12-T04 [P] Apply the console/overlay failure gate to every authenticated test
+- [X] P12-T04 [P] Apply the console/overlay failure gate to every authenticated test
   - **Goal**: Every test added in P12-T03 fails on any unexpected `console.error`, `pageerror`, React hydration/reconciliation warning, failed critical response, or Dev Overlay — the same gate already applied to the anonymous suite, now covering authenticated sessions and repeated locale switching within them.
   - **Dependencies**: P12-T03.
   - **Files/modules**: `tests/e2e/helpers.ts`, every P12-T03 spec.
@@ -1094,7 +1094,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: zero unexplained console/overlay events across the entire authenticated matrix.
   - **Out of scope**: any product code change to fix a finding here (route back to the relevant earlier phase instead).
 
-- [ ] P12-T05 [P] Capture and review the authenticated visual-regression baseline
+- [X] P12-T05 [P] Capture and review the authenticated visual-regression baseline
   - **Goal**: Extend the Phase 9 visual-regression matrix to authenticated screens (account, Admin dashboard/users/Lead Inbox, block/unblock dialog) using `toHaveScreenshot`, with human review of the initial baseline (not auto-accepted).
   - **Dependencies**: P12-T01–T02.
   - **Files/modules**: `tests/e2e/**`.
@@ -1108,7 +1108,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: a human has reviewed and approved the initial authenticated baseline; it is not auto-accepted.
   - **Out of scope**: any UI change made solely to "fix" a screenshot diff without understanding why it changed.
 
-- [ ] P12-T06 Verify fixture cleanup and sign off manual email acceptance
+- [X] P12-T06 Verify fixture cleanup and sign off manual email acceptance
   - **Goal**: Confirm the staging fixture cleanup removes exactly what P12-T01 created (reverse FK order, run-manifest-driven) with no residue, and record the one manual step — a real confirmation-email click-through — as a signed acceptance rather than an assumed pass.
   - **Dependencies**: P12-T01 through P12-T05.
   - **Files/modules**: the cleanup script from P12-T01.
@@ -1122,7 +1122,7 @@ change is made by this document** — it is the task breakdown only.
   - **Runtime acceptance condition**: zero unexplained failures/skips in the required automated matrix; the manual case is explicitly identified and signed, not silently treated as passing; no leaked fixture data or secret in any artifact; visual diffs reviewed and approved; console clean across every persona.
   - **Out of scope**: any production data or account; any relaxation of a security control "for test convenience."
 
-- [ ] P12-T07 **PHASE 12 ACCEPTANCE GATE**
+- [X] P12-T07 **PHASE 12 ACCEPTANCE GATE**
   - **Goal**: Confirm every product journey is proven with real, authenticated, staging-backed evidence before the final production-readiness audit (Phase 13).
   - **Dependencies**: P12-T01 through P12-T06.
   - **Runtime acceptance condition** (per `plan.md` Phase 12): all conditions in P12-T06 hold with recorded evidence.

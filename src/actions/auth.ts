@@ -223,6 +223,29 @@ export async function signUpAction(
   if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
 
   const supabase = await createSupabaseServerClient();
+
+  /*
+   * A public sign-up must not run on top of somebody else's session.
+   *
+   * Signing up is by definition the creation of a *new* identity, but every
+   * destination after it — starting with the verification screen — is chosen
+   * from whoever the browser is currently authenticated as. A browser still
+   * holding an Administrator session therefore carried that Administrator
+   * through a customer sign-up and out the other side into the Admin
+   * workspace, which is the regression this guard closes. Supabase's own
+   * `signUp` is ambiguous when a session is present as well, so the
+   * incompatible session is replaced before the flow starts rather than
+   * reconciled afterwards.
+   *
+   * `scope: "local"` is deliberate and is the minimum that is correct: it
+   * clears only this browser's auth context. Sessions that account holds on
+   * other devices are not touched, and no data is destroyed.
+   */
+  const { data: existing } = await supabase.auth.getUser();
+  const incumbent = existing.user?.email?.trim().toLowerCase();
+  if (incumbent && incumbent !== parsed.data.email.trim().toLowerCase())
+    await supabase.auth.signOut({ scope: "local" });
+
   const metadata = {
     full_name: parsed.data.fullName,
     phone: parsed.data.phone,

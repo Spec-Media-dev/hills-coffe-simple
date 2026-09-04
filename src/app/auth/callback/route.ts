@@ -8,6 +8,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { companyNameSchema } from "@/lib/validation/auth";
 
+/**
+ * Marks that a fragment hand-off is genuinely in progress in this browser.
+ * HttpOnly and short-lived, so `settled=1` cannot be asserted by hand.
+ */
+const SETTLE_COOKIE = "hills-auth-settle";
+const SETTLE_TTL_SECONDS = 600;
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
@@ -27,11 +34,16 @@ export async function GET(request: NextRequest) {
   // absolute URL from NextRequest can adopt the server's canonical host (for
   // example `localhost` instead of `127.0.0.1`) and strand host-only Auth
   // cookies on the callback origin.
-  const to = (path: string) =>
-    new NextResponse(null, {
+  const to = (path: string) => {
+    const response = new NextResponse(null, {
       status: 303,
       headers: { location: path },
     });
+    // A settle marker is single-use. Once this request has acted on it, it is
+    // gone, so a reload cannot replay the return trip.
+    if (settled) response.cookies.delete(SETTLE_COOKIE);
+    return response;
+  };
   const forwardedProtocol = request.headers
     .get("x-forwarded-proto")
     ?.split(",")[0]
@@ -58,9 +70,23 @@ export async function GET(request: NextRequest) {
     });
     exchanged = !error;
   } else if (settled) {
-    // Return trip from the browser-side fragment handler below. The session
-    // now exists in cookies; nothing is left to exchange, and the
-    // classification further down is still performed server-side.
+    /*
+     * Return trip from the browser-side fragment handler below. The session
+     * now exists in cookies; nothing is left to exchange, and the
+     * classification further down is still performed server-side.
+     *
+     * `settled` is a query parameter, so on its own it is an unauthenticated
+     * claim that anyone can type. Taken at face value it made this route
+     * classify *whatever session the browser already held* and forward it —
+     * which sent a browser carrying an Administrator session into `/admin`
+     * from a public callback URL that had confirmed nothing. The marker cookie
+     * is what makes the claim true: it is HttpOnly, short-lived, and set by
+     * this same route at the only moment a fragment hand-off legitimately
+     * begins. No cookie means no confirmation is in progress, so there is
+     * nothing to settle.
+     */
+    if (request.cookies.get(SETTLE_COOKIE)?.value !== "1")
+      return to(failurePath);
     exchanged = true;
   } else {
     // Nothing exchangeable arrived. Supabase's verify endpoint falls back to
@@ -71,9 +97,19 @@ export async function GET(request: NextRequest) {
     // the fragment survives this redirect because the Location carries none.
     // Previously this fell through to `link_expired`, which reported a
     // successful confirmation as a broken link and established no session.
-    return to(
+    const response = to(
       `${localizedPath(locale, "/continue")}?mode=confirm&next=${encodeURIComponent(next)}`,
     );
+    // Proof, for the return trip only, that this browser was sent to the
+    // fragment handler by this route moments ago.
+    response.cookies.set(SETTLE_COOKIE, "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: secureCookies,
+      path: "/",
+      maxAge: SETTLE_TTL_SECONDS,
+    });
+    return response;
   }
 
   if (!exchanged) return to(failurePath);

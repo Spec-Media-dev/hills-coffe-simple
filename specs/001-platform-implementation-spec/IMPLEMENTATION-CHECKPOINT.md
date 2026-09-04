@@ -481,3 +481,61 @@ test-covered), N9 (zero-rows treated as denial), N25, N26.
     `tests/e2e/phase9-public-design.spec.ts`
 - **Phase 9 rollback**: delete the new Phase 9 files above and revert the
   modified public presentation files. No schema or data state to undo.
+
+- **Phase 12 additions** (uncommitted, awaiting owner review):
+  - staging safety machinery: `scripts/e2e/staging-guard.mjs` (+ its 22-case
+    `staging-guard.test.mjs`), `scripts/e2e/runtime.mjs` (protected-data
+    baseline and write-through run manifest), `scripts/e2e/seed.mjs`,
+    `scripts/e2e/cleanup.mjs` (exact-id, reverse-FK), and
+    `scripts/e2e/verify-dataset.mjs`
+  - authenticated browser coverage: `tests/e2e/p12-fixtures.ts` (real
+    form-driven sessions only), `tests/e2e/p12-persona-matrix.spec.ts`,
+    `tests/e2e/p12-visual.spec.ts`
+  - evidence: `evidence/phase-12-authenticated-e2e-staging.md`
+  - `.gitignore` gains `tests/e2e/.p12-runs/`, which holds run manifests,
+    fixture credentials and the authenticated visual baselines. Those baselines
+    stay out of the repository on purpose: several show protected per-kg pricing.
+- **Phase 12 rollback**: delete the new files above and revert `.gitignore`.
+  Run `node scripts/e2e/cleanup.mjs <run-id>` first if a fixture run is still
+  live — run `mtm4uk2mwvx` is already cleaned, verified against its own
+  pre-run baseline. No schema state and no owner data to undo: Phase 12 made no
+  schema, RLS or security-model change, and modified zero pre-existing rows.
+- **Phase 12 open items**: authenticated visual review, real email confirmation
+  and real password recovery all require the owner. P12-T07 stays PENDING until
+  they are done. The site-logo singleton is OWNER ACTION REQUIRED — attaching a
+  fixture logo would overwrite the existing `site_settings` record.
+
+- **Phase 12 authorization-regression addendum** (uncommitted):
+  - product fixes: `src/actions/auth.ts` (public sign-up replaces an
+    incompatible existing session), `src/app/[locale]/(site)/verify-email/page.tsx`
+    (only a verified customer is forwarded to `/account`; no role is ever
+    forwarded to `/admin` from a public route), `src/app/auth/callback/route.ts`
+    (`settled=1` requires the HttpOnly single-use `hills-auth-settle` marker),
+    and `src/components/forms/auth-forms.tsx` (`prefetch={false}` on the
+    Admin-portal refusal link, fixing a separate pre-existing redirect loop)
+  - permanent coverage: `tests/e2e/auth-session-isolation.spec.ts`, cases A–H,
+    verified to fail against the pre-fix build before the fix was applied
+- **Rollback**: revert those four source files and delete the spec. No schema,
+  RLS or security-model change was made, so there is no database state to undo.
+  `requireAdmin()`, `requireVerifiedUser()` and the authoritative
+  `profiles.role` contract are untouched.
+
+- **Phase 12 CLOSED — PASS** (P12-T01 through P12-T07), evidence in
+  `evidence/phase-12-authenticated-e2e-staging.md`. Owner-confirmed manual
+  acceptances: authenticated visual review APPROVED; real confirmation-email
+  acceptance PASS.
+  - A real password-recovery inbox click is **not** part of the official gate —
+    P12-T06 names "the one manual step" as the confirmation-email click-through,
+    and no P12 task or `plan.md` Phase 12 line requires recovery delivery. The
+    Supabase `429` on `POST /auth/v1/recover` is an environment/provider
+    rate-limit limitation; the application request path, the neutral
+    anti-enumeration response, and the recovery security tests all pass.
+  - Known non-Phase-12 residue on the shared staging project, reported and
+    deliberately not deleted because no active run manifest proves ownership:
+    a `site_settings.updated_at` bump from the Phase-8 branding tests; four
+    `qa-oa-*@example.invalid` inquiries from the public-inquiry suite; 21
+    `e2e-hills-` auth users from Phase-3/Phase-5 runs that predate the Phase-12
+    baseline; one inert orphaned storage object at `e2e/mtm4nv6r27j/`.
+  - Fixture credentials file `tests/e2e/.p12-runs/current.json` purged after
+    cleanup; re-created by re-running the seed.
+- **Phase 13 not started.**

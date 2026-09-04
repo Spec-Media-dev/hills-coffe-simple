@@ -54,6 +54,17 @@ function StateMessage({
         <Link
           href="/dashboard-admin"
           locale={locale}
+          /*
+           * This link is rendered inside a Server Action result, so the client
+           * route tree is the internally `/en`-rewritten one and the prefetch
+           * asks for `/en/dashboard-admin?_rsc=…`. The proxy 308s that back to
+           * the canonical `/dashboard-admin`, the router re-requests the
+           * prefixed form, and the two bounce until the browser gives up with
+           * ERR_TOO_MANY_REDIRECTS. Nothing is gained by prefetching a link
+           * that only appears in a refusal state, and the navigation itself is
+           * unaffected.
+           */
+          prefetch={false}
           className="mt-2 inline-flex min-h-11 items-center font-bold underline underline-offset-4"
         >
           {t("adminPortalLink")}

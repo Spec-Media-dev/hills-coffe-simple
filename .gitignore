@@ -44,3 +44,6 @@ next-env.d.ts
 
 # local visual QA
 artifacts/
+
+# Phase 12 E2E run manifests and fixture credentials (never committed)
+tests/e2e/.p12-runs/
