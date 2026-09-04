@@ -33,6 +33,8 @@ export function InquiryPanel({
   warehouse,
   signedIn,
   verifiedEmail,
+  isCustomer = true,
+  activeSampleRequestCode = null,
   labels,
 }: {
   offerId: string;
@@ -40,6 +42,19 @@ export function InquiryPanel({
   warehouse: string;
   signedIn: boolean;
   verifiedEmail: boolean;
+  /**
+   * Whether this viewer is a customer who could actually create a request —
+   * `role = USER`, verified, not blocked. An Administrator and a restricted
+   * account both hold a session and a confirmed address, so `signedIn` and
+   * `verifiedEmail` are true for them and neither answers this question.
+   */
+  isCustomer?: boolean;
+  /**
+   * Set when the server already knows this customer holds an active sample
+   * request for this coffee. Presentation only — the refusal itself is still
+   * decided by `createSampleRequestInquiry`.
+   */
+  activeSampleRequestCode?: string | null;
   labels: {
     inquire: string;
     sample: string;
@@ -51,6 +66,8 @@ export function InquiryPanel({
     sampleTitle: string;
     sampleBody: string;
     sampleSend: string;
+    activeSample: string;
+    viewRequest: string;
     verify: string;
     close: string;
     publicSampleTitle: string;
@@ -106,6 +123,16 @@ export function InquiryPanel({
       </Link>
     );
 
+  /*
+   * Signed in, confirmed, and still not a customer: an Administrator, or a
+   * restricted account. Both were previously offered "Commercial inquiry" and
+   * "Request sample" because the panel only asked whether a session existed.
+   * The submit actions always refused them — `requireVerifiedUser()` rejects
+   * ADMIN and blocked — so nothing was ever created, but the buttons implied a
+   * capability that does not exist. Offering nothing is the honest state.
+   */
+  if (!isCustomer) return null;
+
   const openPanel = (next: "product" | "sample") => {
     setKind(next);
     setOpen(true);
@@ -121,13 +148,34 @@ export function InquiryPanel({
         >
           {labels.inquire}
         </button>
-        <button
-          type="button"
-          onClick={() => openPanel("sample")}
-          className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-        >
-          {labels.sample}
-        </button>
+        {/*
+         * An active sample request for this coffee means a second one cannot
+         * be created, so offering "Request sample" would invite the customer
+         * to write a message only to be refused after sending it. The state
+         * and the way out of it are shown instead. The rule is unchanged and
+         * still enforced server-side; only the invitation is honest now.
+         */}
+        {activeSampleRequestCode ? (
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-border bg-muted px-4 text-xs font-bold text-muted-foreground">
+              {labels.activeSample}
+            </span>
+            <Link
+              href={`/account/requests/${activeSampleRequestCode}`}
+              className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              {labels.viewRequest}
+            </Link>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openPanel("sample")}
+            className="inline-flex h-11 min-h-11 items-center justify-center rounded-full border border-primary px-4 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+          >
+            {labels.sample}
+          </button>
+        )}
       </div>
 
       <ModalDialog

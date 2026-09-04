@@ -49,7 +49,23 @@ test("Phase 9 navigation patterns are keyboard and touch accessible", async ({
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/", { waitUntil: "networkidle" });
-  const products = page.getByRole("button", { name: "Products", exact: true });
+  /*
+   * "Products" is now a link straight to the catalog, and the panel is opened
+   * by a separate chevron control beside it — the standard split-trigger
+   * pattern, adopted so the header keeps a direct route to the catalog after
+   * the search icon (which used to be that route) became real search.
+   *
+   * The keyboard contract asserted below is unchanged: focus the disclosure,
+   * Enter opens it, Escape closes it, and `aria-expanded` tracks both.
+   */
+  await expect(
+    page.locator('header a[href="/green-coffee-offer-list"]'),
+    "the header lost its direct catalog link",
+  ).toHaveCount(1);
+  const products = page.getByRole("button", {
+    name: "Show product categories",
+    exact: true,
+  });
   await products.focus();
   await products.press("Enter");
   await expect(products).toHaveAttribute("aria-expanded", "true");

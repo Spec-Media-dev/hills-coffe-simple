@@ -5,6 +5,8 @@ import type { Locale } from "@/i18n/routing";
 import { getSiteLogo } from "@/lib/data/site-logo";
 import { getSitePage, getSiteSettings } from "@/lib/data/site-content";
 import { requireVerifiedUser } from "@/lib/auth/session";
+import { getPublicPersona } from "@/lib/auth/persona";
+import { AuthCta } from "@/components/auth/auth-cta";
 
 export async function SiteFooter() {
   const t = await getTranslations("footer");
@@ -12,14 +14,17 @@ export async function SiteFooter() {
   const brand = await getTranslations("brand");
   const actions = await getTranslations("actions");
   const account = await getTranslations("account");
+  const cta = await getTranslations("cta");
   const locale = (await getLocale()) as Locale;
-  const [logo, settings, viewer, privacyPage, termsPage] = await Promise.all([
-    getSiteLogo(locale),
-    getSiteSettings(locale),
-    requireVerifiedUser(),
-    getSitePage("privacy", locale),
-    getSitePage("terms", locale),
-  ]);
+  const [logo, settings, viewer, persona, privacyPage, termsPage] =
+    await Promise.all([
+      getSiteLogo(locale),
+      getSiteSettings(locale),
+      requireVerifiedUser(),
+      getPublicPersona(),
+      getSitePage("privacy", locale),
+      getSitePage("terms", locale),
+    ]);
   const legalPages = [
     privacyPage ? { href: "/privacy", label: privacyPage.title } : null,
     termsPage ? { href: "/terms", label: termsPage.title } : null,
@@ -55,7 +60,23 @@ export async function SiteFooter() {
                 <Link href="/account/requests">{account("nav.requests")}</Link>
               </>
             ) : (
-              <Link href="/sign-in">{actions("signin")}</Link>
+              /*
+               * Previously an unconditional "Sign in", which an Administrator
+               * and an unverified customer both saw despite already holding a
+               * session. The persona decides what is actually useful to them.
+               */
+              <AuthCta
+                persona={persona}
+                map={{
+                  anonymous: { label: actions("signin"), href: "/sign-in" },
+                  unverified: {
+                    label: cta("verifyEmail"),
+                    href: "/verify-email",
+                  },
+                  blocked: { label: cta("contactSupport"), href: "/contact" },
+                  admin: null,
+                }}
+              />
             )}
           </div>
         </div>

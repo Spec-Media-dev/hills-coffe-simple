@@ -20,6 +20,8 @@ import {
   PageReveal,
   SectionReveal,
 } from "@/components/motion/primitives";
+import { AuthCta } from "@/components/auth/auth-cta";
+import { getPublicPersona } from "@/lib/auth/persona";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getOfferList, getPublicCoffeeHeroMedia } from "@/lib/data/catalog";
@@ -61,6 +63,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   setRequestLocale(locale);
   const t = await getTranslations("home");
   const actions = await getTranslations("actions");
+  const cta = await getTranslations("cta");
+  // Presentation state only — the home page grants nothing.
+  const persona = await getPublicPersona();
   const nav = await getTranslations("nav");
   const catalogT = await getTranslations("catalog");
   const originsT = await getTranslations("origins");
@@ -314,12 +319,31 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                 </p>
               </div>
               <div className="flex flex-col items-start gap-3 md:items-end">
-                <Link
-                  href="/sign-in"
+                {/*
+                 * This band is the gated buyer path, so its action has to
+                 * follow the visitor. A verified customer was being told to
+                 * "Sign in" to a session they already held.
+                 */}
+                <AuthCta
+                  persona={persona}
                   className="inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-6 py-3 text-sm font-bold text-[#0b241d] transition-colors hover:bg-gold-bright"
-                >
-                  {actions("signin")}
-                </Link>
+                  map={{
+                    anonymous: { label: actions("signin"), href: "/sign-in" },
+                    unverified: {
+                      label: cta("verifyEmail"),
+                      href: "/verify-email",
+                    },
+                    verified: {
+                      label: cta("viewLots"),
+                      href: "/green-coffee-offer-list",
+                    },
+                    blocked: {
+                      label: cta("contactSupport"),
+                      href: "/contact",
+                    },
+                    admin: null,
+                  }}
+                />
                 {/*
                  * A business that is not yet approved needs somewhere to go
                  * that already exists. This is the ordinary commercial request
@@ -636,16 +660,29 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               {t("accountBody")}
             </p>
           </div>
-          <Link
-            href="/sign-up"
+          <AuthCta
+            persona={persona}
             className="inline-flex min-h-12 items-center justify-center gap-2 bg-primary px-7 py-3 text-sm font-bold text-primary-foreground"
+            map={{
+              anonymous: {
+                label: cta("createAccount"),
+                href: "/sign-up",
+              },
+              unverified: {
+                label: cta("verifyEmail"),
+                href: "/verify-email",
+              },
+              // Already has the account this band is advertising.
+              verified: { label: cta("goToAccount"), href: "/account" },
+              blocked: { label: cta("contactSupport"), href: "/contact" },
+              admin: null,
+            }}
           >
-            {actions("continue")}
             <ArrowUpRight
               className="size-4 rtl:-scale-x-100"
               aria-hidden="true"
             />
-          </Link>
+          </AuthCta>
         </SectionReveal>
       </section>
 

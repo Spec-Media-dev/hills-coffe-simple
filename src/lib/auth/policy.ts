@@ -42,3 +42,36 @@ export function adminSignInDecision(
     ? "OK"
     : "FORBIDDEN";
 }
+
+/**
+ * The public presentation persona.
+ *
+ * It lives beside the sign-in decisions because it is the same kind of thing:
+ * a pure function from an already-resolved identity to a label. It grants
+ * nothing. Protected pricing still goes through `requireVerifiedUser()` and
+ * the `hills_is_verified_user()` RPC; Admin routes still go through
+ * `requireAdmin()`. Changing an outcome here changes what a button *says*,
+ * never what a request may read.
+ *
+ * Ordering is the substance. `blocked` is tested before both `admin` and
+ * `verified` so a restricted account never falls through to an entitled
+ * branch, and `admin` before `verified` so an Administrator is never presented
+ * as a customer — the two rules the scattered per-section checks kept getting
+ * wrong.
+ */
+export type PublicPersona =
+  "anonymous" | "unverified" | "verified" | "blocked" | "admin";
+
+export function personaOf(
+  candidate: AuthCandidate | null | undefined,
+): PublicPersona {
+  if (!candidate) return "anonymous";
+  if (candidate.isBlocked) return "blocked";
+  if (candidate.role === "ADMIN") return "admin";
+  if (!candidate.emailConfirmed) return "unverified";
+  return "verified";
+}
+
+/** True when the persona is the one the pricing presentation is written for. */
+export const personaSeesPricing = (persona: PublicPersona) =>
+  persona === "verified";

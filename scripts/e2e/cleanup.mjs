@@ -17,6 +17,7 @@
 
 import {
   captureBaseline,
+  clearCurrentPointer,
   diffBaseline,
   guardedServiceClient,
   loadManifest,
@@ -185,9 +186,23 @@ async function main() {
       console.log(`  warn auth ${user.persona}: ${error.message.slice(0, 70)}`);
     else authDeleted += 1;
   }
-  console.log(
-    `  auth users: ${authDeleted}/${(manifest.authUsers ?? []).length} removed`,
-  );
+  const authTotal = (manifest.authUsers ?? []).length;
+  console.log(`  auth users: ${authDeleted}/${authTotal} removed`);
+
+  /*
+   * Retire the pointer, but only once this run's personas are genuinely gone.
+   *
+   * Gated on the auth deletion rather than on the overall verdict below: that
+   * verdict also fails for residue this run does not own, and in exactly that
+   * case the personas *were* deleted and the pointer *was* stale. Gating on
+   * the verdict would have left the bug alive in the situation that produced
+   * it.
+   */
+  const pointer =
+    authDeleted === authTotal
+      ? clearCurrentPointer(runId)
+      : "kept-auth-remains";
+  console.log(`  current-fixtures pointer: ${pointer}`);
 
   // ------------------------------------------------- prove nothing else moved
   console.log("re-capturing baseline to verify pre-existing data…");
@@ -202,6 +217,7 @@ async function main() {
   console.log("CLEANUP REPORT");
   console.log(`  fixture rows deleted      : ${deleted}`);
   console.log(`  fixture auth users deleted: ${authDeleted}`);
+  console.log(`  current-fixtures pointer  : ${pointer}`);
   console.log(`  refused (not manifest-owned): ${refused.length}`);
   refused.forEach((entry) => console.log(`      ${entry}`));
   console.log(`  pre-existing rows missing : ${findings.missing.length}`);

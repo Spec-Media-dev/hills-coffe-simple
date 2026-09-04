@@ -27,6 +27,7 @@
 import sharp from "sharp";
 import {
   captureBaseline,
+  CURRENT_POINTER,
   guardedServiceClient,
   newManifest,
   recordAuthUser,
@@ -643,13 +644,14 @@ async function main() {
   log(`  database rows    : ${total}`);
   log(`  storage objects  : ${manifest.storagePaths.length}`);
   log(`  password         : withheld from output by design`);
-  // Written to a gitignored file so Playwright can sign in for real.
+  // Written to a gitignored file so Playwright can sign in for real. The
+  // path is the shared constant cleanup retires, so the two cannot drift.
   const { writeFileSync } = await import("node:fs");
   writeFileSync(
-    "tests/e2e/.p12-runs/current.json",
+    CURRENT_POINTER,
     `${JSON.stringify({ runId, password: PASSWORD, personas }, null, 2)}\n`,
   );
-  log(`  credentials      : tests/e2e/.p12-runs/current.json (gitignored)`);
+  log(`  credentials      : ${CURRENT_POINTER} (gitignored)`);
 }
 
 main().catch((error) => {

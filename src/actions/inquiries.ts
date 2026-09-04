@@ -10,9 +10,11 @@ import {
 } from "@/lib/actions";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import {
-  ACTIVE_SAMPLE_STATUSES,
-  processSampleRequest,
-} from "@/lib/inquiries/sample-request";
+  findActiveSampleRequest,
+  findRecentIdenticalProductInquiry,
+  submissionFingerprint,
+} from "@/lib/data/inquiries";
+import { processSampleRequest } from "@/lib/inquiries/sample-request";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -143,6 +145,36 @@ export async function createProductInquiry(
   const offer = await resolveVisibleOffer(db, parsed.data.offerId);
   if (!offer) return fail("NOT_FOUND", "offerUnavailable");
 
+  /*
+   * One intent must not become several rows.
+   *
+   * A commercial inquiry has no uniqueness rule — a customer may raise a new
+   * one about the same coffee whenever business calls for it, and nothing here
+   * blocks that. What this catches is the same submission arriving twice: a
+   * double-click that outruns the disabled button, a second tab, a retry after
+   * a dropped connection, or a no-JavaScript resubmit. The earlier request is
+   * returned as the result, so the customer sees one success and one reference
+   * rather than a refusal for something they did not knowingly do.
+   *
+   * Deliberately *not* modelled as a unique index: that would need a schema
+   * change, and it would also make a legitimate identical follow-up months
+   * later impossible.
+   */
+  const fingerprint = submissionFingerprint(
+    parsed.data.subject,
+    parsed.data.message,
+  );
+  const duplicate = await findRecentIdenticalProductInquiry(
+    db,
+    viewer.id,
+    offer.offerId,
+    fingerprint,
+  );
+  if (duplicate)
+    return ok<CreatedRequest>("productInquirySent", {
+      requestCode: duplicate.requestCode,
+    });
+
   const { data, error } = await db
     .from("inquiries")
     .insert({
@@ -200,25 +232,11 @@ export async function createSampleRequestInquiry(
       resolveVisibleOffer: (offerId) => resolveVisibleOffer(db, offerId),
 
       // Scoped by coffee, never by offer: choosing a different warehouse for
-      // the same coffee is exactly the bypass the rule exists to stop.
-      findActiveRequest: async (userId, coffeeId) => {
-        const { data } = await db
-          .from("inquiries")
-          .select("request_code,status")
-          .eq("user_id", userId)
-          .eq("coffee_id", coffeeId)
-          .eq("type", "SAMPLE_REQUEST")
-          .in("status", [...ACTIVE_SAMPLE_STATUSES])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        return data
-          ? {
-              requestCode: String(data.request_code),
-              status: data.status as (typeof ACTIVE_SAMPLE_STATUSES)[number],
-            }
-          : null;
-      },
+      // the same coffee is exactly the bypass the rule exists to stop. Shared
+      // with the offer page, so the button it renders and the decision this
+      // action makes cannot disagree.
+      findActiveRequest: (userId, coffeeId) =>
+        findActiveSampleRequest(db, userId, coffeeId),
 
       insertRequest: async (input) => {
         const { data, error } = await db

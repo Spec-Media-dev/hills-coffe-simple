@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BrandMark, type BrandLogo } from "@/components/brand/mark";
@@ -17,6 +17,8 @@ export function MobileMenu({
   logo = null,
   actionHref,
   actionLabel,
+  origins,
+  labels,
 }: {
   items: Item[];
   openLabel: string;
@@ -24,8 +26,16 @@ export function MobileMenu({
   brandLabel?: string;
   /** Resolved by the server header; this component never reads the database. */
   logo?: BrandLogo | null;
-  actionHref: string;
-  actionLabel: string;
+  actionHref: string | null;
+  actionLabel: string | null;
+  /** Real active origins, already localized. Labels only — no dataset. */
+  origins: { slug: string; label: string }[];
+  labels: {
+    searchPlaceholder: string;
+    searchSubmit: string;
+    origins: string;
+    originsAll: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const dialogId = useId();
@@ -133,6 +143,42 @@ export function MobileMenu({
                     <X className="size-5" aria-hidden="true" />
                   </button>
                 </div>
+                {/*
+                 * The drawer is where search lives on a phone: the header bar
+                 * has no spare width at 360px, and squeezing a field in there
+                 * is what causes the overflow this project has already had to
+                 * fix once. A plain GET form needs no client state.
+                 */}
+                {/*
+                 * No `onSubmit` handler on purpose. Closing the drawer here
+                 * unmounted this portal before the browser had finished
+                 * submitting, so the navigation was cancelled and Enter did
+                 * nothing. The navigation itself tears the drawer down.
+                 */}
+                <form
+                  role="search"
+                  action="/search"
+                  method="get"
+                  className="relative mt-6"
+                >
+                  <label>
+                    <span className="sr-only">{labels.searchPlaceholder}</span>
+                    <input
+                      name="q"
+                      type="search"
+                      placeholder={labels.searchPlaceholder}
+                      data-testid="mobile-search-input"
+                      className="h-12 w-full rounded-xl border border-input bg-background ps-4 pe-12 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="absolute end-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground"
+                  >
+                    <span className="sr-only">{labels.searchSubmit}</span>
+                    <Search className="size-4" aria-hidden="true" />
+                  </button>
+                </form>
                 <nav className="flex flex-col pt-6" aria-label={openLabel}>
                   {items.map((item, index) => (
                     <Link
@@ -148,15 +194,41 @@ export function MobileMenu({
                     </Link>
                   ))}
                 </nav>
-                <div className="mt-auto pt-10">
-                  <Link
-                    href={actionHref}
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-12 items-center justify-center bg-primary px-6 py-3 text-sm font-bold text-primary-foreground"
-                  >
-                    {actionLabel}
-                  </Link>
-                </div>
+                {origins.length ? (
+                  <div className="pt-8">
+                    <p className="eyebrow">{labels.origins}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {origins.slice(0, 8).map((origin) => (
+                        <Link
+                          key={origin.slug}
+                          href={`/green-coffee-offer-list?origin=${origin.slug}`}
+                          onClick={() => setOpen(false)}
+                          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm transition-colors hover:border-highlight focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {origin.label}
+                        </Link>
+                      ))}
+                      <Link
+                        href="/coffee-origins"
+                        onClick={() => setOpen(false)}
+                        className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold text-highlight focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {labels.originsAll}
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+                {actionHref && actionLabel ? (
+                  <div className="mt-auto pt-10">
+                    <Link
+                      href={actionHref}
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-12 items-center justify-center bg-primary px-6 py-3 text-sm font-bold text-primary-foreground"
+                    >
+                      {actionLabel}
+                    </Link>
+                  </div>
+                ) : null}
               </DrawerReveal>
             </div>,
             document.body,

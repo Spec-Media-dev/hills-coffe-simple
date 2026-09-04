@@ -19,6 +19,8 @@ const SCREENS: Array<{ label: string; route: string }> = [
   { label: "arabic-homepage", route: "/ar" },
   { label: "arabic-catalog", route: "/ar/green-coffee-offer-list" },
   { label: "arabic-admin-login", route: "/ar/dashboard-admin" },
+  { label: "search", route: "/search?q=coffee" },
+  { label: "arabic-search", route: "/ar/search?q=coffee" },
   { label: "not-found", route: "/nonexistent-xyz-404" },
 ];
 

@@ -19,7 +19,10 @@
     "catalog": "Catalog",
     "primary": "Primary navigation",
     "skip": "Skip to content",
-    "theme": "Toggle color theme"
+    "theme": "Toggle color theme",
+    "searchLabel": "Search",
+    "originsAll": "View all origins",
+    "productsMenu": "Show product categories"
   },
   "actions": {
     "cancel": "Cancel",
@@ -34,7 +37,9 @@
     "signin": "Sign in",
     "signout": "Sign out",
     "view": "View coffee",
-    "requestOffer": "Request an offer"
+    "requestOffer": "Request an offer",
+    "apply": "Apply",
+    "search": "Search"
   },
   "home": {
     "eyebrow": "Independent green coffee partner",
@@ -154,7 +159,29 @@
     "bags": "bags",
     "details": "Details",
     "noResults": "No coffees match these filters.",
-    "reset": "Reset your selection"
+    "reset": "Reset your selection",
+    "sortDefault": "Reference",
+    "sortCupScore": "Cup score",
+    "sortBags": "Bags available",
+    "certified": "Certified only",
+    "expand": "Show details",
+    "collapse": "Hide details",
+    "applying": "Updating results…",
+    "results": "Catalog results",
+    "grade": "Grade",
+    "warehouse": "Warehouse",
+    "bagWeight": "Bag weight",
+    "availableFrom": "Available from",
+    "certifications": "Certifications",
+    "tags": "Tags",
+    "pricingLockedTitle": "Sign in to view pricing",
+    "pricingLockedBody": "Protected per-kg pricing is available to verified customers.",
+    "pricingVerifyTitle": "Verify your email to view pricing",
+    "pricingVerifyBody": "Confirm your address to unlock protected pricing on every offer.",
+    "pricingBlockedTitle": "Account restricted",
+    "pricingBlockedBody": "Pricing is unavailable while this account is restricted.",
+    "pricingVisible": "Protected pricing is shown for your account.",
+    "pricingOnRequest": "Pricing on request"
   },
   "product": {
     "back": "Back to catalog",
@@ -1254,7 +1281,7 @@
     "SAMPLE_REQUEST": "Sample request"
   },
   "inquiry": {
-    "inquire": "Send request",
+    "inquire": "Commercial inquiry",
     "sample": "Request sample",
     "message": "Request details",
     "send": "Send request",
@@ -1264,7 +1291,8 @@
     "sampleBody": "Manual business review only; submission does not guarantee a physical sample",
     "sampleSend": "Submit sample request",
     "verify": "Verify email to continue",
-    "close": "Close"
+    "close": "Close",
+    "activeSample": "Active sample request"
   },
   "knowledge": {
     "eyebrow": "Knowledge",
@@ -1312,5 +1340,34 @@
     "sampleStep1": "Send your delivery details — you get a reference code immediately.",
     "sampleStep2": "We review the request against the lot's availability.",
     "sampleStep3": "If approved, we confirm dispatch with you before anything ships."
+  },
+  "cta": {
+    "signIn": "Sign in",
+    "createAccount": "Create an account",
+    "verifyEmail": "Verify your email",
+    "viewLots": "View available lots",
+    "goToAccount": "Go to your account",
+    "viewRequests": "View your requests",
+    "continueSourcing": "Continue sourcing",
+    "requestAccess": "Request access",
+    "browseCatalog": "Browse the catalog",
+    "contactSupport": "Contact us"
+  },
+  "search": {
+    "eyebrow": "Search",
+    "title": "Search Hills Coffee",
+    "placeholder": "Search coffees, origins, knowledge…",
+    "open": "Open search",
+    "close": "Close search",
+    "submit": "Search",
+    "prompt": "Search coffees, origins and knowledge from one place.",
+    "resultsFor": "Results for “{q}”",
+    "count": "{count} results",
+    "empty": "Nothing matches “{q}”.",
+    "emptyHint": "Try a different word, or browse the full catalog.",
+    "coffees": "Coffees",
+    "origins": "Origins",
+    "articles": "Knowledge",
+    "pages": "Pages"
   }
 }

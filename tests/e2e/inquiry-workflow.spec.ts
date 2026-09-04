@@ -85,6 +85,14 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
     const problems = collectPageProblems(page);
     await signInCustomer(page, people.customer);
 
+    // Loaded now, while no active request exists, so its controls are still
+    // the pre-request ones when FLOW B uses it below.
+    const staleTab = await page.context().newPage();
+    await staleTab.goto(`/green-coffee-offer-list/${people.coffeeSlug}`);
+    await expect(
+      staleTab.getByRole("button", { name: "Request sample" }),
+    ).toHaveCount(2);
+
     const dialog = await openSampleDialog(page);
     await dialog
       .getByRole("textbox")
@@ -114,12 +122,40 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
     await page.goto("/account/requests");
     await expect(page.getByText(requestCode)).toBeVisible();
 
-    // FLOW B — same coffee, a different offer and warehouse: still refused.
+    /*
+     * FLOW B — same coffee, a different offer and warehouse: still refused.
+     *
+     * The offer page now answers this before the customer types: every offer
+     * for a coffee with an active sample request shows that state and a link
+     * to the surviving request instead of a control that cannot succeed. So
+     * the refusal is no longer reachable by clicking, and the check has two
+     * halves.
+     */
     await page.goto(`/green-coffee-offer-list/${people.coffeeSlug}`);
-    const triggers = page.getByRole("button", { name: "Request sample" });
-    await expect(triggers).toHaveCount(2);
-    await triggers.nth(1).click();
-    const second = page.getByRole("dialog");
+    await expect(
+      page.getByRole("button", { name: "Request sample" }),
+      "an offer still invited a second sample request for the same coffee",
+    ).toHaveCount(0);
+    // Both offers of this coffee report the state, not just the one used.
+    await expect(page.getByText("Active sample request")).toHaveCount(2);
+    await expect(
+      page.getByRole("link", { name: "View request" }).first(),
+    ).toBeVisible();
+
+    /*
+     * The server rule itself is still proven end to end, through the one path
+     * that can genuinely still reach it: a page loaded *before* the request
+     * existed, whose buttons are now stale. That is the real race this rule
+     * guards — two tabs, or a back-button — rather than a scenario the UI no
+     * longer offers.
+     */
+    const stalePage = staleTab;
+    const staleTriggers = stalePage.getByRole("button", {
+      name: "Request sample",
+    });
+    await expect(staleTriggers).toHaveCount(2);
+    await staleTriggers.nth(1).click();
+    const second = stalePage.getByRole("dialog");
     await second
       .getByRole("textbox")
       .fill("Second warehouse attempt for the same coffee.");
@@ -133,6 +169,7 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
     expect(refusalText).toContain(requestCode);
     // Nothing from the database reaches the customer.
     expect(refusalText).not.toMatch(/duplicate key|uq_inquiries|23505|violat/i);
+    await stalePage.close();
 
     expect(problems.appErrors()).toEqual([]);
   });
@@ -147,7 +184,12 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
     // A PRODUCT inquiry alongside the sample request, created through the UI.
     await signInCustomer(page, people.customer);
     await page.goto(`/green-coffee-offer-list/${people.coffeeSlug}`);
-    await page.getByRole("button", { name: "Send request" }).first().click();
+    // The offer-page trigger is "Commercial inquiry"; "Send request" is the
+    // dialog's own submit, so the two are addressed separately.
+    await page
+      .getByRole("button", { name: "Commercial inquiry" })
+      .first()
+      .click();
     const productDialog = page.getByRole("dialog");
     await productDialog
       .getByRole("textbox")
@@ -274,13 +316,20 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
     await page.goto(`/account/requests/${sample!.request_code}`);
     await expect(page.getByText("Sample delivered").first()).toBeVisible();
 
-    // FLOW E — a new request for the same coffee is refused while active…
-    let dialog = await openSampleDialog(page);
-    await dialog.getByRole("textbox").fill("Attempt while still active.");
-    await dialog.getByRole("button", { name: "Submit sample request" }).click();
-    await expect(dialog.getByRole("alert")).toContainText(
-      "already have an active sample request",
-    );
+    /*
+     * FLOW E — while the request is still active (DELIVERED is an active
+     * status), the coffee offers no way to start another one. The offer page
+     * reports the state instead, so the customer learns it before writing a
+     * message rather than after sending one. The server-side refusal that
+     * backs this is proven end to end in FLOW B, through a page loaded before
+     * the request existed.
+     */
+    await page.goto(`/green-coffee-offer-list/${people.coffeeSlug}`);
+    await expect(
+      page.getByRole("button", { name: "Request sample" }),
+      "a second sample request was offered while one was still active",
+    ).toHaveCount(0);
+    await expect(page.getByText("Active sample request").first()).toBeVisible();
 
     // …and allowed once the Administrator closes it.
     await page.context().clearCookies();
@@ -300,7 +349,7 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
 
     await page.context().clearCookies();
     await signInCustomer(page, people.customer);
-    dialog = await openSampleDialog(page);
+    const dialog = await openSampleDialog(page);
     await dialog.getByRole("textbox").fill("New request after closure.");
     await dialog.getByRole("button", { name: "Submit sample request" }).click();
     await expect(dialog.getByRole("status")).toBeVisible({ timeout: 30_000 });
@@ -383,7 +432,12 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
   }) => {
     await signInCustomer(page, people.customer);
     await page.goto(`/green-coffee-offer-list/${people.coffeeSlug}`);
-    await page.getByRole("button", { name: "Send request" }).first().click();
+    // The offer-page trigger is "Commercial inquiry"; "Send request" is the
+    // dialog's own submit, so the two are addressed separately.
+    await page
+      .getByRole("button", { name: "Commercial inquiry" })
+      .first()
+      .click();
     const dialog = page.getByRole("dialog");
     const message = dialog.getByRole("textbox");
     await message.fill("short");
@@ -406,8 +460,15 @@ test.describe("Phase 7 inquiry and sample workflow", () => {
     await signInCustomer(page, people.customer);
     await page.goto(`/green-coffee-offer-list/${people.coffeeSlug}`);
 
+    /*
+     * The commercial control, not the sample one. This test is about the
+     * dialog shell — both actions open the same `ModalDialog` with the same
+     * form — and the sample control is legitimately absent whenever the
+     * customer already holds an active request for this coffee, which earlier
+     * tests in this serial block leave behind.
+     */
     const trigger = page
-      .getByRole("button", { name: "Request sample" })
+      .getByRole("button", { name: "Commercial inquiry" })
       .first();
     await trigger.focus();
     await page.keyboard.press("Enter");

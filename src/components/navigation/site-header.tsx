@@ -1,6 +1,7 @@
-import { Search, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { BrandMark } from "@/components/brand/mark";
+import { HeaderSearch } from "./header-search";
 import { LocaleSwitcher } from "./locale-switcher";
 import { MobileMenu } from "./mobile-menu";
 import { CatalogMegaMenu } from "./catalog-mega-menu";
@@ -8,6 +9,9 @@ import { NavUnderline } from "@/components/motion/primitives";
 import { ThemeToggle } from "./theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { requireVerifiedUser } from "@/lib/auth/session";
+import { getPublicPersona } from "@/lib/auth/persona";
+import { AuthCta } from "@/components/auth/auth-cta";
+import { getCatalogFacets } from "@/lib/data/catalog-query";
 import { AccountMenu } from "./account-menu";
 import { avatarInitials, getOwnAvatarUrl } from "@/lib/data/avatar";
 import { getSiteLogo } from "@/lib/data/site-logo";
@@ -23,6 +27,13 @@ export async function SiteHeader() {
   // Administrator is never rendered as a protected-pricing customer and a
   // blocked customer's protected UI disappears (Constitution VI and VII).
   const viewer = await requireVerifiedUser();
+  /*
+   * `requireVerifiedUser()` still decides the account affordance, unchanged.
+   * The persona is presentation only: it decides what the *call to action*
+   * says, which is what stopped an Administrator and an unverified customer
+   * both being shown a "Sign in" button they should never see.
+   */
+  const persona = await getPublicPersona();
   const locale = (await getLocale()) as Locale;
   const avatarUrl = viewer ? await getOwnAvatarUrl() : null;
   // Resolved once per render and shared with the mobile menu, which is a
@@ -30,6 +41,27 @@ export async function SiteHeader() {
   const logo = await getSiteLogo(locale);
   const account = await getTranslations("account");
   const catalog = await getTranslations("catalog");
+  const search = await getTranslations("search");
+  const cta = await getTranslations("cta");
+  // Real, active, already-localized origins — the same source the catalog
+  // filter uses, so the menu can never offer an origin the filter rejects.
+  const facets = await getCatalogFacets(locale);
+  /*
+   * The drawer's primary action follows the same persona rules as the header
+   * button, so the two can never disagree — a verified customer used to be
+   * offered "Account" here while the header still said "Sign in".
+   */
+  const mobileAction =
+    persona === "verified"
+      ? { actionHref: "/account", actionLabel: t("account") }
+      : persona === "unverified"
+        ? { actionHref: "/verify-email", actionLabel: cta("verifyEmail") }
+        : persona === "blocked"
+          ? { actionHref: "/contact", actionLabel: cta("contactSupport") }
+          : persona === "admin"
+            ? { actionHref: null, actionLabel: null }
+            : { actionHref: "/sign-in", actionLabel: actions("signin") };
+
   const items = [
     { href: "/", label: t("home") },
     { href: "/green-coffee-offer-list", label: t("products") },
@@ -67,11 +99,26 @@ export async function SiteHeader() {
               all: t("all"),
               specialty: t("specialty"),
               commercial: t("commercial"),
+              productsMenu: t("productsMenu"),
               origins: t("origins"),
+              originsAll: t("originsAll"),
+              location: catalog("location"),
               egypt: t("egypt"),
               dubai: t("dubai"),
-              pricing: actions("pricing"),
+              // Same reasoning as the catalog aside: the Products panel used
+              // to tell a signed-in customer to sign in.
+              pricing:
+                persona === "verified"
+                  ? catalog("pricingVisible")
+                  : persona === "unverified"
+                    ? catalog("pricingVerifyTitle")
+                    : persona === "blocked"
+                      ? catalog("pricingBlockedTitle")
+                      : persona === "admin"
+                        ? catalog("eyebrow")
+                        : actions("pricing"),
             }}
+            origins={facets.origins}
           />
           <Link href="/coffee-origins" className="text-sm font-semibold">
             <NavUnderline>{t("origins")}</NavUnderline>
@@ -87,13 +134,14 @@ export async function SiteHeader() {
           </Link>
         </nav>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <Link
-            href="/green-coffee-offer-list"
-            className="hidden size-11 place-items-center rounded-full border border-border transition hover:border-gold hover:text-gold sm:grid"
-            aria-label={catalog("search")}
-          >
-            <Search className="size-4" />
-          </Link>
+          <HeaderSearch
+            labels={{
+              open: search("open"),
+              close: search("close"),
+              placeholder: search("placeholder"),
+              submit: search("submit"),
+            }}
+          />
           <ThemeToggle label={t("theme")} />
           <LocaleSwitcher />
           {viewer ? (
@@ -118,13 +166,23 @@ export async function SiteHeader() {
               }}
             />
           ) : (
-            <Link
-              href="/sign-in"
+            <AuthCta
+              persona={persona}
               className="hidden h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition hover:bg-forest-light sm:flex"
+              map={{
+                anonymous: { label: actions("signin"), href: "/sign-in" },
+                unverified: {
+                  label: cta("verifyEmail"),
+                  href: "/verify-email",
+                },
+                // An Administrator is not a customer; the Admin workspace is
+                // reached at /dashboard-admin, never through public nav.
+                admin: null,
+                blocked: { label: cta("contactSupport"), href: "/contact" },
+              }}
             >
-              <UserRound className="size-4" />
-              {actions("signin")}
-            </Link>
+              <UserRound className="size-4" aria-hidden="true" />
+            </AuthCta>
           )}
           <MobileMenu
             items={items}
@@ -132,8 +190,14 @@ export async function SiteHeader() {
             closeLabel={t("close")}
             brandLabel={brand("logoAlt")}
             logo={logo}
-            actionHref={viewer ? "/account" : "/sign-in"}
-            actionLabel={viewer ? t("account") : actions("signin")}
+            origins={facets.origins}
+            labels={{
+              searchPlaceholder: search("placeholder"),
+              searchSubmit: search("submit"),
+              origins: t("origins"),
+              originsAll: t("originsAll"),
+            }}
+            {...mobileAction}
           />
         </div>
       </div>

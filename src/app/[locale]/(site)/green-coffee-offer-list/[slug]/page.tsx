@@ -9,6 +9,8 @@ import { InquiryPanel } from "@/components/inquiries/inquiry-panel";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
 import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/auth/session";
+import { getPublicPersona } from "@/lib/auth/persona";
+import { getActiveSampleRequestForCoffee } from "@/lib/data/inquiries";
 import { getCoffeeBySlug, getPublicCoffeeMedia } from "@/lib/data/catalog";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
@@ -52,7 +54,27 @@ export default async function CoffeePage({
   const catalog = await getTranslations("catalog");
   const inquiry = await getTranslations("inquiry");
   const publicInquiry = await getTranslations("publicInquiry");
+  const requests = await getTranslations("account.requests");
   const viewer = await getViewer();
+  const persona = await getPublicPersona();
+  /*
+   * Asked before the buttons render, so a customer who already holds an active
+   * sample request for this coffee is shown that state instead of an action
+   * the server would refuse. Returns null for anyone not entitled to create
+   * one, so "none" and "not entitled" are indistinguishable here.
+   */
+  const activeSample = await getActiveSampleRequestForCoffee(coffee.coffeeId);
+  /** What to say when this offer has no protected tier for this reader. */
+  const noPriceLabel =
+    persona === "verified"
+      ? catalog("pricingOnRequest")
+      : persona === "unverified"
+        ? catalog("pricingVerifyTitle")
+        : persona === "blocked"
+          ? catalog("pricingBlockedTitle")
+          : persona === "admin"
+            ? catalog("pricingOnRequest")
+            : actions("pricing");
   const prices: Map<string, { minBags: number; pricePerKgUsd: number }[]> =
     viewer?.emailVerified
       ? await getProtectedPriceTiers(coffee.offers.map((item) => item.id))
@@ -91,6 +113,8 @@ export default async function CoffeePage({
     sampleTitle: inquiry("sampleTitle"),
     sampleBody: inquiry("sampleBody"),
     sampleSend: inquiry("sampleSend"),
+    activeSample: inquiry("activeSample"),
+    viewRequest: requests("viewRequest"),
     verify: inquiry("verify"),
     close: inquiry("close"),
     // The anonymous sample dialog's own heading/description, kept in the
@@ -239,7 +263,13 @@ export default async function CoffeePage({
                     ))
                   ) : (
                     <p className="text-sm font-bold text-highlight">
-                      {actions("pricing")}
+                      {/*
+                       * This fallback used to read "Sign in to view pricing"
+                       * for everyone, including a verified customer looking at
+                       * an offer that simply has no published tiers, and an
+                       * Administrator who is not a customer at all.
+                       */}
+                      {noPriceLabel}
                     </p>
                   )}
                 </div>
@@ -249,6 +279,8 @@ export default async function CoffeePage({
                   warehouse={offer.warehouse}
                   signedIn={Boolean(viewer)}
                   verifiedEmail={Boolean(viewer?.emailVerified)}
+                  isCustomer={persona === "verified"}
+                  activeSampleRequestCode={activeSample?.requestCode ?? null}
                   labels={inquiryLabels}
                 />
               </article>

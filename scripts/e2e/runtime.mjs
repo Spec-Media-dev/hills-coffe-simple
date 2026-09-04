@@ -19,11 +19,26 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  existsSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { assertStagingTarget, isProtectedAccount } from "./staging-guard.mjs";
 
 export const MANIFEST_DIR = join("tests", "e2e", ".p12-runs");
+
+/**
+ * The "which fixtures are live" pointer the seed writes and the suite reads.
+ *
+ * It carries the run id and the persona credentials, so it is both the thing
+ * that tells `hasP12Fixtures` a run exists and a file that should not outlive
+ * the accounts it describes.
+ */
+export const CURRENT_POINTER = join(MANIFEST_DIR, "current.json");
 
 /** Every table Phase 12 may create rows in, in dependency order. */
 export const SEEDED_TABLES = Object.freeze([
@@ -327,4 +342,36 @@ export function recordStoragePath(manifest, bucket, path) {
 /** The only sanctioned ownership check before a delete. */
 export function manifestOwns(manifest, table, key) {
   return (manifest.rows[table] ?? []).includes(String(key));
+}
+
+/**
+ * Retires the current-fixtures pointer once its run has been cleaned up.
+ *
+ * Cleanup used to delete the rows, the storage objects and the auth users and
+ * leave this file behind. The suite then still reported `hasP12Fixtures ===
+ * true` and drove every authenticated test against accounts that no longer
+ * existed: sign-in produced no session, and fixture-dependent tests burned
+ * their full timeout instead of skipping. A whole regression sweep was spent
+ * that way before the cause was found.
+ *
+ * Deliberately narrow. It removes exactly one known path, only when that file
+ * names the run just cleaned, and never when it cannot be parsed — a pointer
+ * whose contents are unreadable might belong to a live run, and guessing is
+ * how a cleanup starts deleting things it does not own. A pointer for a
+ * *different* run is left strictly alone.
+ *
+ * Returns what it did, so the caller can say so in its report rather than
+ * claiming a removal that did not happen.
+ */
+export function clearCurrentPointer(runId, pointerPath = CURRENT_POINTER) {
+  if (!existsSync(pointerPath)) return "absent";
+  let pointer;
+  try {
+    pointer = JSON.parse(readFileSync(pointerPath, "utf8"));
+  } catch {
+    return "unreadable";
+  }
+  if (!pointer || pointer.runId !== runId) return "other-run";
+  rmSync(pointerPath, { force: true });
+  return "removed";
 }
