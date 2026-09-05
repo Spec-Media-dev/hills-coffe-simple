@@ -1,5 +1,7 @@
 import { SiteFooter } from "@/components/navigation/site-footer";
 import { SiteHeader } from "@/components/navigation/site-header";
+import { WhatsAppFab } from "@/components/contact/whatsapp-fab";
+import { whatsAppUrl } from "@/lib/contact/regions";
 import { getTranslations } from "next-intl/server";
 
 export default async function SiteLayout({
@@ -8,6 +10,10 @@ export default async function SiteLayout({
   children: React.ReactNode;
 }) {
   const nav = await getTranslations("nav");
+  const contact = await getTranslations("contact");
+  // Absent when no WhatsApp destination is configured, in which case the
+  // floating control is not rendered at all rather than linking nowhere.
+  const whatsapp = whatsAppUrl();
   return (
     <>
       <a
@@ -21,6 +27,13 @@ export default async function SiteLayout({
         {children}
       </main>
       <SiteFooter />
+      {whatsapp ? (
+        <WhatsAppFab
+          href={whatsapp}
+          label={contact("whatsapp.open")}
+          hint={contact("whatsapp.hint")}
+        />
+      ) : null}
     </>
   );
 }

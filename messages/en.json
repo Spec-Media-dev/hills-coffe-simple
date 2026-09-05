@@ -137,7 +137,10 @@
     "legal": "Legal",
     "rights": "Hills Coffee. All rights reserved.",
     "privacy": "Privacy",
-    "terms": "Terms"
+    "terms": "Terms",
+    "follow": "Follow Hills Coffee",
+    "officeUae": "Dubai office",
+    "officeEgypt": "Cairo office"
   },
   "catalog": {
     "eyebrow": "Live catalog",
@@ -244,7 +247,44 @@
     "metaDescription": "Contact the Hills Coffee team or find our published warehouse locations.",
     "ctaTitle": "Tell us what you need.",
     "ctaBody": "An offer request goes straight to the sourcing team, and you get a reference code back immediately.",
-    "warehouses": "Where we hold stock"
+    "warehouses": "Where we hold stock",
+    "regions": {
+      "eyebrow": "Our offices",
+      "title": "Two desks, one sourcing book.",
+      "intro": "Reach the team in Dubai or Cairo. Both offices work from the same offer list, so either can open a quote, arrange samples or answer a question about a shipment in transit.",
+      "address": "Address",
+      "facility": "Facilities",
+      "hours": "Working hours",
+      "phone": "Phone",
+      "showMap": "Show map",
+      "mapTitle": "Map of the {region} office",
+      "mapsAction": "Open in Google Maps",
+      "mapsLabel": "Open the {region} office in Google Maps, in a new tab",
+      "emailPending": "Email address coming soon",
+      "emailLabel": "Email the {region} office",
+      "callLabel": "Call the {region} office on {number}",
+      "socialLabel": "Hills Coffee on {network}, in a new tab",
+      "uae": {
+        "name": "Dubai, United Arab Emirates",
+        "type": "Office · Warehouse · Factory",
+        "address": "Office No. 2013, DAMAC Smart Heights, TECOM, Dubai Internet City, Dubai, UAE",
+        "hours": "10:00 AM – 7:00 PM"
+      },
+      "egypt": {
+        "name": "Cairo, Egypt",
+        "type": "Office",
+        "address": "Sheraton Residences, Zone 1, Building 2, Cairo, Egypt",
+        "hours": "9:00 AM – 5:00 PM"
+      },
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "emailAction": "Email",
+      "whatsappLabel": "Message the {region} office on WhatsApp at {number}, in a new tab"
+    },
+    "whatsapp": {
+      "open": "Chat with us on WhatsApp",
+      "hint": "Drag this button to move it, or use the arrow keys while it is focused."
+    }
   },
   "auth": {
     "signinTitle": "Welcome back",

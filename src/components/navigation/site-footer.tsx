@@ -1,5 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { BrandMark } from "@/components/brand/mark";
+import { SocialIcon } from "@/components/brand/social-icons";
+import { SOCIAL_PROFILES } from "@/lib/contact/regions";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getSiteLogo } from "@/lib/data/site-logo";
@@ -15,6 +17,7 @@ export async function SiteFooter() {
   const actions = await getTranslations("actions");
   const account = await getTranslations("account");
   const cta = await getTranslations("cta");
+  const contact = await getTranslations("contact");
   const locale = (await getLocale()) as Locale;
   const [logo, settings, viewer, persona, privacyPage, termsPage] =
     await Promise.all([
@@ -38,6 +41,24 @@ export async function SiteFooter() {
           <p className="mt-7 max-w-sm font-heading text-3xl font-semibold leading-tight text-[#eee4d1]">
             {t("statement")}
           </p>
+          {/* The company's profiles appear once, site-wide, here. */}
+          <ul className="mt-8 flex gap-2.5" aria-label={t("follow")}>
+            {SOCIAL_PROFILES.map((profile) => (
+              <li key={profile.network}>
+                <a
+                  href={profile.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  aria-label={contact("regions.socialLabel", {
+                    network: profile.label,
+                  })}
+                  className="grid size-10 place-items-center rounded-full border border-white/15 text-[#c8bfb0] transition-colors hover:border-gold-bright hover:text-gold-bright focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-bright"
+                >
+                  <SocialIcon network={profile.network} className="size-4" />
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
         <div>
           <p className="eyebrow">{t("explore")}</p>
@@ -82,7 +103,7 @@ export async function SiteFooter() {
         </div>
         <div>
           <p className="eyebrow">{nav("contact")}</p>
-          <div className="mt-6 grid gap-3 text-sm text-[#c8bfb0]">
+          <div className="footer-links mt-6 grid gap-3 text-sm text-[#c8bfb0]">
             {settings?.org_email ? (
               <a href={`mailto:${settings.org_email}`}>{settings.org_email}</a>
             ) : null}
@@ -90,6 +111,13 @@ export async function SiteFooter() {
               <a href={`tel:${settings.org_phone}`}>{settings.org_phone}</a>
             ) : null}
             {settings?.address ? <span>{settings.address}</span> : null}
+            {/*
+             * The two regional desks, linked straight to their card on the
+             * Contact page. The addresses themselves are not repeated here —
+             * this is a way in, not a second copy of the same content.
+             */}
+            <Link href="/contact#uae">{t("officeUae")}</Link>
+            <Link href="/contact#egypt">{t("officeEgypt")}</Link>
             <Link href="/contact">{nav("contact")}</Link>
           </div>
         </div>

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/content/cms-page";
+import { ContactRegionSection } from "@/components/contact/region-sections";
 import { WarehouseSection } from "@/components/content/entity-sections";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -12,7 +13,9 @@ import {
   getWarehouses,
 } from "@/lib/data/site-content";
 import { getViewer } from "@/lib/auth/session";
+import { env } from "@/lib/env";
 import { contactPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
+import { organizationAndWebsiteJsonLd } from "@/lib/seo/organization";
 import {
   cmsMetadata,
   localizedMetadata,
@@ -51,13 +54,29 @@ export default async function ContactPage({
     // side effects, so a public page can ask "is anyone signed in?" safely.
     getViewer(),
   ]);
-  /* ContactPage pointing at the single Organization node, not a second copy. */
-  const jsonLd = contactPageJsonLd({
-    locale: locale as Locale,
-    canonical: localizedUrl(locale as Locale, "/contact"),
-    name: t("title"),
-    description: t("intro"),
-  });
+  const hasPublishedDetails = Boolean(
+    settings?.org_email || settings?.org_phone || settings?.address,
+  );
+  /*
+   * ContactPage pointing at the single Organization node, not a second copy —
+   * and the Organization node itself, emitted here so that reference actually
+   * resolves. This is the page that carries the company's offices, phones and
+   * social profiles, so it is the one page where a crawler most needs the
+   * entity present rather than referenced by an id defined elsewhere.
+   */
+  const jsonLd = [
+    contactPageJsonLd({
+      locale: locale as Locale,
+      canonical: localizedUrl(locale as Locale, "/contact"),
+      name: t("title"),
+      description: t("intro"),
+    }),
+    ...organizationAndWebsiteJsonLd({
+      locale: locale as Locale,
+      siteUrl: env.NEXT_PUBLIC_SITE_URL,
+      settings,
+    }),
+  ];
 
   return (
     <>
@@ -80,42 +99,55 @@ export default async function ContactPage({
           </SectionReveal>
         </section>
       )}
+      {/* The regional offices come first: they are the concrete answer to
+          "where are you and how do I reach you". The general contact block and
+          the offer CTA below stay where they were. */}
+      <ContactRegionSection locale={locale as Locale} />
       <section className="pb-24">
-        <div className="site-container grid gap-px overflow-hidden bg-border lg:grid-cols-[1fr_.8fr_.8fr]">
-          <SectionReveal className="bg-card p-7 md:p-10">
-            <h2 className="text-3xl">{t("details")}</h2>
-            <div className="mt-7 grid gap-5 text-sm">
-              {!settings?.org_email &&
-              !settings?.org_phone &&
-              !settings?.address ? (
-                <p className="text-muted-foreground">{t("detailsEmpty")}</p>
-              ) : null}
-              {settings?.org_email ? (
-                <a
-                  className="flex items-center gap-3"
-                  href={`mailto:${settings.org_email}`}
-                >
-                  <Mail className="size-5 text-highlight" />
-                  {settings.org_email}
-                </a>
-              ) : null}
-              {settings?.org_phone ? (
-                <a
-                  className="flex items-center gap-3"
-                  href={`tel:${settings.org_phone}`}
-                >
-                  <Phone className="size-5 text-highlight" />
-                  {settings.org_phone}
-                </a>
-              ) : null}
-              {settings?.address ? (
-                <p className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 size-5 shrink-0 text-highlight" />
-                  {settings.address}
-                </p>
-              ) : null}
-            </div>
-          </SectionReveal>
+        <div
+          className={`site-container grid gap-px overflow-hidden bg-border ${
+            hasPublishedDetails
+              ? "lg:grid-cols-[1fr_.8fr_.8fr]"
+              : "lg:grid-cols-[1fr_.8fr]"
+          }`}
+        >
+          {/*
+           * The CMS-managed company details, shown only when the owner has
+           * actually published one. The empty state that used to stand here
+           * told a visitor nothing — and now says nothing true either, since
+           * the offices above carry every address and number the business has.
+           */}
+          {hasPublishedDetails ? (
+            <SectionReveal className="bg-card p-7 md:p-10">
+              <h2 className="text-3xl">{t("details")}</h2>
+              <div className="mt-7 grid gap-5 text-sm">
+                {settings?.org_email ? (
+                  <a
+                    className="flex items-center gap-3"
+                    href={`mailto:${settings.org_email}`}
+                  >
+                    <Mail className="size-5 text-highlight" />
+                    {settings.org_email}
+                  </a>
+                ) : null}
+                {settings?.org_phone ? (
+                  <a
+                    className="flex items-center gap-3"
+                    href={`tel:${settings.org_phone}`}
+                  >
+                    <Phone className="size-5 text-highlight" />
+                    {settings.org_phone}
+                  </a>
+                ) : null}
+                {settings?.address ? (
+                  <p className="flex items-start gap-3">
+                    <MapPin className="mt-0.5 size-5 shrink-0 text-highlight" />
+                    {settings.address}
+                  </p>
+                ) : null}
+              </div>
+            </SectionReveal>
+          ) : null}
           <SectionReveal className="bg-primary p-7 text-primary-foreground md:p-10">
             {/* This card used to repeat `contact.intro` word for word, which
                 the hero above already shows. It now carries its own line. */}
