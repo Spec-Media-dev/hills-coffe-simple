@@ -40,6 +40,7 @@ const STATIC_PATHS = [
   "/knowledge",
   "/about",
   "/contact",
+  "/legal",
   // Public since the Owner Alignment addendum: an anonymous visitor can
   // complete a real RFQ here, so it is indexable and belongs in the map.
   "/request-a-quote",

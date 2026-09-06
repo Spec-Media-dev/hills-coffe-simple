@@ -1,4 +1,47 @@
 {
+  "legal": {
+    "title": "Privacy & website terms",
+    "description": "How Hills Coffee handles your information, account access, sample requests and inquiries.",
+    "intro": "Hills Coffee is a place to explore coffees, view prices through an account, request samples and ask our team questions. This page explains the rules for using the website and how we handle the information you provide.",
+    "updated": "Last updated: 6 September 2026",
+    "contents": "On this page",
+    "contactLink": "Contact Hills Coffee",
+    "signupNotice": "Read how we handle your information and sample requests.",
+    "sections": {
+      "website": {
+        "title": "Using the website",
+        "body": "You can browse published coffees without an account. This website does not take online payments or complete purchases. A sample request or inquiry starts a conversation with our team; it is not a confirmed purchase, stock reservation or guarantee that a sample will be supplied. Product information and availability may change. Please contact us to confirm details before making a commercial decision."
+      },
+      "account": {
+        "title": "Accounts and prices",
+        "body": "To view protected prices, create an account, confirm your email and sign in. Provide accurate contact details and keep your login information secure. Do not use another person's account or try to access information you are not authorized to view. Contact us if you believe your account has been accessed without permission."
+      },
+      "samples": {
+        "title": "Sample requests",
+        "body": "Provide the contact and delivery details requested in the sample form so our team can review and follow up on your request. You cannot submit another sample request for the same coffee while your existing request is still active. The website will show a message directing you to the existing request. Once the admin finishes processing it and closes the request, you can request that coffee again. Sending or delivering a sample does not by itself close the request."
+      },
+      "inquiries": {
+        "title": "Questions and inquiries",
+        "body": "General questions and product inquiries are separate from sample requests. You do not need to wait for a sample request to be completed before asking a question or sending another inquiry. Please send relevant, accurate information and avoid spam, abusive content or sensitive information that we do not need to answer your question."
+      },
+      "privacy": {
+        "title": "Information we collect and use",
+        "body": "We receive the information you enter when registering, updating your profile or sending a request: your name, email, phone number, and any company, country, address or message details you provide. Your account may also store saved coffees and request history. We use this information to manage account access, display protected pricing, respond to inquiries, coordinate samples and track request progress. Authentication and technical records help operate the website and protect it against misuse."
+      },
+      "sharing": {
+        "title": "Access, storage and your requests",
+        "body": "Hills Coffee staff handling your account or request and the service providers supporting website hosting, authentication and data storage process information needed for those functions. Delivery details may be shared with a delivery provider when a sample shipment is arranged. Service providers may process information outside your country. Records are kept for account operation, request follow-up and applicable recordkeeping obligations; closing a sample request does not automatically delete its history. Contact us to ask about your information or request access, correction or deletion. We may need to verify your identity and explain any information that must be retained under applicable requirements."
+      },
+      "cookies": {
+        "title": "Cookies and external services",
+        "body": "The website uses cookies and browser storage to support sign-in, account security and preferences such as language or appearance. Blocking these may affect those features. Maps on the Contact page load when you choose to open them. Loading a Google map or following a social or external link connects you to a separate provider whose privacy terms also apply."
+      },
+      "contact": {
+        "title": "Questions and policy updates",
+        "body": "For questions about this page, your account, your personal information or a sample request, use the contact details on our Contact page. Include your request reference when relevant, but do not send your password. We may update this page when our website or processes change; the date above identifies the latest revision."
+      }
+    }
+  },
   "nav": {
     "home": "Home",
     "products": "Products",

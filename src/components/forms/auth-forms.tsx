@@ -256,6 +256,7 @@ export function SignUpForm({
 }) {
   const [state, action, pending] = useAuthAction(signUpAction);
   const errors = fieldErrorsOf(state);
+  const legal = useTranslations("legal");
   return (
     <form action={action} noValidate className="grid gap-4">
       <input type="hidden" name="locale" value={locale} />
@@ -308,6 +309,16 @@ export function SignUpForm({
         autoComplete="new-password"
         error={errors?.confirmPassword}
       />
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        {legal("signupNotice")}{" "}
+        <Link
+          href="/legal"
+          locale={locale}
+          className="underline underline-offset-4"
+        >
+          {legal("title")}
+        </Link>
+      </p>
       <StateMessage state={state} locale={locale} />
       <Submit label={labels.submit} pending={pending} />
     </form>

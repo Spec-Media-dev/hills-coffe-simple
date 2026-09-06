@@ -5,7 +5,7 @@ import { SOCIAL_PROFILES } from "@/lib/contact/regions";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getSiteLogo } from "@/lib/data/site-logo";
-import { getSitePage, getSiteSettings } from "@/lib/data/site-content";
+import { getSiteSettings } from "@/lib/data/site-content";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import { getPublicPersona } from "@/lib/auth/persona";
 import { AuthCta } from "@/components/auth/auth-cta";
@@ -18,20 +18,14 @@ export async function SiteFooter() {
   const account = await getTranslations("account");
   const cta = await getTranslations("cta");
   const contact = await getTranslations("contact");
+  const legal = await getTranslations("legal");
   const locale = (await getLocale()) as Locale;
-  const [logo, settings, viewer, persona, privacyPage, termsPage] =
-    await Promise.all([
-      getSiteLogo(locale),
-      getSiteSettings(locale),
-      requireVerifiedUser(),
-      getPublicPersona(),
-      getSitePage("privacy", locale),
-      getSitePage("terms", locale),
-    ]);
-  const legalPages = [
-    privacyPage ? { href: "/privacy", label: privacyPage.title } : null,
-    termsPage ? { href: "/terms", label: termsPage.title } : null,
-  ].filter((item): item is { href: string; label: string } => Boolean(item));
+  const [logo, settings, viewer, persona] = await Promise.all([
+    getSiteLogo(locale),
+    getSiteSettings(locale),
+    requireVerifiedUser(),
+    getPublicPersona(),
+  ]);
   return (
     <footer className="site-footer bg-[#13241b] text-[#eee8dc]">
       <div className="h-2 bg-gold" aria-hidden="true" />
@@ -124,15 +118,7 @@ export async function SiteFooter() {
         <div>
           <p className="eyebrow">{t("legal")}</p>
           <div className="footer-links mt-6 grid gap-3 text-sm text-[#c8bfb0]">
-            {legalPages.length ? (
-              legalPages.map((page) => (
-                <Link key={page.href} href={page.href}>
-                  {page.label}
-                </Link>
-              ))
-            ) : (
-              <span className="text-[#8fa095]">—</span>
-            )}
+            <Link href="/legal">{legal("title")}</Link>
           </div>
         </div>
       </div>
