@@ -129,7 +129,7 @@ export function FeaturedCoffeeSection({
                 {/* Image first on every screen: the coffee is the subject. */}
                 {picture ? (
                   <div
-                    className={`relative overflow-hidden bg-muted ${single ? "min-h-64 lg:min-h-[26rem]" : "aspect-[4/3]"}`}
+                    className={`relative overflow-hidden bg-muted ${single ? "min-h-64 lg:min-h-[26rem]" : "aspect-[16/10]"}`}
                   >
                     <Image
                       src={picture.url}
@@ -148,7 +148,7 @@ export function FeaturedCoffeeSection({
                   /* A published coffee without media still holds its place —
                      branded, not a broken frame, and never invented imagery. */
                   <div
-                    className={`surface-noise flex items-end bg-primary p-6 text-primary-foreground ${single ? "min-h-64 lg:min-h-[26rem]" : "aspect-[4/3]"}`}
+                    className={`surface-noise flex items-end bg-primary p-6 text-primary-foreground ${single ? "min-h-64 lg:min-h-[26rem]" : "aspect-[16/10]"}`}
                   >
                     <PackageOpen
                       className="size-8 text-gold-bright"

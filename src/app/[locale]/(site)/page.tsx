@@ -1,19 +1,12 @@
 import Image from "next/image";
 import type { Metadata } from "next";
-import {
-  ArrowUpRight,
-  BookOpen,
-  Globe2,
-  Lock,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowUpRight, BookOpen, Globe2, Lock, MapPin } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/content/cms-page";
 import { HeroImageRotation } from "@/components/home/hero-image-rotation";
 import {
   FeaturedCoffeeSection,
   featuredCoffeeList,
-  WarehouseSection,
 } from "@/components/content/entity-sections";
 import {
   ImageReveal,
@@ -101,6 +94,48 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     settings,
   });
 
+  /*
+   * The Evidence section's example record — the first published offer this
+   * page already loaded, read as a set of labelled facts rather than the
+   * abstract field-name list. No new query: `catalog.offers` is the same
+   * array `FeaturedCoffeeSection` renders from. `fVariety` has no reliable
+   * source column here (`type` is a commercial category, not a botanical
+   * variety) and is intentionally left out rather than guessed.
+   */
+  const exampleOffer = catalog.offers[0] ?? null;
+  const exampleFields: [string, string][] | null = exampleOffer
+    ? (
+        [
+          [t("fOrigin"), exampleOffer.origin],
+          [t("fRegion"), exampleOffer.region],
+          [t("fProcess"), exampleOffer.process],
+          [t("fGrade"), exampleOffer.grade],
+          [
+            t("fScore"),
+            exampleOffer.cupScore != null
+              ? String(exampleOffer.cupScore)
+              : null,
+          ],
+          [t("fCrop"), exampleOffer.availableFrom],
+          [t("fWarehouse"), exampleOffer.warehouse],
+          [t("fReference"), exampleOffer.reference],
+          [t("fBags"), `${exampleOffer.bags} ${catalogT("bags")}`],
+          [
+            t("fCerts"),
+            exampleOffer.certifications.length
+              ? exampleOffer.certifications.join(", ")
+              : null,
+          ],
+        ] as [string, string | null][]
+      ).filter((pair): pair is [string, string] => Boolean(pair[1]))
+    : null;
+
+  // Dubai-first (OA-T07), computed once and shared by the Supply / Logistics
+  // composition below — the same ordering `WarehouseSection` used to apply.
+  const sortedWarehouses = [...warehouses].sort((a, b) =>
+    a.code === "DUBAI" ? -1 : b.code === "DUBAI" ? 1 : 0,
+  );
+
   return (
     <>
       <script
@@ -114,63 +149,68 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           <CmsPageView page={page} />
         ) : (
           /**
-           * The hero is an asymmetric split, not text dropped onto a photo.
+           * The hero is now a full-bleed photograph, not a split panel.
            *
-           * The sourcing image is composed with its subject to the right and
-           * open space to the left, so on LTR it occupies the trailing half and
-           * the copy sits in the space the photograph already leaves. RTL is
-           * not a mirror: the photograph is never flipped (that would reverse
-           * real people and real equipment). Instead the crop moves — see
-           * `object-position` below — so the open side of the frame stays
-           * beside the text whichever way the page runs.
+           * Every frame fills the entire hero visual (`object-cover`, `fill`)
+           * at every breakpoint, and the headline sits directly on top of it.
+           * Two overlays make that legible without hiding the photograph
+           * behind a tinted rectangle: a horizontal wash that is strongest
+           * where the copy starts and fades toward the open part of the frame
+           * — flipped for RTL via `rtl:bg-gradient-to-l`, since the copy still
+           * leads from the logical start edge, whichever side that is — and a
+           * gentle vertical wash that keeps the eyebrow readable against a
+           * bright sky and settles the foot of the image into the proof strip
+           * below it. Neither photograph is ever mirrored for RTL — that would
+           * reverse real people and real equipment — only the crop's focal
+           * point moves, via `object-position`.
            */
-          <section className="home-hero relative isolate flex flex-col overflow-hidden bg-primary text-primary-foreground lg:min-h-[calc(100svh-5rem)]">
-            <div className="relative flex flex-1 flex-col lg:block">
-              <div className="relative h-[42vh] min-h-64 w-full lg:absolute lg:inset-y-0 lg:end-0 lg:h-auto lg:min-h-0 lg:w-[52%] lg:border-s lg:border-white/20">
-                {/*
-                 * Deliberately NOT wrapped in ImageReveal. The first frame is
-                 * the LCP element, and ImageReveal rests at
-                 * `clip-path: inset(0 0 100%)` until it intersects — making the
-                 * largest paint wait on an animation. It also keeps the hero
-                 * clear of the Chromium clip-path/IntersectionObserver
-                 * interaction fixed earlier.
-                 *
-                 * Each frame carries its own crop. Neither photograph is ever
-                 * mirrored for RTL; the crop moves instead. In the sourcing
-                 * frame the buyer stands at the right of the shot with open
-                 * space to his left, so LTR favours 72% to seat him near the
-                 * page edge, and RTL — where the panel sits on the left of the
-                 * screen — pulls back to 58% so he stays in view. The
-                 * inspection frame is centre-weighted and needs less shift.
-                 */}
+          /* The subtraction is the sticky header (5rem) plus the category
+             ticker above it (1.75rem). Without the second term the first
+             viewport is ticker + header + hero and the hero runs past the
+             fold. */
+          <section className="home-hero relative isolate flex flex-col overflow-hidden bg-primary text-primary-foreground lg:min-h-[calc(100svh-6.75rem)]">
+            {/* This inner box is what the full-bleed image is scoped to. It
+                stops at the top of the proof strip below, which stays on its
+                own solid ground so the four facts in it are never read
+                against a photograph. Explicit min-heights give the photograph
+                real presence on every screen size, not just at `lg`, where the
+                outer section's own min-height already governs. */}
+            <div className="relative min-h-[30rem] flex-1 overflow-hidden sm:min-h-[34rem] lg:min-h-0">
+              {/*
+               * Deliberately NOT wrapped in ImageReveal. The first frame is
+               * the LCP element, and ImageReveal rests at
+               * `clip-path: inset(0 0 100%)` until it intersects — making the
+               * largest paint wait on an animation. It also keeps the hero
+               * clear of the Chromium clip-path/IntersectionObserver
+               * interaction fixed earlier. The rotation data, its 3.2s
+               * interval and the idle-armed second frame are unchanged — only
+               * `sizes` (now the full viewport, since the frame is no longer
+               * confined to a 52% column) and each frame's crop have moved.
+               */}
+              <div className="absolute inset-0">
                 <HeroImageRotation
-                  sizes="(max-width: 1024px) 100vw, 52vw"
+                  sizes="100vw"
                   frames={[
+                    {
+                      /* The intake frame: a buyer grading green coffee in a
+                         Dubai warehouse with the port behind him. */
+                      src: "/images/hills-hero-dubai-intake.webp",
+                      className:
+                        "object-cover object-[62%_35%] rtl:object-[38%_35%]",
+                    },
                     {
                       src: "/images/hills-sourcing-hero.webp",
                       className:
-                        "object-cover object-[72%_center] rtl:object-[58%_center]",
-                    },
-                    {
-                      src: "/images/hills-quality-traceability.webp",
-                      className:
-                        "object-cover object-[60%_center] rtl:object-[42%_center]",
+                        "object-cover object-[62%_center] rtl:object-[38%_center]",
                     },
                   ]}
                 />
-                {/*
-                 * Blends the photograph into the solid field at the seam. The
-                 * seam is the leading edge in LTR and the trailing edge in RTL,
-                 * so the gradient flips — and it runs lighter in RTL because
-                 * there it falls across the subject rather than open space.
-                 */}
-                <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/45 to-transparent rtl:bg-gradient-to-l rtl:via-primary/20" />
               </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/88 via-primary/52 to-primary/12 rtl:bg-gradient-to-l" />
+              <div className="absolute inset-0 bg-gradient-to-b from-primary/34 via-transparent to-primary/45" />
 
-              {/* Height comes from the flex parent, so the data strip below is
-                  never squeezed out by a hardcoded reservation. */}
-              <div className="site-container relative grid lg:h-full lg:grid-cols-[minmax(0,50%)_1fr] lg:items-center">
-                <div className="py-12 lg:py-20">
+              <div className="site-container relative flex h-full items-center py-16 lg:py-24">
+                <div className="max-w-xl lg:max-w-2xl">
                   <SectionReveal>
                     <p className="eyebrow !text-gold-contrast">
                       {t("heroEyebrow")}
@@ -180,16 +220,13 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                     </h1>
                   </SectionReveal>
                   <SectionReveal delay={0.1}>
-                    <p className="mt-7 max-w-[54ch] text-base leading-8 text-white/78 md:text-lg">
+                    <p className="mt-7 max-w-[54ch] text-base leading-8 text-white/85 md:text-lg">
                       {t("heroIntro")}
                     </p>
                   </SectionReveal>
                   <SectionReveal delay={0.18}>
                     <div className="mt-9 flex flex-wrap gap-3">
-                      <Link
-                        href="/request-a-quote"
-                        className="inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-6 py-3 text-sm font-bold text-[#0b241d] transition-colors hover:bg-gold-bright"
-                      >
+                      <Link href="/request-a-quote" className="btn-primary">
                         {t("heroPrimary")}
                         <ArrowUpRight
                           className="size-4 rtl:-scale-x-100"
@@ -198,7 +235,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                       </Link>
                       <Link
                         href="/green-coffee-offer-list"
-                        className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/35 px-6 py-3 text-sm font-bold transition-colors hover:bg-white/10"
+                        className="btn-on-dark"
                       >
                         {actions("explore")}
                       </Link>
@@ -231,7 +268,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                     className="border-white/15 py-5 pe-6 nth-[2n]:border-s nth-[2n]:pe-0 nth-[2n]:ps-6 nth-[n+3]:border-t md:py-6 md:pe-7 md:ps-7 md:nth-[-n+4]:border-t-0 md:nth-[n+2]:border-s md:first:ps-0"
                   >
                     <dt className="text-xs leading-5 text-white/70">{label}</dt>
-                    <dd className="mt-1 text-sm font-bold leading-6 md:text-base">
+                    {/* Quieter than the previous bold/16px: these are four
+                        facts a buyer can check, not four more headlines. */}
+                    <dd className="mt-1 text-sm leading-6 font-semibold">
                       {value}
                     </dd>
                   </div>
@@ -253,12 +292,25 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * separate section explaining it.
        */}
       <section className="border-t border-border">
-        <SectionReveal className="site-container pt-16 pb-10 md:pt-24 md:pb-12">
+        <SectionReveal className="site-container pt-14 pb-8 md:pt-20 md:pb-10">
           <p className="eyebrow">{t("pathsEyebrow")}</p>
           <h2 className="display-lg mt-6 max-w-4xl">{t("pathsTitle")}</h2>
         </SectionReveal>
 
-        <ul className="border-t border-border">
+        {/*
+         * Three columns, not three full-width rows.
+         *
+         * As stacked rows this ran to roughly 1,200 desktop pixels and put the
+         * three options a screen apart, which is the one thing a section called
+         * "three clear ways to buy" must not do. Side by side they can be
+         * compared in a single glance — matched padding, titles on one line and
+         * actions pinned to a common baseline.
+         *
+         * The ruled `gap-px` grid over `bg-border` is the same idiom the origin
+         * and offer grids already use, so this reads as part of the page rather
+         * than as a new card system.
+         */}
+        <ul className="site-container grid gap-px bg-border md:grid-cols-3">
           {[
             {
               who: t("path1Who"),
@@ -277,202 +329,112 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           ].map((path) => (
             <li
               key={path.name}
-              className="group border-b border-border transition-colors hover:bg-page"
+              className="group flex flex-col bg-background p-7 transition-colors hover:bg-page lg:p-9"
             >
-              <div className="site-container grid gap-7 py-11 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-12 lg:py-14">
-                <div>
-                  <p className="eyebrow">{path.who}</p>
-                  <h3 className="display-lg mt-5">{path.name}</h3>
-                  <p className="mt-5 max-w-[62ch] text-base leading-7 text-muted-foreground">
-                    {path.what}
-                  </p>
-                </div>
-                <Link
-                  href={path.href}
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 border border-primary px-6 py-3 text-sm font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
-                >
-                  {path.action}
-                  <ArrowUpRight
-                    className="size-4 rtl:-scale-x-100"
-                    aria-hidden="true"
-                  />
-                </Link>
-              </div>
+              <p className="eyebrow">{path.who}</p>
+              {/* Was `.display-lg` — up to 4.8rem, which in a third of the
+                  width was a headline pretending to be a card title. */}
+              <h3 className="mt-4 font-heading text-3xl leading-tight font-bold">
+                {path.name}
+              </h3>
+              <p className="mt-4 text-base leading-7 text-muted-foreground">
+                {path.what}
+              </p>
+              {/* `mt-auto` is what puts the three actions on one baseline
+                  however unevenly the descriptions wrap. */}
+              <Link
+                href={path.href}
+                className="btn-secondary mt-auto w-fit pt-7 group-hover:bg-primary group-hover:text-primary-foreground"
+              >
+                {path.action}
+                <ArrowUpRight
+                  className="size-4 rtl:-scale-x-100"
+                  aria-hidden="true"
+                />
+              </Link>
             </li>
           ))}
 
-          <li className="border-b border-border bg-primary text-primary-foreground">
-            <div className="site-container grid gap-7 py-11 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-12 lg:py-14">
-              <div>
-                <p className="flex items-center gap-2.5">
-                  <Lock
-                    className="size-3.5 text-gold-contrast"
-                    aria-hidden="true"
-                  />
-                  <span className="eyebrow !text-gold-contrast">
-                    {t("path3Badge")}
-                  </span>
-                </p>
-                <h3 className="display-lg mt-5">{t("path3Name")}</h3>
-                <p className="mt-5 max-w-[62ch] text-base leading-7 text-white/72">
-                  {t("path3What")}
-                </p>
-              </div>
-              <div className="flex flex-col items-start gap-3 md:items-end">
-                {/*
-                 * This band is the gated buyer path, so its action has to
-                 * follow the visitor. A verified customer was being told to
-                 * "Sign in" to a session they already held.
-                 */}
-                <AuthCta
-                  persona={persona}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-6 py-3 text-sm font-bold text-[#0b241d] transition-colors hover:bg-gold-bright"
-                  map={{
-                    anonymous: { label: actions("signin"), href: "/sign-in" },
-                    unverified: {
-                      label: cta("verifyEmail"),
-                      href: "/verify-email",
-                    },
-                    verified: {
-                      label: cta("viewLots"),
-                      href: "/green-coffee-offer-list",
-                    },
-                    blocked: {
-                      label: cta("contactSupport"),
-                      href: "/contact",
-                    },
-                    admin: null,
-                  }}
-                />
-                {/*
-                 * A business that is not yet approved needs somewhere to go
-                 * that already exists. This is the ordinary commercial request
-                 * route — no membership workflow, no separate application.
-                 */}
-                <Link
-                  href="/request-a-quote"
-                  className="text-sm font-bold text-gold-contrast underline-offset-4 hover:underline"
-                >
-                  {t("path3Access")}
-                </Link>
-              </div>
+          {/*
+           * The gated path keeps its dark ground. It is the only one of the
+           * three that is permission-gated rather than public, and that single
+           * visual difference is what carries the public-site/portal separation
+           * without a section explaining it. It stays third and stays quieter
+           * in emphasis than the two public routes.
+           */}
+          <li className="flex flex-col bg-primary p-7 text-primary-foreground lg:p-9">
+            <p className="flex items-center gap-2.5">
+              <Lock
+                className="size-3.5 text-gold-contrast"
+                aria-hidden="true"
+              />
+              <span className="eyebrow !text-gold-contrast">
+                {t("path3Badge")}
+              </span>
+            </p>
+            <h3 className="mt-4 font-heading text-3xl leading-tight font-bold">
+              {t("path3Name")}
+            </h3>
+            <p className="mt-4 text-base leading-7 text-white/72">
+              {t("path3What")}
+            </p>
+            <div className="mt-auto flex flex-col items-start gap-3 pt-7">
+              {/*
+               * This band is the gated buyer path, so its action has to
+               * follow the visitor. A verified customer was being told to
+               * "Sign in" to a session they already held.
+               */}
+              {/*
+               * Outline rather than gold. Gold is the page's signal for the
+               * primary commercial action — requesting samples and pricing in
+               * the hero, and the offer request in the closing band. This path
+               * is the permission-gated one, and the audit is explicit that it
+               * should stay secondary in emphasis; giving it the same gold as
+               * the two public actions made three "primary" CTAs compete.
+               * Destination and persona map are untouched.
+               */}
+              <AuthCta
+                persona={persona}
+                className="btn-on-dark"
+                map={{
+                  anonymous: { label: actions("signin"), href: "/sign-in" },
+                  unverified: {
+                    label: cta("verifyEmail"),
+                    href: "/verify-email",
+                  },
+                  verified: {
+                    label: cta("viewLots"),
+                    href: "/green-coffee-offer-list",
+                  },
+                  blocked: {
+                    label: cta("contactSupport"),
+                    href: "/contact",
+                  },
+                  admin: null,
+                }}
+              />
+              {/*
+               * A business that is not yet approved needs somewhere to go
+               * that already exists. This is the ordinary commercial request
+               * route — no membership workflow, no separate application.
+               */}
+              <Link
+                href="/request-a-quote"
+                className="text-sm font-bold text-gold-contrast underline-offset-4 hover:underline"
+              >
+                {t("path3Access")}
+              </Link>
             </div>
           </li>
         </ul>
       </section>
 
-      <section className="section-space overflow-hidden">
-        <div className="site-container grid gap-12 lg:grid-cols-[.82fr_1.18fr] lg:items-center">
-          <SectionReveal>
-            <p className="eyebrow">{t("source")}</p>
-            <h2 className="display-lg mt-5">{t("story")}</h2>
-            <p className="mt-7 max-w-xl text-lg leading-8 text-muted-foreground">
-              {t("sourceBody")}
-            </p>
-            <Link
-              href="/about"
-              className="mt-8 inline-flex min-h-11 items-center gap-2 border-b border-highlight pb-1 text-sm font-bold text-highlight"
-            >
-              {actions("learn")}
-              <ArrowUpRight
-                className="size-4 rtl:-scale-x-100"
-                aria-hidden="true"
-              />
-            </Link>
-          </SectionReveal>
-          <ImageReveal className="relative aspect-[5/4] bg-muted">
-            <Image
-              src="/images/coffee-cherry.jpg"
-              alt=""
-              fill
-              sizes="(min-width:1024px) 55vw, 100vw"
-              className="object-cover"
-            />
-            <div className="absolute bottom-0 start-0 max-w-xs bg-gold p-6 text-[#17251c]">
-              <ShieldCheck className="size-6" aria-hidden="true" />
-              <p className="mt-4 font-heading text-2xl font-bold leading-tight">
-                {t("source")}
-              </p>
-            </div>
-          </ImageReveal>
-        </div>
-      </section>
-
       {/*
-       * Traceability, evidenced rather than claimed.
-       *
-       * The list is the actual field set carried by every published lot — read
-       * off the catalog data layer, not invented. Altitude, producer name and
-       * farm size are deliberately absent: this data model does not hold them,
-       * and listing them would be the exact kind of unearned claim the section
-       * exists to argue against. The two figures beneath come from data this
-       * page has already loaded, so they cost no extra query and are true at
-       * render time.
+       * Coffee Offers moved directly after the three buying paths (was
+       * behind the sourcing story and the traceability block). A buyer who
+       * already knows they want to browse lots should not have to scroll
+       * past two more sections of positioning to reach one.
        */}
-      <section className="section-space bg-page">
-        <div className="site-container grid gap-12 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:gap-16">
-          <ImageReveal className="relative aspect-[4/5] bg-muted lg:aspect-[3/4]">
-            <Image
-              src="/images/hills-quality-traceability.webp"
-              alt=""
-              fill
-              sizes="(max-width: 1024px) 100vw, 44vw"
-              className="object-cover"
-            />
-          </ImageReveal>
-
-          <SectionReveal>
-            <p className="eyebrow">{t("traceEyebrow")}</p>
-            <h2 className="display-lg mt-5">{t("traceTitle")}</h2>
-            <p className="mt-6 max-w-[60ch] text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
-              {t("traceBody")}
-            </p>
-
-            <ul className="mt-10 grid border-t border-border sm:grid-cols-2">
-              {[
-                t("fOrigin"),
-                t("fRegion"),
-                t("fProcess"),
-                t("fVariety"),
-                t("fGrade"),
-                t("fScore"),
-                t("fCrop"),
-                t("fWarehouse"),
-                t("fReference"),
-                t("fBags"),
-                t("fCerts"),
-              ].map((field) => (
-                <li
-                  key={field}
-                  className="flex items-center gap-3 border-b border-border py-3 sm:nth-[2n]:border-s sm:nth-[2n]:ps-6 sm:nth-[2n-1]:pe-6"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="h-px w-4 shrink-0 bg-highlight"
-                  />
-                  <span className="text-sm leading-6">{field}</span>
-                </li>
-              ))}
-            </ul>
-
-            <p className="mt-8 flex flex-wrap items-baseline gap-x-8 gap-y-2 text-sm text-muted-foreground">
-              <span>
-                <b className="font-heading text-2xl text-foreground tabular-nums">
-                  {catalog.offers.length}
-                </b>{" "}
-                {t("traceStatCoffees")}
-              </span>
-              <span>
-                <b className="font-heading text-2xl text-foreground tabular-nums">
-                  {origins.length}
-                </b>{" "}
-                {t("traceStatOrigins")}
-              </span>
-            </p>
-          </SectionReveal>
-        </div>
-      </section>
-
       <FeaturedCoffeeSection
         offers={catalog.offers}
         media={coffeeHeroMedia}
@@ -483,7 +445,52 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         viewLabel={originsT("viewCoffee")}
       />
 
-      <section className="section-space bg-page">
+      {/*
+       * The former gold account band, reduced to a single ruled strip and
+       * moved beside the coffees it explains. It used to be a full-width gold
+       * campaign band lower on the page, competing with the RFQ journey and
+       * implying that registration was the point of the site. This states the
+       * one fact a browsing visitor needs — pricing sits behind a verified
+       * account — and gets out of the way. The `AuthCta` persona map is
+       * copied verbatim from that band; only the surrounding chrome changed.
+       */}
+      <section className="border-b border-border bg-page py-8">
+        <SectionReveal className="site-container flex flex-wrap items-center justify-between gap-6">
+          <div className="max-w-2xl">
+            <p className="font-heading text-lg font-bold text-foreground">
+              {t("accessTitle")}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {t("accessBody")}
+            </p>
+          </div>
+          <AuthCta
+            persona={persona}
+            className="btn-secondary shrink-0"
+            map={{
+              anonymous: {
+                label: cta("createAccount"),
+                href: "/sign-up",
+              },
+              unverified: {
+                label: cta("verifyEmail"),
+                href: "/verify-email",
+              },
+              // Already has the account this band is advertising.
+              verified: { label: cta("goToAccount"), href: "/account" },
+              blocked: { label: cta("contactSupport"), href: "/contact" },
+              admin: null,
+            }}
+          >
+            <ArrowUpRight
+              className="size-4 rtl:-scale-x-100"
+              aria-hidden="true"
+            />
+          </AuthCta>
+        </SectionReveal>
+      </section>
+
+      <section className="section-space-tight bg-page">
         <div className="site-container">
           <SectionReveal className="grid gap-8 md:grid-cols-[1fr_.7fr] md:items-end">
             <div>
@@ -555,192 +562,402 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </div>
       </section>
 
-      <section className="overflow-hidden bg-primary text-primary-foreground">
-        <div className="site-container grid lg:grid-cols-2">
-          <ImageReveal className="relative min-h-[28rem] lg:min-h-[42rem]">
+      {/*
+       * Evidence — traceability, sourcing and quality, merged into one
+       * section instead of three separate full-height bands that each
+       * restated the same promise. The main panel used to list eleven field
+       * *names*; it now shows those fields' actual values for one real
+       * published lot, with a route to that lot's own page, and only falls
+       * back to the bare list when the catalogue has nothing published yet.
+       * Altitude, producer name and farm size stay absent — this data model
+       * does not carry them, and listing them would be exactly the unearned
+       * claim this section exists to argue against.
+       */}
+      <section className="section-space-tight bg-page">
+        <div className="site-container">
+          <div className="grid gap-12 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:gap-16">
+            <ImageReveal className="relative aspect-[4/5] bg-muted lg:aspect-[3/4]">
+              <Image
+                src="/images/hills-evidence-grading.webp"
+                alt=""
+                fill
+                sizes="(max-width: 1024px) 100vw, 44vw"
+                className="object-cover"
+              />
+            </ImageReveal>
+
+            <SectionReveal>
+              <p className="eyebrow">{t("traceEyebrow")}</p>
+              <h2 className="display-lg mt-5">{t("traceTitle")}</h2>
+              <p className="mt-6 max-w-[60ch] text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
+                {t("traceBody")}
+              </p>
+
+              {exampleFields && exampleOffer ? (
+                <>
+                  <dl className="mt-10 grid border-t border-border sm:grid-cols-2">
+                    {exampleFields.map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="flex items-center justify-between gap-3 border-b border-border py-3 sm:nth-[2n]:border-s sm:nth-[2n]:ps-6 sm:nth-[2n-1]:pe-6"
+                      >
+                        <dt className="flex items-center gap-3 text-sm leading-6 text-muted-foreground">
+                          <span
+                            aria-hidden="true"
+                            className="h-px w-4 shrink-0 bg-highlight"
+                          />
+                          {label}
+                        </dt>
+                        <dd className="text-sm font-semibold">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <Link
+                    href={`/green-coffee-offer-list/${exampleOffer.slug}`}
+                    className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-highlight"
+                  >
+                    {originsT("viewCoffee")}
+                    <ArrowUpRight
+                      className="size-4 rtl:-scale-x-100"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </>
+              ) : (
+                <ul className="mt-10 grid border-t border-border sm:grid-cols-2">
+                  {[
+                    t("fOrigin"),
+                    t("fRegion"),
+                    t("fProcess"),
+                    t("fVariety"),
+                    t("fGrade"),
+                    t("fScore"),
+                    t("fCrop"),
+                    t("fWarehouse"),
+                    t("fReference"),
+                    t("fBags"),
+                    t("fCerts"),
+                  ].map((field) => (
+                    <li
+                      key={field}
+                      className="flex items-center gap-3 border-b border-border py-3 sm:nth-[2n]:border-s sm:nth-[2n]:ps-6 sm:nth-[2n-1]:pe-6"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-px w-4 shrink-0 bg-highlight"
+                      />
+                      <span className="text-sm leading-6">{field}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <p className="mt-8 flex flex-wrap items-baseline gap-x-8 gap-y-2 text-sm text-muted-foreground">
+                <span>
+                  <b className="font-heading text-2xl text-foreground tabular-nums">
+                    {catalog.offers.length}
+                  </b>{" "}
+                  {t("traceStatCoffees")}
+                </span>
+                <span>
+                  <b className="font-heading text-2xl text-foreground tabular-nums">
+                    {origins.length}
+                  </b>{" "}
+                  {t("traceStatOrigins")}
+                </span>
+              </p>
+            </SectionReveal>
+          </div>
+
+          {/* The former standalone sourcing-story and quality-story bands,
+              folded in as a ruled two-column footnote to the evidence above
+              rather than two more full-height sections repeating the same
+              promise. */}
+          <div className="mt-16 grid gap-10 border-t border-border pt-12 md:grid-cols-2 md:gap-14 lg:mt-20 lg:pt-16">
+            <SectionReveal className="grid gap-6 sm:grid-cols-[.8fr_1.2fr] sm:items-center">
+              <ImageReveal className="relative aspect-[4/3] bg-muted">
+                <Image
+                  src="/images/hills-origin-relationship.webp"
+                  alt=""
+                  fill
+                  sizes="(min-width:768px) 22vw, 100vw"
+                  className="object-cover"
+                />
+              </ImageReveal>
+              <div>
+                <p className="eyebrow">{t("source")}</p>
+                <h3 className="mt-3 font-heading text-2xl font-bold leading-tight">
+                  {t("story")}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  {t("sourceBody")}
+                </p>
+                <Link
+                  href="/about"
+                  className="mt-4 inline-flex min-h-9 items-center gap-2 text-sm font-bold text-highlight"
+                >
+                  {actions("learn")}
+                  <ArrowUpRight
+                    className="size-4 rtl:-scale-x-100"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </div>
+            </SectionReveal>
+            <SectionReveal delay={0.05}>
+              <p className="eyebrow">{t("qualityEyebrow")}</p>
+              <h3 className="mt-3 font-heading text-2xl font-bold leading-tight">
+                {t("sustain")}
+              </h3>
+              <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                {t("sustainBody")}
+              </p>
+            </SectionReveal>
+          </div>
+        </div>
+      </section>
+
+      {/*
+       * Supply / Logistics — a homepage-specific composition, not the shared
+       * `WarehouseSection` (which `/contact` still renders unchanged). The
+       * old two-card version showed almost nothing per warehouse and no
+       * image at all; this pairs one real logistics photograph with a
+       * compact two-location panel and the Dubai/Egypt positioning that used
+       * to head the old "How Hills works" band.
+       */}
+      <section className="section-space-tight overflow-hidden bg-primary text-primary-foreground">
+        <div className="site-container grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+          <ImageReveal className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[28rem]">
             <Image
-              src="/images/cupping-lab.jpg"
+              src="/images/hills-supply-dubai-port.webp"
               alt=""
               fill
               sizes="(min-width:1024px) 50vw, 100vw"
               className="object-cover"
             />
           </ImageReveal>
-          <SectionReveal className="flex min-h-[32rem] flex-col justify-center py-16 lg:px-16">
-            <p className="eyebrow !text-gold-contrast">{t("qualityEyebrow")}</p>
-            <h2 className="display-lg mt-6">{t("sustain")}</h2>
-            <p className="mt-7 max-w-xl text-lg leading-8 text-white/68">
-              {t("sustainBody")}
+          <SectionReveal>
+            <p className="eyebrow !text-gold-contrast">
+              {t("tradeEyebrowWorking")}
             </p>
+            <h2 className="display-lg mt-5 max-w-lg">{t("tradeTitle")}</h2>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-white/72">
+              {t("tradeBody")}
+            </p>
+
+            {sortedWarehouses.length ? (
+              <dl className="mt-9 grid gap-px border-t border-white/15 bg-white/15 sm:grid-cols-2">
+                {sortedWarehouses.map((warehouse) => (
+                  <div
+                    key={warehouse.id}
+                    lang={warehouse.lang}
+                    className="bg-primary py-4"
+                  >
+                    <dt className="flex items-center gap-2 text-sm font-bold">
+                      <MapPin
+                        className="size-4 shrink-0 text-gold-bright"
+                        aria-hidden="true"
+                      />
+                      {warehouse.displayName}
+                    </dt>
+                    <dd className="mt-1 ps-6 text-xs text-white/60">
+                      {warehouse.displayCity}
+                      {warehouse.displayRegion
+                        ? ` · ${warehouse.displayRegion}`
+                        : ""}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-9 border-t border-white/15 pt-4 text-sm text-white/65">
+                {t("warehouseEmpty")}
+              </p>
+            )}
+
+            {/* The plan's "Discuss delivery requirements" wording is not an
+                existing translation key, so this reuses actions.inquire
+                ("Get in touch"/"تواصل معنا") — same destination, same
+                function, no invented copy. */}
+            <Link href="/contact" className="btn-on-dark mt-9 w-fit">
+              {actions("inquire")}
+              <ArrowUpRight
+                className="size-4 rtl:-scale-x-100"
+                aria-hidden="true"
+              />
+            </Link>
           </SectionReveal>
         </div>
       </section>
 
-      <WarehouseSection
-        // Dubai-first positioning (OA-T07). The warehouse rows themselves are
-        // untouched — this only decides which card a reader meets first.
-        warehouses={[...warehouses].sort((a, b) =>
-          a.code === "DUBAI" ? -1 : b.code === "DUBAI" ? 1 : 0,
-        )}
-        title={t("network")}
-        intro={t("networkBody")}
-        empty={t("warehouseEmpty")}
-      />
-
-      <section className="section-space bg-page">
-        <SectionReveal className="site-container">
-          {/* Not "Trade with Hills" any more: that name now belongs to the
-              gated buyer path above, and two sections carrying it read as the
-              same thing said twice. This band is about how the business runs. */}
-          <p className="eyebrow">{t("tradeEyebrowWorking")}</p>
-          <h2 className="display-lg mt-5 max-w-4xl">{t("tradeTitle")}</h2>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-            {t("tradeBody")}
-          </p>
-
-          <h3 className="mt-14 text-2xl font-bold">{t("stepsTitle")}</h3>
-          {/* A real sequence, so it is numbered. */}
-          <ol className="mt-7 grid gap-px bg-border md:grid-cols-3">
-            {[
-              { title: t("step1Title"), body: t("step1Body") },
-              { title: t("step2Title"), body: t("step2Body") },
-              { title: t("step3Title"), body: t("step3Body") },
-            ].map((step, index) => (
-              <li
-                key={step.title}
-                className="flex min-h-56 flex-col bg-card p-7"
-              >
-                <span
-                  aria-hidden="true"
-                  className="font-mono text-xs font-bold text-highlight"
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <h4 className="mt-6 text-lg font-bold">{step.title}</h4>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  {step.body}
-                </p>
-              </li>
-            ))}
-          </ol>
-
-          {/*
-           * The traceability and access panels that used to sit here have
-           * moved rather than been dropped: traceability is now its own
-           * evidenced section above, and "public catalogue, protected pricing"
-           * is carried by the gated third buyer path, which shows the
-           * distinction instead of describing it.
-           */}
-
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link
-              href="/green-coffee-offer-list"
-              className="inline-flex h-12 min-h-11 items-center rounded-full bg-primary px-6 text-sm font-bold text-primary-foreground transition hover:bg-forest-light"
-            >
-              {t("browseLots")}
-            </Link>
-            {/* "Request an Offer" is CTA wording; the canonical route is
-                /request-a-quote and there is no parallel RFQ page. */}
-            <Link
-              href="/request-a-quote"
-              className="inline-flex h-12 min-h-11 items-center rounded-full border border-primary px-6 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
-            >
-              {actions("requestOffer")}
-            </Link>
-          </div>
-        </SectionReveal>
-      </section>
-
-      <section className="section-space bg-gold text-[#17251c]">
-        <SectionReveal className="site-container grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
-          <div>
-            <p className="eyebrow !text-[#3b260f]">{t("accountEyebrow")}</p>
-            <h2 className="display-lg mt-5 max-w-4xl">{t("accountTitle")}</h2>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[#1b3027]">
-              {t("accountBody")}
-            </p>
-          </div>
-          <AuthCta
-            persona={persona}
-            className="inline-flex min-h-12 items-center justify-center gap-2 bg-primary px-7 py-3 text-sm font-bold text-primary-foreground"
-            map={{
-              anonymous: {
-                label: cta("createAccount"),
-                href: "/sign-up",
-              },
-              unverified: {
-                label: cta("verifyEmail"),
-                href: "/verify-email",
-              },
-              // Already has the account this band is advertising.
-              verified: { label: cta("goToAccount"), href: "/account" },
-              blocked: { label: cta("contactSupport"), href: "/contact" },
-              admin: null,
-            }}
-          >
-            <ArrowUpRight
-              className="size-4 rtl:-scale-x-100"
-              aria-hidden="true"
-            />
-          </AuthCta>
-        </SectionReveal>
-      </section>
-
-      <section className="section-space">
+      <section className="section-space-tight">
         <div className="site-container">
           <SectionReveal className="flex items-end justify-between gap-6">
             <div>
               <p className="eyebrow">{nav("knowledge")}</p>
               <h2 className="display-lg mt-5">{t("knowledgeTitle")}</h2>
             </div>
-            <Link
-              href="/knowledge"
-              className="hidden font-bold text-highlight sm:block"
-            >
+            {/* Was `hidden sm:block` — made reliably visible, matching the
+                audit's "clear library action" direction. */}
+            <Link href="/knowledge" className="font-bold text-highlight">
               {actions("learn")} →
             </Link>
           </SectionReveal>
           {articles.length ? (
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {articles.slice(0, 3).map((article, index) => (
-                <SectionReveal key={article.id} delay={index * 0.05}>
-                  <Link
-                    href={`/knowledge/${article.slug}`}
-                    className="group block border-t border-border pt-5"
-                  >
-                    {article.featuredMedia ? (
-                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                        <Image
-                          src={article.featuredMedia.url}
-                          alt={article.featuredMedia.alt}
-                          fill
-                          unoptimized
-                          sizes="(min-width:1024px) 32vw, 100vw"
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.025]"
-                        />
-                      </div>
-                    ) : (
-                      <div className="grid aspect-[16/10] place-items-center bg-primary text-primary-foreground">
-                        <BookOpen
-                          className="size-8 text-gold-bright"
-                          aria-hidden="true"
-                        />
-                      </div>
-                    )}
+            articles.length === 1 ? (
+              /*
+               * One article in a three-column grid left two empty columns and
+               * read as an under-filled feed. Composition now follows count,
+               * the same principle `FeaturedCoffeeSection` already applies:
+               * one article gets a real two-column feature instead of a third
+               * of a grid built for three.
+               */
+              <SectionReveal className="mt-12 grid gap-10 border-t border-border pt-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:gap-16">
+                <Link
+                  href={`/knowledge/${articles[0].slug}`}
+                  className="group block"
+                >
+                  {articles[0].featuredMedia ? (
+                    <div className="relative aspect-[16/10] overflow-hidden bg-muted lg:aspect-[4/3]">
+                      <Image
+                        src={articles[0].featuredMedia.url}
+                        alt={articles[0].featuredMedia.alt}
+                        fill
+                        unoptimized
+                        sizes="(min-width:1024px) 50vw, 100vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid aspect-[16/10] place-items-center bg-primary text-primary-foreground lg:aspect-[4/3]">
+                      <BookOpen
+                        className="size-8 text-gold-bright"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+                </Link>
+                <div>
+                  <Link href={`/knowledge/${articles[0].slug}`}>
                     <h3
-                      lang={article.lang}
-                      className="mt-6 font-heading text-2xl font-bold leading-tight"
+                      lang={articles[0].lang}
+                      className="font-heading text-3xl leading-tight font-bold transition-colors hover:text-highlight"
                     >
-                      {article.title}
+                      {articles[0].title}
                     </h3>
                   </Link>
-                </SectionReveal>
-              ))}
-            </div>
+                  {articles[0].excerpt ? (
+                    <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+                      {articles[0].excerpt}
+                    </p>
+                  ) : null}
+                  <Link
+                    href={`/knowledge/${articles[0].slug}`}
+                    className="mt-6 inline-flex min-h-9 items-center gap-2 text-sm font-bold text-highlight"
+                  >
+                    {actions("learn")}
+                    <ArrowUpRight
+                      className="size-4 rtl:-scale-x-100"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </div>
+              </SectionReveal>
+            ) : (
+              <div className="mt-12 grid gap-6 lg:grid-cols-3">
+                {articles.slice(0, 3).map((article, index) => (
+                  <SectionReveal key={article.id} delay={index * 0.05}>
+                    <Link
+                      href={`/knowledge/${article.slug}`}
+                      className="group block border-t border-border pt-5"
+                    >
+                      {article.featuredMedia ? (
+                        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                          <Image
+                            src={article.featuredMedia.url}
+                            alt={article.featuredMedia.alt}
+                            fill
+                            unoptimized
+                            sizes="(min-width:1024px) 32vw, 100vw"
+                            className="object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid aspect-[16/10] place-items-center bg-primary text-primary-foreground">
+                          <BookOpen
+                            className="size-8 text-gold-bright"
+                            aria-hidden="true"
+                          />
+                        </div>
+                      )}
+                      <h3
+                        lang={article.lang}
+                        className="mt-6 font-heading text-2xl font-bold leading-tight"
+                      >
+                        {article.title}
+                      </h3>
+                    </Link>
+                  </SectionReveal>
+                ))}
+              </div>
+            )
           ) : (
             <p className="empty-state mt-8">{t("knowledgeEmpty")}</p>
           )}
         </div>
+      </section>
+
+      {/*
+       * RFQ / Sample CTA — the page's final conversion band. This is what
+       * remains of the old "How Hills works" section once its Dubai/Egypt
+       * positioning moved into Supply / Logistics above: the three-step
+       * sequence and the two commercial actions, now headed by the
+       * previously orphaned `home.cta` / `home.ctaBody` pair instead of
+       * restating the Dubai-first heading a second time. "Request an offer"
+       * is now the visually primary action — the buyer has just read the
+       * evidence, the origins and the logistics; this is the ask.
+       */}
+      <section className="section-space-tight bg-primary text-primary-foreground">
+        <SectionReveal className="site-container">
+          <h2 className="display-lg max-w-3xl">{t("cta")}</h2>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75">
+            {t("ctaBody")}
+          </p>
+
+          <h3 className="mt-14 text-2xl font-bold">{t("stepsTitle")}</h3>
+          {/* A real sequence, so it is numbered. */}
+          <ol className="mt-7 grid gap-px bg-white/15 md:grid-cols-3">
+            {[
+              { title: t("step1Title"), body: t("step1Body") },
+              { title: t("step2Title"), body: t("step2Body") },
+              { title: t("step3Title"), body: t("step3Body") },
+            ].map((step, index) => (
+              <li key={step.title} className="flex flex-col bg-primary p-7">
+                <span
+                  aria-hidden="true"
+                  className="font-mono text-xs font-bold text-gold-bright"
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h4 className="mt-6 text-lg font-bold">{step.title}</h4>
+                <p className="mt-3 text-sm leading-6 text-white/70">
+                  {step.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-9 flex flex-wrap gap-3">
+            {/* "Request an Offer" is CTA wording; the canonical route is
+                /request-a-quote and there is no parallel RFQ page. */}
+            <Link href="/request-a-quote" className="btn-primary">
+              {actions("requestOffer")}
+            </Link>
+            <Link href="/green-coffee-offer-list" className="btn-on-dark">
+              {t("browseLots")}
+            </Link>
+          </div>
+        </SectionReveal>
       </section>
     </>
   );

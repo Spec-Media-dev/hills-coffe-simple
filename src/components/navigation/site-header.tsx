@@ -5,6 +5,7 @@ import { HeaderSearch } from "./header-search";
 import { LocaleSwitcher } from "./locale-switcher";
 import { MobileMenu } from "./mobile-menu";
 import { CatalogMegaMenu } from "./catalog-mega-menu";
+import { TopTicker } from "./top-ticker";
 import { NavUnderline } from "@/components/motion/primitives";
 import { ThemeToggle } from "./theme-toggle";
 import { Link } from "@/i18n/navigation";
@@ -71,136 +72,162 @@ export async function SiteHeader() {
     { href: "/contact", label: t("contact") },
   ];
 
+  /*
+   * Decorative category strip. It reuses the facets already loaded above for
+   * the mega menu — real published coffee types and processing methods,
+   * already localized — so it costs no extra query and states nothing the
+   * catalogue does not. It sits outside the sticky header and is not sticky
+   * itself, so it scrolls away and the header keeps its `top-0` behaviour.
+   *
+   * Origins are deliberately excluded even though they are in the same object.
+   * Types and processes are a controlled vocabulary; origin names are free text
+   * an Administrator types, so putting them here would repeat whatever the
+   * catalogue currently holds across the top of every page in the site. Types
+   * and processes are also the better answer to "categories" — an origin is a
+   * place, not a category.
+   */
+  const tickerItems = [...facets.types, ...facets.processes].map(
+    (facet) => facet.label,
+  );
+
   return (
-    <header className="site-header sticky top-0 z-40 border-b border-border/75 bg-background/92 backdrop-blur-xl">
-      <div className="site-container flex h-20 items-center justify-between gap-3 sm:gap-5">
-        <Link
-          href="/"
-          className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <BrandMark
-            height={38}
-            priority
-            label={brand("logoAlt")}
-            logo={logo}
-            className="px-2 sm:px-3"
-          />
-        </Link>
-        <nav
-          className="hidden items-center gap-7 xl:flex"
-          aria-label={t("primary")}
-        >
-          <Link href="/" className="text-sm font-semibold">
-            <NavUnderline>{t("home")}</NavUnderline>
+    <>
+      <TopTicker items={tickerItems} />
+      <header className="site-header sticky top-0 z-40 border-b border-border/75 bg-background/92 backdrop-blur-xl">
+        <div className="site-container flex h-20 items-center justify-between gap-3 sm:gap-4">
+          <Link
+            href="/"
+            className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <BrandMark
+              height={38}
+              priority
+              label={brand("logoAlt")}
+              logo={logo}
+              className="px-2 sm:px-3"
+            />
           </Link>
-          <CatalogMegaMenu
-            labels={{
-              trigger: t("products"),
-              all: t("all"),
-              specialty: t("specialty"),
-              commercial: t("commercial"),
-              productsMenu: t("productsMenu"),
-              origins: t("origins"),
-              originsAll: t("originsAll"),
-              location: catalog("location"),
-              egypt: t("egypt"),
-              dubai: t("dubai"),
-              // Same reasoning as the catalog aside: the Products panel used
-              // to tell a signed-in customer to sign in.
-              pricing:
-                persona === "verified"
-                  ? catalog("pricingVisible")
-                  : persona === "unverified"
-                    ? catalog("pricingVerifyTitle")
-                    : persona === "blocked"
-                      ? catalog("pricingBlockedTitle")
-                      : persona === "admin"
-                        ? catalog("eyebrow")
-                        : actions("pricing"),
-            }}
-            origins={facets.origins}
-          />
-          <Link href="/coffee-origins" className="text-sm font-semibold">
-            <NavUnderline>{t("origins")}</NavUnderline>
-          </Link>
-          <Link href="/knowledge" className="text-sm font-semibold">
-            <NavUnderline>{t("knowledge")}</NavUnderline>
-          </Link>
-          <Link href="/about" className="text-sm font-semibold">
-            <NavUnderline>{t("about")}</NavUnderline>
-          </Link>
-          <Link href="/contact" className="text-sm font-semibold">
-            <NavUnderline>{t("contact")}</NavUnderline>
-          </Link>
-        </nav>
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <HeaderSearch
-            labels={{
-              open: search("open"),
-              close: search("close"),
-              placeholder: search("placeholder"),
-              submit: search("submit"),
-            }}
-          />
-          <ThemeToggle label={t("theme")} />
-          <LocaleSwitcher />
-          {viewer ? (
-            <AccountMenu
-              locale={locale}
-              name={viewer.fullName || viewer.email}
-              initials={avatarInitials(viewer.fullName, viewer.email)}
-              avatarUrl={avatarUrl}
-              links={[
-                { href: "/account", label: t("account") },
-                { href: "/account/settings", label: account("nav.settings") },
-                { href: "/account/favorites", label: account("nav.favorites") },
-                { href: "/account/requests", label: account("nav.requests") },
-              ]}
+          {/* Tightened from gap-7 so the always-visible search field fits at
+            1280, where Arabic nav labels are widest. */}
+          <nav
+            className="hidden items-center gap-5 xl:flex 2xl:gap-7"
+            aria-label={t("primary")}
+          >
+            <Link href="/" className="text-sm font-semibold">
+              <NavUnderline>{t("home")}</NavUnderline>
+            </Link>
+            <CatalogMegaMenu
               labels={{
-                open: account("menu.open"),
-                signOut: actions("signout"),
-                confirmTitle: account("signOut.title"),
-                confirmBody: account("signOut.body"),
-                confirmAction: actions("signout"),
-                cancel: actions("cancel"),
+                trigger: t("products"),
+                all: t("all"),
+                specialty: t("specialty"),
+                commercial: t("commercial"),
+                productsMenu: t("productsMenu"),
+                origins: t("origins"),
+                originsAll: t("originsAll"),
+                location: catalog("location"),
+                egypt: t("egypt"),
+                dubai: t("dubai"),
+                // Same reasoning as the catalog aside: the Products panel used
+                // to tell a signed-in customer to sign in.
+                pricing:
+                  persona === "verified"
+                    ? catalog("pricingVisible")
+                    : persona === "unverified"
+                      ? catalog("pricingVerifyTitle")
+                      : persona === "blocked"
+                        ? catalog("pricingBlockedTitle")
+                        : persona === "admin"
+                          ? catalog("eyebrow")
+                          : actions("pricing"),
+              }}
+              origins={facets.origins}
+            />
+            <Link href="/coffee-origins" className="text-sm font-semibold">
+              <NavUnderline>{t("origins")}</NavUnderline>
+            </Link>
+            <Link href="/knowledge" className="text-sm font-semibold">
+              <NavUnderline>{t("knowledge")}</NavUnderline>
+            </Link>
+            <Link href="/about" className="text-sm font-semibold">
+              <NavUnderline>{t("about")}</NavUnderline>
+            </Link>
+            <Link href="/contact" className="text-sm font-semibold">
+              <NavUnderline>{t("contact")}</NavUnderline>
+            </Link>
+          </nav>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <HeaderSearch
+              labels={{
+                open: search("open"),
+                close: search("close"),
+                placeholder: search("placeholder"),
+                submit: search("submit"),
               }}
             />
-          ) : (
-            <AuthCta
-              persona={persona}
-              className="hidden h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition hover:bg-forest-light sm:flex"
-              map={{
-                anonymous: { label: actions("signin"), href: "/sign-in" },
-                unverified: {
-                  label: cta("verifyEmail"),
-                  href: "/verify-email",
-                },
-                // An Administrator is not a customer; the Admin workspace is
-                // reached at /dashboard-admin, never through public nav.
-                admin: null,
-                blocked: { label: cta("contactSupport"), href: "/contact" },
+            <ThemeToggle label={t("theme")} />
+            <LocaleSwitcher />
+            {viewer ? (
+              <AccountMenu
+                locale={locale}
+                name={viewer.fullName || viewer.email}
+                initials={avatarInitials(viewer.fullName, viewer.email)}
+                avatarUrl={avatarUrl}
+                links={[
+                  { href: "/account", label: t("account") },
+                  { href: "/account/settings", label: account("nav.settings") },
+                  {
+                    href: "/account/favorites",
+                    label: account("nav.favorites"),
+                  },
+                  { href: "/account/requests", label: account("nav.requests") },
+                ]}
+                labels={{
+                  open: account("menu.open"),
+                  signOut: actions("signout"),
+                  confirmTitle: account("signOut.title"),
+                  confirmBody: account("signOut.body"),
+                  confirmAction: actions("signout"),
+                  cancel: actions("cancel"),
+                }}
+              />
+            ) : (
+              <AuthCta
+                persona={persona}
+                className="hidden h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground transition hover:bg-forest-light sm:flex"
+                map={{
+                  anonymous: { label: actions("signin"), href: "/sign-in" },
+                  unverified: {
+                    label: cta("verifyEmail"),
+                    href: "/verify-email",
+                  },
+                  // An Administrator is not a customer; the Admin workspace is
+                  // reached at /dashboard-admin, never through public nav.
+                  admin: null,
+                  blocked: { label: cta("contactSupport"), href: "/contact" },
+                }}
+              >
+                <UserRound className="size-4" aria-hidden="true" />
+              </AuthCta>
+            )}
+            <MobileMenu
+              items={items}
+              openLabel={t("menu")}
+              closeLabel={t("close")}
+              brandLabel={brand("logoAlt")}
+              logo={logo}
+              origins={facets.origins}
+              labels={{
+                searchPlaceholder: search("placeholder"),
+                searchSubmit: search("submit"),
+                origins: t("origins"),
+                originsAll: t("originsAll"),
               }}
-            >
-              <UserRound className="size-4" aria-hidden="true" />
-            </AuthCta>
-          )}
-          <MobileMenu
-            items={items}
-            openLabel={t("menu")}
-            closeLabel={t("close")}
-            brandLabel={brand("logoAlt")}
-            logo={logo}
-            origins={facets.origins}
-            labels={{
-              searchPlaceholder: search("placeholder"),
-              searchSubmit: search("submit"),
-              origins: t("origins"),
-              originsAll: t("originsAll"),
-            }}
-            {...mobileAction}
-          />
+              {...mobileAction}
+            />
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

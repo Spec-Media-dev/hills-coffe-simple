@@ -34,7 +34,7 @@ async function expectCleanRuntime(
 
 test.describe("header search", () => {
   for (const locale of ["en", "ar"] as const)
-    test(`${locale}: opens in place, submits, and closes without ever navigating on open`, async ({
+    test(`${locale}: is always on screen at desktop width, submits, and never navigates on an empty query`, async ({
       page,
       isMobile,
     }) => {
@@ -45,21 +45,22 @@ test.describe("header search", () => {
       const input = page.getByTestId("header-search-input");
 
       /*
-       * Desktop-only, and measured: shown at phone widths the trigger pushed
+       * Desktop-only, and measured: shown at phone widths the field pushed
        * the authenticated header past 375px. Phones reach search through the
        * drawer form, which the mobile test below exercises end to end.
+       *
+       * From `xl` up (the `desktop` project's 1280px viewport) the field is
+       * simply on screen — no click needed, and the icon trigger that used to
+       * reveal it is hidden rather than duplicated alongside it.
        */
       test.skip(isMobile, "search opens from the drawer on a phone");
-      await expect(trigger).toBeVisible();
+      await expect(trigger).toBeHidden();
+      await expect(input).toBeVisible();
 
       const before = page.url();
-      await trigger.click();
-      // The whole point of the change: clicking search must not navigate.
-      expect(page.url(), "clicking search navigated away").toBe(before);
-      await expect(input).toBeVisible();
-      await expect(input).toBeFocused();
 
-      // An empty query must not navigate either.
+      // An empty query must not navigate.
+      await input.focus();
       await input.press("Enter");
       await page.waitForTimeout(400);
       expect(page.url(), "empty search navigated").toBe(before);
@@ -73,29 +74,60 @@ test.describe("header search", () => {
       await expectCleanRuntime(page, problems, `header-search/${locale}`);
     });
 
-  for (const locale of ["en", "ar"] as const)
-    test(`${locale}: Escape closes the field and returns focus to the trigger`, async ({
-      page,
-    }, testInfo) => {
-      await page.goto(`${prefix(locale)}/`, { waitUntil: "domcontentloaded" });
-      test.skip(
-        testInfo.project.name !== "desktop",
-        "search opens from the drawer on a phone",
-      );
-      const trigger = page.getByTestId("header-search-trigger");
+  test("desktop: the magnifier button submits too, not only Enter", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "search opens from the drawer on a phone");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    /*
+     * `type="button"`, not `type="submit"` — a real submit button here would
+     * make the bare `button[type="submit"]` selector several auth specs use
+     * to sign in ambiguous on every page. Clicking it must still search.
+     */
+    await page.getByTestId("header-search-input").fill("coffee");
+    await page.getByTestId("header-search-submit").click();
+    await page.waitForURL(/\/search\?q=coffee/, { timeout: 15_000 });
+    expect(new URL(page.url()).searchParams.get("q")).toBe("coffee");
+  });
 
-      await trigger.click();
-      const input = page.getByTestId("header-search-input");
-      await expect(input).toBeFocused();
-      await input.press("Escape");
-      await expect(input).toBeHidden();
-      await expect(trigger).toBeFocused();
-
-      // The close button is the pointer equivalent of Escape.
-      await trigger.click();
-      await page.getByTestId("header-search-close").click();
-      await expect(input).toBeHidden();
+  test("tablet width (below xl): the trigger still reveals the field, and Escape/close still work", async ({
+    browser,
+  }) => {
+    /*
+     * Neither Playwright project's viewport lands in the `sm`–`lg` band, but
+     * the reveal-by-click code path is still there for it — the field is
+     * only unconditionally visible from `xl` up. A mid-width context exercises
+     * it directly rather than leaving it untested by coincidence of viewport
+     * choice.
+     */
+    const context = await browser.newContext({
+      viewport: { width: 900, height: 800 },
     });
+    const page = await context.newPage();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const trigger = page.getByTestId("header-search-trigger");
+    const input = page.getByTestId("header-search-input");
+
+    await expect(trigger).toBeVisible();
+    await expect(input).toBeHidden();
+
+    await trigger.click();
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+
+    await input.press("Escape");
+    await expect(input).toBeHidden();
+    await expect(trigger).toBeFocused();
+
+    // The close button is the pointer equivalent of Escape.
+    await trigger.click();
+    await page.getByTestId("header-search-close").click();
+    await expect(input).toBeHidden();
+
+    await context.close();
+  });
 
   test("mobile: search is reachable from the drawer without overflowing", async ({
     page,

@@ -158,6 +158,14 @@
   .section-space {
     padding-block: clamp(5rem, 9vw, 9rem);
   }
+  /* The homepage's own rhythm. The audit's dominant finding was that the page
+     is too tall, but `.section-space` is shared with About, Contact, Origins,
+     Knowledge, the catalog and search — none of which were audited. This is
+     additive so the homepage can be calmed without restyling five other page
+     types by accident. */
+  .section-space-tight {
+    padding-block: clamp(3.5rem, 6vw, 6rem);
+  }
   .eyebrow {
     font-size: 0.72rem;
     line-height: 1;
@@ -217,12 +225,16 @@
      section. This is scoped to .home-hero on purpose: About, Origins and the
      catalog heroes still want the larger scale. */
   .home-hero .display-hero {
-    font-size: clamp(2.75rem, 5.2vw, 5.25rem);
-    line-height: 0.92;
+    /* Stepped down from 5.25rem. At the old ceiling the headline was the
+       loudest thing on the page by a wide margin and crowded the supporting
+       line and both actions; this keeps the editorial scale contrast the hero
+       needs while letting the rest of the column breathe. */
+    font-size: clamp(2.5rem, 4.5vw, 4.5rem);
+    line-height: 0.94;
   }
   [dir="rtl"] .home-hero .display-hero {
-    font-size: clamp(2.5rem, 4.4vw, 4.5rem);
-    line-height: 1.12;
+    font-size: clamp(2.25rem, 3.9vw, 3.9rem);
+    line-height: 1.14;
   }
   [dir="rtl"] .display-xl {
     letter-spacing: -0.035em;
@@ -281,6 +293,107 @@
     color: var(--muted-foreground);
     font-size: 0.9375rem;
     line-height: 1.6;
+  }
+  /*
+   * One button language.
+   *
+   * The homepage used to render the same primary action as a square gold block
+   * in the hero and as a `rounded-full` pill in the trade band, so the page
+   * disagreed with itself about what a button is. These three carry the hero's
+   * treatment, which is the one the brand already leads with. Styling only —
+   * every button and link keeps its own element, type and destination.
+   */
+  .btn-primary,
+  .btn-secondary,
+  .btn-on-dark {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-inline: 1.5rem;
+    padding-block: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: #0b241d;
+  }
+  .btn-primary:hover {
+    background: var(--gold-bright);
+  }
+  .btn-secondary {
+    border: 1px solid var(--primary);
+    color: var(--primary);
+  }
+  .btn-secondary:hover {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  /*
+   * Dark needs its own resting state. `--primary` is a mid green there
+   * (#2a5c3e) sitting on a near-black page, which lands around 1.8:1 — the
+   * outline button was legible in light and all but invisible in dark. The
+   * hover state is already fine, because it fills with that green and puts
+   * cream on top of it. */
+  .dark .btn-secondary {
+    border-color: color-mix(in srgb, var(--foreground) 42%, transparent);
+    color: var(--foreground);
+  }
+  /* For the forest and photographic grounds, where the border has to read
+     against the surface rather than against the page. */
+  .btn-on-dark {
+    border: 1px solid rgb(255 255 255 / 0.35);
+    color: inherit;
+  }
+  .btn-on-dark:hover {
+    background: rgb(255 255 255 / 0.1);
+  }
+
+  /*
+   * The category ticker above the header.
+   *
+   * `overflow: hidden` is load-bearing, not cosmetic: the track is deliberately
+   * wider than the viewport, and the suite's `hasHorizontalOverflow()` only
+   * forgives elements that sit inside a scroll container. Without it every
+   * overflow assertion on every page fails.
+   *
+   * The track repeats the same group six times and translates by exactly -50%.
+   * Half of six identical groups is three of them, so the translate always
+   * lands on a group boundary whose content is identical to the starting one —
+   * the loop closes with no seam and no blank gap. It is also forced to
+   * `direction: ltr` so the flex order and the translate agree in both locales
+   * — the strip moves physically right-to-left in English and Arabic alike,
+   * while each label still shapes its own text correctly through normal bidi.
+   *
+   * The duration follows the distance. -50% of six groups is three group-widths
+   * of travel, so holding the original one-group-per-38s pace means 114s for
+   * the full cycle; leaving it at 38s would run the strip three times too fast.
+   */
+  .ticker {
+    overflow: hidden;
+  }
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    gap: 0;
+    animation: hc-ticker 114s linear infinite;
+  }
+  .ticker-track > ul {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+  }
+  /* Freezes the current frame rather than resetting it — the animation is
+     paused, not restarted, so the strip resumes from exactly where it was. */
+  .ticker:hover .ticker-track {
+    animation-play-state: paused;
   }
   .footer-links a {
     width: fit-content;
@@ -410,6 +523,13 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
     opacity: 0;
   }
 }
+/* Half the track is a duplicate of the first half, so -50% lands exactly on the
+   seam and the loop has no visible restart. */
+@keyframes hc-ticker {
+  to {
+    transform: translateX(-16.6666667%);
+  }
+}
 
 @media (max-width: 640px) {
   .site-container {
@@ -437,5 +557,18 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
     opacity: 1 !important;
     transform: none !important;
     clip-path: none !important;
+  }
+  /*
+   * The ticker needs its own stop, and it needs `!important`.
+   *
+   * The blanket rule above forces `animation-duration: 0.01ms` and
+   * `iteration-count: 1` on every element, which does not pause an infinite
+   * marquee — it runs it to completion instantly, leaving the track parked at
+   * translateX(-50%) and the strip looking half empty. Cancelling the animation
+   * outright is what actually holds the first items still and readable.
+   */
+  .ticker-track {
+    animation: none !important;
+    transform: none !important;
   }
 }
