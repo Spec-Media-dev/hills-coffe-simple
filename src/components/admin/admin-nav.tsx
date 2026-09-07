@@ -117,7 +117,7 @@ export async function AdminNav() {
     <aside className="border-e border-white/10 bg-[#13241b] text-[#eee8dc] lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-72 lg:shrink-0 lg:flex-col">
       <div className="shrink-0 px-5 pt-5 lg:px-6 lg:pt-7">
         <Link href="/" className="inline-block">
-          <BrandMark className="text-white" logo={logo} />
+          <BrandMark variant="on-dark" logo={logo} />
         </Link>
       </div>
 

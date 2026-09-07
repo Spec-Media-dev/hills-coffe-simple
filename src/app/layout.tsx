@@ -37,6 +37,19 @@ export const metadata: Metadata = {
       "Specialty and commercial green coffee sourcing for roasters, supplied from Egypt and Dubai.",
     type: "website",
   },
+  icons: {
+    // A square transparent crop of the supplied vertical Hills mark stays
+    // recognisable at browser-tab size.
+    icon: [
+      {
+        url: "/images/hills-favicon-green.png?v=20260907v1",
+        type: "image/png",
+        sizes: "512x512",
+      },
+    ],
+    shortcut: "/images/hills-favicon-green.png?v=20260907v1",
+    apple: "/images/hills-favicon-green.png?v=20260907v1",
+  },
 };
 
 export const viewport: Viewport = {

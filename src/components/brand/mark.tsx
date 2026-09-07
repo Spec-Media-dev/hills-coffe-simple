@@ -5,13 +5,11 @@ import { BrandImage } from "./brand-image";
 /**
  * Official Hills Coffee logo lockup (emblem + wordmark).
  *
- * The supplied artwork `/images/logo-mark.png` is 529x231 and is drawn in brand
- * dark green (#173C32) on a transparent background, so it disappears on dark
- * surfaces. Rather than inverting or recolouring official artwork, the lockup is
- * placed on a brand cream plate (#EEE4D1). In the light theme the page
- * background is the same cream, so the plate is visually seamless; on dark
- * surfaces (dark theme, the footer, and the admin sidebar) it keeps the logo
- * legible without altering the artwork.
+ * The project supplies two transparent official assets: dark green for light
+ * surfaces and cream for dark surfaces. They are selected with the app's theme
+ * class, so the header never needs a coloured plate behind the mark. Surfaces
+ * that are permanently dark (the footer and admin sidebar) explicitly request
+ * the cream version regardless of the selected site theme.
  *
  * Phase 8 added the `logo` prop: an Administrator's chosen media item, resolved
  * from `site_settings.org_logo_media_id` by `getSiteLogo()`. This component
@@ -23,9 +21,10 @@ import { BrandImage } from "./brand-image";
  * dynamic logo can be unavailable, so the mark cannot disappear because of a
  * NULL relation, an archived row, or a missing storage object.
  */
-const LOGO_SRC = "/images/logo-mark.png";
-const LOGO_WIDTH = 529;
-const LOGO_HEIGHT = 231;
+const DARK_LOGO_SRC = "/images/hills-logo-dark.png";
+const LIGHT_LOGO_SRC = "/images/hills-logo-light.png";
+const LOGO_WIDTH = 2624;
+const LOGO_HEIGHT = 996;
 const LOGO_ASPECT = LOGO_WIDTH / LOGO_HEIGHT;
 
 export type BrandLogo = {
@@ -39,7 +38,7 @@ export function BrandMark({
   className,
   height = 44,
   priority = false,
-  plate = true,
+  variant = "theme",
   label = "Hills Coffee",
   logo = null,
 }: {
@@ -47,8 +46,8 @@ export function BrandMark({
   /** Rendered logo height in px. Width is derived from the true aspect ratio. */
   height?: number;
   priority?: boolean;
-  /** Render the cream plate that keeps the dark artwork legible on dark surfaces. */
-  plate?: boolean;
+  /** Use the cream mark where the surrounding surface is always dark. */
+  variant?: "theme" | "on-dark";
   label?: string;
   /** The Administrator's configured logo, or null for the official artwork. */
   logo?: BrandLogo | null;
@@ -63,8 +62,6 @@ export function BrandMark({
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center",
-        // Clear space around the lockup, per the brand clear-space rule.
-        plate && "rounded-xl bg-[#eee4d1] px-3 py-1.5",
         className,
       )}
     >
@@ -73,7 +70,7 @@ export function BrandMark({
         // localized brand label is used. It is never empty.
         <BrandImage
           src={usable.url}
-          fallbackSrc={LOGO_SRC}
+          fallbackSrc={DARK_LOGO_SRC}
           fallbackAspect={LOGO_ASPECT}
           alt={usable.alt || label}
           height={height}
@@ -81,14 +78,26 @@ export function BrandMark({
           priority={priority}
         />
       ) : (
-        <Image
-          src={LOGO_SRC}
-          width={width}
-          height={height}
-          alt={label}
-          priority={priority}
-          className="block"
-        />
+        <>
+          <Image
+            src={variant === "on-dark" ? LIGHT_LOGO_SRC : DARK_LOGO_SRC}
+            width={width}
+            height={height}
+            alt={label}
+            priority={priority}
+            className={cn("block", variant === "theme" && "dark:hidden")}
+          />
+          {variant === "theme" ? (
+            <Image
+              src={LIGHT_LOGO_SRC}
+              width={width}
+              height={height}
+              alt=""
+              priority={priority}
+              className="hidden dark:block"
+            />
+          ) : null}
+        </>
       )}
     </span>
   );

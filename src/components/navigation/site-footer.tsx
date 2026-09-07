@@ -31,7 +31,12 @@ export async function SiteFooter() {
       <div className="h-2 bg-gold" aria-hidden="true" />
       <div className="site-container grid gap-x-8 gap-y-12 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)] lg:py-20">
         <div className="md:col-span-2 lg:col-span-1">
-          <BrandMark height={46} label={brand("logoAlt")} logo={logo} />
+          <BrandMark
+            height={46}
+            variant="on-dark"
+            label={brand("logoAlt")}
+            logo={logo}
+          />
           <p className="mt-7 max-w-sm font-heading text-3xl font-semibold leading-tight text-[#eee4d1]">
             {t("statement")}
           </p>
