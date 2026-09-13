@@ -26,8 +26,36 @@ describe("organizationAndWebsiteJsonLd", () => {
     expect(website).toMatchObject({
       name: "هيلز كوفي مصر",
       publisher: { "@id": "https://example.test/ar#organization" },
-      inLanguage: "ar",
+      inLanguage: ["en", "ar"],
     });
+  });
+
+  it("keeps one WebSite identity across EN and AR callers", () => {
+    const siteUrl = "https://www.hillscoffees.com";
+    const [, enSite] = organizationAndWebsiteJsonLd({
+      locale: "en",
+      siteUrl,
+      settings: null,
+    });
+    const [, arSite] = organizationAndWebsiteJsonLd({
+      locale: "ar",
+      siteUrl,
+      settings: null,
+    });
+
+    expect(enSite).toMatchObject({
+      "@id": `${siteUrl}#website`,
+      url: siteUrl,
+      inLanguage: ["en", "ar"],
+      publisher: { "@id": `${siteUrl}#organization` },
+    });
+    expect(arSite).toMatchObject({
+      "@id": `${siteUrl}#website`,
+      url: siteUrl,
+      inLanguage: ["en", "ar"],
+      publisher: { "@id": `${siteUrl}#organization` },
+    });
+    expect(enSite).toEqual(arSite);
   });
 
   it("declares the confirmed social profiles as sameAs", () => {

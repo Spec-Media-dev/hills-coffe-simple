@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { notFound } from "next/navigation";
 import { CatalogFilters } from "@/components/catalog/catalog-filters";
 import { CatalogItem } from "@/components/catalog/catalog-item";
 import { AuthCta } from "@/components/auth/auth-cta";
@@ -28,9 +29,8 @@ import type { OfferStatus } from "@/lib/supabase/types.generated";
 /**
  * Catalog parameters that produce a *filtered view* of the same inventory.
  *
- * `page` is deliberately absent: paginated pages are genuinely different
- * content and stay crawlable and self-canonical, which is what keeps deep lots
- * reachable. Everything here, by contrast, is a re-slice of the same hub.
+ * `page` is absent: genuine pagination is unique content and stays self-
+ * canonical and indexable. Everything here is a re-slice of the same hub.
  */
 const FILTER_PARAMS = [
   "q",
@@ -42,6 +42,14 @@ const FILTER_PARAMS = [
   "certified",
   "sort",
 ] as const;
+
+/** Only a positive integer is a pagination request; malformed values are page 1. */
+const pageFrom = (value: string | string[] | undefined) => {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (!candidate || !/^[1-9]\d*$/.test(candidate)) return 1;
+  const page = Number(candidate);
+  return Number.isSafeInteger(page) ? page : 1;
+};
 
 export async function generateMetadata({
   params,
@@ -60,17 +68,30 @@ export async function generateMetadata({
    * filtered view are still discovered, and the canonical points back at the
    * clean hub so any equity a filtered URL attracts consolidates there.
    *
-   * Shareability is untouched: the URLs still work, still render, and still
-   * carry their filters. Only their indexing instruction changes.
+   * Paginated hubs (`?page=2+`) are different: each page shows a distinct
+   * slice of inventory, so they stay indexable with a self-referencing
+   * canonical that includes the page query (Google pagination guidance).
    */
   const filtered = FILTER_PARAMS.some((key) => {
     const value = query[key];
     return Array.isArray(value) ? value.length > 0 : Boolean(value);
   });
 
+  const pageNumber = pageFrom(query.page);
+  const paged = !filtered && pageNumber > 1;
+
+  // The render path also checks this, but metadata resolves separately. Throw
+  // here too so an out-of-range 404 cannot retain a page-specific canonical.
+  if (paged) {
+    const result = await queryCatalog(locale as Locale, { page: pageNumber });
+    if (result.configured && pageNumber > result.pageCount) notFound();
+  }
+
   const base = localizedMetadata({
     locale: locale as Locale,
-    path: "/green-coffee-offer-list",
+    path: paged
+      ? `/green-coffee-offer-list?page=${pageNumber}`
+      : "/green-coffee-offer-list",
     title: meta("offerListTitle"),
     description: meta("offerListDescription"),
   });
@@ -115,13 +136,18 @@ export default async function OfferListPage({
       ? (availabilityParam as OfferStatus)
       : undefined,
     sort: isCatalogSort(sortParam) ? sortParam : undefined,
-    page: Math.max(1, Number.parseInt(first(query.page) ?? "1", 10) || 1),
+    page: pageFrom(query.page),
   };
 
   // Filtering, ordering and pagination are all evaluated by the database, so
   // the page transfers one page of rows whatever the catalog's size.
-  const [result, facets, persona] = await Promise.all([
-    queryCatalog(locale as Locale, filters),
+  const result = await queryCatalog(locale as Locale, filters);
+  // A requested page beyond the final result is not an empty catalog state:
+  // it does not represent inventory and must not become an indexable URL.
+  // `notFound()` also supplies the framework's noindex directive.
+  if (result.configured && filters.page > result.pageCount) notFound();
+
+  const [facets, persona] = await Promise.all([
     getCatalogFacets(locale as Locale),
     getPublicPersona(),
   ]);
@@ -154,13 +180,21 @@ export default async function OfferListPage({
 
   /*
    * Structured data describes only what this page shows, and never a price.
-   * The list mirrors the rendered rows exactly; the CollectionPage anchors it
-   * to the *clean* hub URL rather than the filtered one, so a filtered view
-   * consolidates onto the canonical hub instead of declaring a second entity.
+   * The list mirrors the rendered rows exactly. Filtered views consolidate
+   * onto the clean hub; genuine pagination pages use their self-canonical URL.
    */
+  const collectionCanonical =
+    activeFilterCount > 0
+      ? localizedUrl(locale as Locale, "/green-coffee-offer-list")
+      : filters.page > 1
+        ? localizedUrl(
+            locale as Locale,
+            `/green-coffee-offer-list?page=${filters.page}`,
+          )
+        : localizedUrl(locale as Locale, "/green-coffee-offer-list");
   const jsonLd = collectionPageJsonLd({
     locale: locale as Locale,
-    canonical: localizedUrl(locale as Locale, "/green-coffee-offer-list"),
+    canonical: collectionCanonical,
     name: t("title"),
     description: t("intro"),
     items: result.rows.map((item) => ({

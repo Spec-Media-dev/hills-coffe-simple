@@ -28,11 +28,8 @@ import {
   getSiteSettings,
   getWarehouses,
 } from "@/lib/data/site-content";
-import {
-  cmsMetadata,
-  localizedMetadata,
-  localizedUrl,
-} from "@/lib/seo/metadata";
+import { env } from "@/lib/env";
+import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
 import { organizationAndWebsiteJsonLd } from "@/lib/seo/organization";
 import { publicContinentLabel } from "@/lib/public-labels";
 
@@ -42,12 +39,13 @@ export async function generateMetadata({
   const { locale } = await params;
   const meta = await getTranslations({ locale, namespace: "seo" });
   const page = await getSitePage("home", locale as Locale);
-  if (page) return cmsMetadata(page, locale as Locale, "/");
+  if (page) return cmsMetadata(page, locale as Locale, "/", true);
   return localizedMetadata({
     locale: locale as Locale,
     path: "/",
     title: meta("homeTitle"),
     description: meta("homeDescription"),
+    absoluteTitle: true,
   });
 }
 
@@ -87,10 +85,11 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     ),
   ]);
 
-  const siteUrl = localizedUrl(locale as Locale, "/");
   const jsonLd = organizationAndWebsiteJsonLd({
     locale: locale as Locale,
-    siteUrl,
+    // Organization and WebSite are domain-level entities, not one entity per
+    // localized homepage, so every locale shares the root identity URL.
+    siteUrl: env.NEXT_PUBLIC_SITE_URL,
     settings,
   });
 

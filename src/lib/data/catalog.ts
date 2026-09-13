@@ -11,6 +11,8 @@ export type OfferListItem = {
   slug: string;
   name: string;
   nameLang: Locale | "en";
+  /** Locales with real coffee and origin translations (not fallbacks). */
+  availableLocales: Locale[];
   featured: boolean;
   featuredOrder: number;
   origin: string;
@@ -53,6 +55,12 @@ const empty = (): CatalogData => ({
   types: [],
   configured: false,
 });
+
+const localesFrom = (rows: readonly { locale: string }[]): Locale[] =>
+  (["en", "ar"] as const).filter((target) =>
+    rows.some((row) => row.locale === target),
+  );
+
 export async function getOfferList(locale: Locale): Promise<CatalogData> {
   if (!isSupabaseConfigured()) return empty();
   const db = await createSupabaseServerClient();
@@ -201,19 +209,18 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
     const origin = coffee ? origins.get(coffee.origin_id) : null;
     const warehouse = warehouses.get(offer.warehouse_id);
     if (!coffee || !origin || !warehouse) return [];
-    const coffeeT = pickTranslation(
-      coffeeTranslations.get(coffee.id) ?? [],
-      locale,
-    );
-    const originT = pickTranslation(
-      originTranslations.get(origin.id) ?? [],
-      locale,
-    );
+    const coffeeRows = coffeeTranslations.get(coffee.id) ?? [];
+    const originRows = originTranslations.get(origin.id) ?? [];
+    const coffeeT = pickTranslation(coffeeRows, locale);
+    const originT = pickTranslation(originRows, locale);
     const warehouseT = pickTranslation(
       warehouseTranslations.get(warehouse.id) ?? [],
       locale,
     );
     if (!coffeeT.translation || !originT.translation) return [];
+    const availableLocales = localesFrom(coffeeRows).filter((target) =>
+      originRows.some((row) => row.locale === target),
+    );
     const type = types.get(coffee.coffee_type_id);
     const typeT = type
       ? pickTranslation(typeTranslations.get(type.id) ?? [], locale).translation
@@ -244,6 +251,7 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
         slug: coffee.slug,
         name: coffeeT.translation.name,
         nameLang: coffeeT.translation.locale,
+        availableLocales,
         featured: coffee.is_featured,
         featuredOrder: coffee.featured_sort_order,
         origin: originT.translation.name,

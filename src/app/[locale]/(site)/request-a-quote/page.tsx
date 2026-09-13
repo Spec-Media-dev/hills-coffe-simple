@@ -7,7 +7,7 @@ import type { Locale } from "@/i18n/routing";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import { getOfferList } from "@/lib/data/catalog";
 import { getSitePage } from "@/lib/data/site-content";
-import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
+import { localizedMetadata } from "@/lib/seo/metadata";
 import { SectionReveal } from "@/components/motion/primitives";
 
 export async function generateMetadata({
@@ -15,15 +15,30 @@ export async function generateMetadata({
 }: PageProps<"/[locale]/request-a-quote">): Promise<Metadata> {
   const { locale } = await params;
   const page = await getSitePage("request-a-quote", locale as Locale);
-  if (page) return cmsMetadata(page, locale as Locale, "/request-a-quote");
   const meta = await getTranslations({ locale, namespace: "quote" });
   // Indexable since the Owner Alignment addendum: an anonymous visitor can
   // now complete a real RFQ here, so this is a genuine public entry point
   // rather than an account-only utility page (FR-061, FR-079).
+  //
+  // Description always comes from messages: the public RFQ capability is
+  // defined in-app, and a stale CMS seoDescription must not advertise a
+  // signed-in-only flow. Title / hreflang still follow CMS when present.
   return localizedMetadata({
     locale: locale as Locale,
     path: "/request-a-quote",
-    title: meta("metaTitle"),
+    ...(page
+      ? {
+          paths: {
+            en: page.availableLocales.includes("en")
+              ? "/request-a-quote"
+              : undefined,
+            ar: page.availableLocales.includes("ar")
+              ? "/request-a-quote"
+              : undefined,
+          },
+        }
+      : {}),
+    title: page?.seoTitle || page?.title || meta("metaTitle"),
     description: meta("metaDescription"),
   });
 }

@@ -34,8 +34,18 @@ export type CmsPage = SitePage & {
   seoTitle: string | null;
   seoDescription: string | null;
   lang: Locale | "en";
+  /** Locales with real page translations; fallback locales are not included. */
+  availableLocales: Locale[];
   sections: CmsSection[];
 };
+
+const localesFrom = (rows: readonly { locale: string }[]): Locale[] => [
+  ...new Set(
+    rows
+      .map((row) => row.locale)
+      .filter((locale): locale is Locale => locale === "en" || locale === "ar"),
+  ),
+];
 
 export async function getSitePage(
   pageKey: string,
@@ -69,6 +79,7 @@ export async function getSitePage(
     throw new Error("Site content unavailable (upstream)");
   const translation = pickTranslation(translationsQ.data ?? [], locale);
   if (!translation.translation) return null;
+  const availableLocales = localesFrom(translationsQ.data ?? []);
   const sections = sectionsQ.data ?? [];
   const sectionIds = sections.map((x) => x.id);
   const mediaIds = sections.flatMap((x) => (x.media_id ? [x.media_id] : []));
@@ -114,6 +125,7 @@ export async function getSitePage(
     seoTitle: translation.translation.seo_title,
     seoDescription: translation.translation.seo_description,
     lang: translation.translation.locale,
+    availableLocales,
     // A section is validated against the registry before it can reach a
     // renderer (P8-T01). An unknown type, or content that does not satisfy
     // its own type, is dropped from the page and logged server-side: the
@@ -198,17 +210,17 @@ export async function getPublishedSitePages(locale: Locale) {
     db
       .from("site_page_translations")
       .select("page_id,title,seo_description,locale")
-      .in("locale", [locale, "en"]),
+      .in("locale", ["en", "ar"]),
   ]);
   if (pagesQ.error || translationsQ.error)
     throw new Error("Published pages unavailable (upstream)");
   return (pagesQ.data ?? []).flatMap((page) => {
     if (page.published_at && new Date(page.published_at) > new Date())
       return [];
-    const t = pickTranslation(
-      (translationsQ.data ?? []).filter((x) => x.page_id === page.id),
-      locale,
-    ).translation;
+    const pageTranslations = (translationsQ.data ?? []).filter(
+      (x) => x.page_id === page.id,
+    );
+    const t = pickTranslation(pageTranslations, locale).translation;
     return t
       ? [
           {
@@ -216,6 +228,7 @@ export async function getPublishedSitePages(locale: Locale) {
             title: t.title,
             description: t.seo_description,
             lang: t.locale,
+            availableLocales: localesFrom(pageTranslations),
           },
         ]
       : [];

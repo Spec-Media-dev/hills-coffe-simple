@@ -239,10 +239,9 @@ export async function queryCatalog(
   const { data, error, count } = await sorted.range(from, to);
 
   if (error) {
-    // PGRST103 means the requested range starts past the last row — a page
-    // number beyond the result set. That is an ordinary empty page, not a
-    // failure, so the real total is fetched and an empty page is returned
-    // rather than logging an error and losing the pagination footer.
+    // PGRST103 means the requested range starts past the last row. The route
+    // needs the real total to turn that impossible pagination URL into a 404,
+    // rather than rendering an empty page with a misleading catalog count.
     if (error.code === "PGRST103") {
       const total = count ?? (await countMatching(db, filters));
       return {

@@ -4,6 +4,11 @@ import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { pickTranslation, storagePublicUrl } from "./shared";
 
+const localesFrom = (rows: readonly { locale: string }[]): Locale[] =>
+  (["en", "ar"] as const).filter((target) =>
+    rows.some((row) => row.locale === target),
+  );
+
 /**
  * P6-T04 — active, non-deleted origins with a published-coffee count.
  *
@@ -37,10 +42,10 @@ export async function getOrigins(locale: Locale) {
     coffeeCounts.set(key, (coffeeCounts.get(key) ?? 0) + 1);
   }
   return (rowsQ.data ?? []).flatMap((row) => {
-    const t = pickTranslation(
-      (translationsQ.data ?? []).filter((x) => x.origin_id === row.id),
-      locale,
+    const rowTranslations = (translationsQ.data ?? []).filter(
+      (x) => x.origin_id === row.id,
     );
+    const t = pickTranslation(rowTranslations, locale);
     return t.translation
       ? [
           {
@@ -53,6 +58,7 @@ export async function getOrigins(locale: Locale) {
             seoTitle: t.translation.seo_title,
             seoDescription: t.translation.seo_description,
             lang: t.translation.locale,
+            availableLocales: localesFrom(rowTranslations),
             coffeeCount: coffeeCounts.get(String(row.id)) ?? 0,
           },
         ]

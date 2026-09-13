@@ -4,6 +4,9 @@ import createNextIntlPlugin from "next-intl/plugin";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   allowedDevOrigins: ["127.0.0.1"],
+  // The explicit legacy rules below must see both slash forms before the
+  // framework's automatic trailing-slash normalizer runs.
+  skipTrailingSlashRedirect: true,
   experimental: {
     optimizePackageImports: ["lucide-react", "motion"],
     serverActions: { bodySizeLimit: "11mb" },
@@ -23,39 +26,46 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/products/",
-        destination: "/green-coffee-offer-list/",
+        source: "/products",
+        destination: "/green-coffee-offer-list",
         permanent: true,
       },
       {
-        source: "/products/:slug/",
-        destination: "/green-coffee-offer-list/:slug/",
+        source: "/products/:slug",
+        destination: "/green-coffee-offer-list/:slug",
         permanent: true,
       },
       {
-        source: "/en/products/",
-        destination: "/green-coffee-offer-list/",
+        source: "/en/products",
+        destination: "/green-coffee-offer-list",
         permanent: true,
       },
       {
-        source: "/en/products/:slug/",
-        destination: "/green-coffee-offer-list/:slug/",
+        source: "/en/products/:slug",
+        destination: "/green-coffee-offer-list/:slug",
         permanent: true,
       },
       {
-        source: "/full-offer-list/",
-        destination: "/green-coffee-offer-list/",
+        source: "/full-offer-list",
+        destination: "/green-coffee-offer-list",
         permanent: true,
       },
       {
-        source: "/spot-offerings/",
-        destination: "/green-coffee-offer-list/",
+        source: "/spot-offerings",
+        destination: "/green-coffee-offer-list",
         permanent: true,
       },
-      { source: "/origins/", destination: "/coffee-origins/", permanent: true },
+      { source: "/origins", destination: "/coffee-origins", permanent: true },
       {
-        source: "/en/origins/",
-        destination: "/coffee-origins/",
+        source: "/en/origins",
+        destination: "/coffee-origins",
+        permanent: true,
+      },
+      // Preserve the site's existing no-trailing-slash canonical convention
+      // for every non-legacy route after opting out of the implicit redirect.
+      {
+        source: "/:path+/",
+        destination: "/:path+",
         permanent: true,
       },
     ];

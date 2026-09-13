@@ -38,10 +38,10 @@ type OrganizationSettings = {
 };
 
 export function organizationAndWebsiteJsonLd({
-  locale,
   siteUrl,
   settings,
 }: {
+  /** Retained for call-site stability; WebSite `inLanguage` is domain-level. */
   locale: Locale;
   siteUrl: string;
   settings: OrganizationSettings | null;
@@ -80,7 +80,9 @@ export function organizationAndWebsiteJsonLd({
       name,
       url: siteUrl,
       publisher: { "@id": `${siteUrl}#organization` },
-      inLanguage: locale,
+      // One WebSite entity for the whole domain — never locale-varying
+      // `inLanguage`, which would conflict under the shared `#website` @id.
+      inLanguage: ["en", "ar"],
     },
   ];
 }

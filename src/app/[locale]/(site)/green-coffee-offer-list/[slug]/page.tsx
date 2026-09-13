@@ -27,6 +27,14 @@ export async function generateMetadata({
     ? localizedMetadata({
         locale: locale as Locale,
         path: `/green-coffee-offer-list/${slug}`,
+        paths: {
+          en: coffee.availableLocales.includes("en")
+            ? `/green-coffee-offer-list/${slug}`
+            : undefined,
+          ar: coffee.availableLocales.includes("ar")
+            ? `/green-coffee-offer-list/${slug}`
+            : undefined,
+        },
         title: coffee.name,
         description:
           [coffee.origin, coffee.region, coffee.process]

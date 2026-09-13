@@ -103,6 +103,24 @@ describe("the catalog query is evaluated by the database (P6-T01)", () => {
     expect(page).not.toContain("getOfferList");
     expect(page).not.toMatch(/data\.offers\.filter\(/);
   });
+
+  it("rejects pagination beyond the final result page before rendering", () => {
+    const page = code(
+      "src/app/[locale]/(site)/green-coffee-offer-list/page.tsx",
+    );
+    expect(page).toContain('import { notFound } from "next/navigation"');
+    expect(page).toContain(
+      "if (result.configured && filters.page > result.pageCount) notFound()",
+    );
+    expect(
+      page.indexOf(
+        "if (result.configured && filters.page > result.pageCount) notFound()",
+      ),
+    ).toBeLessThan(page.indexOf("const [details, prices]"));
+    expect(page).toContain(
+      "if (result.configured && pageNumber > result.pageCount) notFound()",
+    );
+  });
 });
 
 describe("Admin catalog forms (P6 owner requirements)", () => {

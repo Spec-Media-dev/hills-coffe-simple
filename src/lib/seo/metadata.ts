@@ -15,6 +15,7 @@ export function localizedMetadata({
   title,
   description,
   robots,
+  absoluteTitle = false,
 }: {
   locale: Locale;
   path: string;
@@ -27,32 +28,56 @@ export function localizedMetadata({
    * `/ar/knowledge/dalil-alqahwa-al-khadra` are the same article. Without this
    * the `hreflang` alternates pointed at a URL that 404s.
    */
-  paths?: Partial<Record<Locale, string>>;
+  paths?: Partial<Record<Locale, string | null>>;
   title: string;
   description?: string;
   robots?: Metadata["robots"];
+  /** Keep a page title outside the root layout's `%s | Hills Coffee` template. */
+  absoluteTitle?: boolean;
 }): Metadata {
+  const hasExplicitPaths = paths !== undefined;
   const pathFor = (target: Locale) => paths?.[target] ?? path;
-  const canonical = localizedUrl(locale, pathFor(locale));
-  const alternateLocale = locale === "en" ? "ar_EG" : "en_US";
+  // An Arabic route that is rendering English fallback content must consolidate
+  // to its real English URL instead of making the fallback look like Arabic.
+  const canonicalLocale =
+    locale === "ar" && hasExplicitPaths && !paths?.ar ? "en" : locale;
+  const canonical = localizedUrl(canonicalLocale, pathFor(canonicalLocale));
+  const alternateLocale = canonicalLocale === "en" ? "ar_EG" : "en_US";
+  const languages: Record<string, string> = hasExplicitPaths
+    ? {}
+    : {
+        en: localizedUrl("en", pathFor("en")),
+        ar: localizedUrl("ar", pathFor("ar")),
+        "x-default": localizedUrl("en", pathFor("en")),
+      };
+
+  if (hasExplicitPaths) {
+    for (const target of ["en", "ar"] as const) {
+      const targetPath = paths?.[target];
+      if (targetPath) languages[target] = localizedUrl(target, targetPath);
+    }
+    if (paths?.en) languages["x-default"] = localizedUrl("en", paths.en);
+  }
+
+  const metadataTitle: Metadata["title"] = absoluteTitle
+    ? { absolute: title }
+    : title;
   return {
-    title,
+    title: metadataTitle,
     description,
     robots,
     alternates: {
       canonical,
-      languages: {
-        en: localizedUrl("en", pathFor("en")),
-        ar: localizedUrl("ar", pathFor("ar")),
-        "x-default": localizedUrl("en", pathFor("en")),
-      },
+      languages,
     },
     openGraph: {
       title,
       description,
       url: canonical,
-      locale: locale === "en" ? "en_US" : "ar_EG",
-      alternateLocale: [alternateLocale],
+      locale: canonicalLocale === "en" ? "en_US" : "ar_EG",
+      ...(languages[canonicalLocale === "en" ? "ar" : "en"]
+        ? { alternateLocale: [alternateLocale] }
+        : {}),
       type: "website",
     },
     twitter: {
@@ -67,11 +92,17 @@ export function cmsMetadata(
   page: CmsPage,
   locale: Locale,
   path: string,
+  absoluteTitle = false,
 ): Metadata {
   return localizedMetadata({
     locale,
     path,
+    paths: {
+      en: page.availableLocales.includes("en") ? path : undefined,
+      ar: page.availableLocales.includes("ar") ? path : undefined,
+    },
     title: page.seoTitle || page.title,
     description: page.seoDescription || page.summary || undefined,
+    absoluteTitle,
   });
 }

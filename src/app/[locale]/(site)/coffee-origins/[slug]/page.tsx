@@ -26,6 +26,14 @@ export async function generateMetadata({
     ? localizedMetadata({
         locale: locale as Locale,
         path: `/coffee-origins/${slug}`,
+        paths: {
+          en: origin.availableLocales.includes("en")
+            ? `/coffee-origins/${slug}`
+            : undefined,
+          ar: origin.availableLocales.includes("ar")
+            ? `/coffee-origins/${slug}`
+            : undefined,
+        },
         title: origin.seoTitle || origin.name,
         description: origin.seoDescription || origin.summary || undefined,
       })
