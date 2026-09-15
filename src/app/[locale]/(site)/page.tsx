@@ -1,9 +1,17 @@
 import Image from "next/image";
 import type { Metadata } from "next";
-import { ArrowUpRight, BookOpen, Globe2, Lock, MapPin } from "lucide-react";
+import { ArrowUpRight, BookOpen, MapPin } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/content/cms-page";
-import { HeroImageRotation } from "@/components/home/hero-image-rotation";
+import { HomeHeroLandscape } from "@/components/home/home-hero-landscape";
+import {
+  StackedFeaturePanels,
+  type StackedPanel,
+} from "@/components/home/stacked-feature-panels";
+import {
+  OriginScrollList,
+  type OriginRowData,
+} from "@/components/home/origin-scroll-list";
 import {
   FeaturedCoffeeSection,
   featuredCoffeeList,
@@ -71,12 +79,13 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
     ]);
   // Both surfaces below show a handful of rows, and both need one image per
   // row. These are batched readers — three queries each, whatever the count —
-  // and they run together because neither depends on the other.
-  const homeOrigins = origins.slice(0, 4);
+  // and they run together because neither depends on the other. The origins
+  // scroll list renders every published origin (no slice), so its media read
+  // covers the full list rather than a fixed first four.
   const featuredCoffees = featuredCoffeeList(catalog.offers);
   const [originHeroMedia, coffeeHeroMedia] = await Promise.all([
     getPublicOriginHeroMedia(
-      homeOrigins.map((origin) => origin.id),
+      origins.map((origin) => origin.id),
       locale as Locale,
     ),
     getPublicCoffeeHeroMedia(
@@ -84,6 +93,19 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       locale as Locale,
     ),
   ]);
+  const originRows: OriginRowData[] = origins.map((origin) => {
+    const media = originHeroMedia.get(origin.id);
+    return {
+      id: origin.id,
+      slug: origin.slug,
+      name: origin.name,
+      lang: origin.lang,
+      continentLabel: publicContinentLabel(origin.continent, locale as Locale),
+      coffeeCountLabel: originsT("coffeeCount", { count: origin.coffeeCount }),
+      summary: origin.summary,
+      media: media ?? null,
+    };
+  });
 
   const jsonLd = organizationAndWebsiteJsonLd({
     locale: locale as Locale,
@@ -147,285 +169,152 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         {page ? (
           <CmsPageView page={page} />
         ) : (
-          /**
-           * The hero is now a full-bleed photograph, not a split panel.
-           *
-           * Every frame fills the entire hero visual (`object-cover`, `fill`)
-           * at every breakpoint, and the headline sits directly on top of it.
-           * Two overlays make that legible without hiding the photograph
-           * behind a tinted rectangle: a horizontal wash that is strongest
-           * where the copy starts and fades toward the open part of the frame
-           * — flipped for RTL via `rtl:bg-gradient-to-l`, since the copy still
-           * leads from the logical start edge, whichever side that is — and a
-           * gentle vertical wash that keeps the eyebrow readable against a
-           * bright sky and settles the foot of the image into the proof strip
-           * below it. Neither photograph is ever mirrored for RTL — that would
-           * reverse real people and real equipment — only the crop's focal
-           * point moves, via `object-position`.
+          /*
+           * Layered landscape hero (to-top.ch's interaction language, Hills
+           * Coffee content): the full-bleed HeroImageRotation photograph is
+           * replaced by three depth-composited PNG planes with scroll
+           * parallax, centred copy with no buttons (the header carries the
+           * navigation), the interactive bean as the one action, a
+           * placeholder partner band over the foreground, and the four facts
+           * on their own ground beneath. See `home-hero-landscape.tsx` for the
+           * asset-mapping note — two of the supplied hero PNGs are used
+           * opposite their filenames because their actual content (a full
+           * sky vs. a transparent one) decides which is the base plate and
+           * which is the depth layer.
            */
-          /* The subtraction is the sticky header (5rem) plus the category
-             ticker above it (1.75rem). Without the second term the first
-             viewport is ticker + header + hero and the hero runs past the
-             fold. */
-          <section className="home-hero relative isolate flex flex-col overflow-hidden bg-primary text-primary-foreground lg:min-h-[calc(100svh-6.75rem)]">
-            {/* This inner box is what the full-bleed image is scoped to. It
-                stops at the top of the proof strip below, which stays on its
-                own solid ground so the four facts in it are never read
-                against a photograph. Explicit min-heights give the photograph
-                real presence on every screen size, not just at `lg`, where the
-                outer section's own min-height already governs. */}
-            <div className="relative min-h-[30rem] flex-1 overflow-hidden sm:min-h-[34rem] lg:min-h-0">
-              {/*
-               * Deliberately NOT wrapped in ImageReveal. The first frame is
-               * the LCP element, and ImageReveal rests at
-               * `clip-path: inset(0 0 100%)` until it intersects — making the
-               * largest paint wait on an animation. It also keeps the hero
-               * clear of the Chromium clip-path/IntersectionObserver
-               * interaction fixed earlier. The rotation data, its 3.2s
-               * interval and the idle-armed second frame are unchanged — only
-               * `sizes` (now the full viewport, since the frame is no longer
-               * confined to a 52% column) and each frame's crop have moved.
-               */}
-              <div className="absolute inset-0">
-                <HeroImageRotation
-                  sizes="100vw"
-                  frames={[
-                    {
-                      /* The intake frame: a buyer grading green coffee in a
-                         Dubai warehouse with the port behind him. */
-                      src: "/images/hills-hero-dubai-intake.webp",
-                      className:
-                        "object-cover object-[62%_35%] rtl:object-[38%_35%]",
-                    },
-                    {
-                      src: "/images/hills-sourcing-hero.webp",
-                      className:
-                        "object-cover object-[62%_center] rtl:object-[38%_center]",
-                    },
-                  ]}
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/88 via-primary/52 to-primary/12 rtl:bg-gradient-to-l" />
-              <div className="absolute inset-0 bg-gradient-to-b from-primary/34 via-transparent to-primary/45" />
-
-              <div className="site-container relative flex h-full items-center py-16 lg:py-24">
-                <div className="max-w-xl lg:max-w-2xl">
-                  <SectionReveal>
-                    <p className="eyebrow !text-gold-contrast">
-                      {t("heroEyebrow")}
-                    </p>
-                    <h1 className="display-hero mt-6 text-balance">
-                      {t("heroTitle")}
-                    </h1>
-                  </SectionReveal>
-                  <SectionReveal delay={0.1}>
-                    <p className="mt-7 max-w-[54ch] text-base leading-8 text-white/85 md:text-lg">
-                      {t("heroIntro")}
-                    </p>
-                  </SectionReveal>
-                  <SectionReveal delay={0.18}>
-                    <div className="mt-9 flex flex-wrap gap-3">
-                      <Link href="/request-a-quote" className="btn-primary">
-                        {t("heroPrimary")}
-                        <ArrowUpRight
-                          className="size-4 rtl:-scale-x-100"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                      <Link
-                        href="/green-coffee-offer-list"
-                        className="btn-on-dark"
-                      >
-                        {actions("explore")}
-                      </Link>
-                    </div>
-                  </SectionReveal>
-                </div>
-              </div>
-            </div>
-
-            {/*
-             * The first appearance of the ledger motif: four facts a buyer can
-             * check, in place of one more line of adjectives.
-             */}
-            <SectionReveal
-              delay={0.26}
-              className="relative border-t border-white/20 bg-primary"
-            >
-              <dl className="site-container grid grid-cols-2 md:grid-cols-4">
-                {[
-                  [t("heroHubLabel"), t("heroHubValue")],
-                  [t("heroOpsLabel"), t("heroOpsValue")],
-                  [t("heroTraceLabel"), t("heroTraceValue")],
-                  [t("heroSampleLabel"), t("heroSampleValue")],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    // Rules between cells only: the second cell of each mobile
-                    // row and every cell after the first once it is a single
-                    // four-up row. Logical borders, so RTL needs no override.
-                    className="border-white/15 py-5 pe-6 nth-[2n]:border-s nth-[2n]:pe-0 nth-[2n]:ps-6 nth-[n+3]:border-t md:py-6 md:pe-7 md:ps-7 md:nth-[-n+4]:border-t-0 md:nth-[n+2]:border-s md:first:ps-0"
-                  >
-                    <dt className="text-xs leading-5 text-white/70">{label}</dt>
-                    {/* Quieter than the previous bold/16px: these are four
-                        facts a buyer can check, not four more headlines. */}
-                    <dd className="mt-1 text-sm leading-6 font-semibold">
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </SectionReveal>
-          </section>
+          <HomeHeroLandscape
+            eyebrow={t("heroEyebrow")}
+            title={t("heroTitle")}
+            intro={t("heroIntro")}
+            stats={[
+              { label: t("heroHubLabel"), value: t("heroHubValue") },
+              { label: t("heroOpsLabel"), value: t("heroOpsValue") },
+              { label: t("heroTraceLabel"), value: t("heroTraceValue") },
+              { label: t("heroSampleLabel"), value: t("heroSampleValue") },
+            ]}
+            beanCtaLabel={t("heroBeanCta")}
+            partnersLabel={t("heroPartnersLabel")}
+            partnersSrText={t("heroPartnersSr")}
+          />
         )}
       </PageReveal>
 
       {/*
-       * The three ways to buy, as a decision ledger rather than three cards.
-       *
-       * They are alternatives, not steps, so they carry no 01/02/03 markers —
-       * numbering them would tell a buyer to read them in order. Ruled rows
-       * let the eye compare them instead. The third row is the only one on a
-       * dark ground: it is permission-gated rather than public, and that one
-       * difference carries the public-site/portal separation without a
-       * separate section explaining it.
+       * The three ways to buy, as sticky-overlapping panels (to-top.ch's
+       * service-panel behavior) instead of the previous three-column ledger.
+       * The gated third panel keeps its dark ground and its AuthCta — built
+       * here, in the server component, since it needs `persona` — and is
+       * passed into the client panel component as ready-made markup rather
+       * than threading auth state across the server/client boundary.
        */}
-      <section className="border-t border-border">
-        <SectionReveal className="site-container pt-14 pb-8 md:pt-20 md:pb-10">
+      <section className="border-t border-border bg-page pb-20 md:pb-28 lg:pb-36">
+        <SectionReveal className="site-container flex flex-col items-center pt-16 pb-10 text-center md:pt-24 md:pb-14">
           <p className="eyebrow">{t("pathsEyebrow")}</p>
           <h2 className="display-lg mt-6 max-w-4xl">{t("pathsTitle")}</h2>
         </SectionReveal>
 
-        {/*
-         * Three columns, not three full-width rows.
-         *
-         * As stacked rows this ran to roughly 1,200 desktop pixels and put the
-         * three options a screen apart, which is the one thing a section called
-         * "three clear ways to buy" must not do. Side by side they can be
-         * compared in a single glance — matched padding, titles on one line and
-         * actions pinned to a common baseline.
-         *
-         * The ruled `gap-px` grid over `bg-border` is the same idiom the origin
-         * and offer grids already use, so this reads as part of the page rather
-         * than as a new card system.
-         */}
-        <ul className="site-container grid gap-px bg-border md:grid-cols-3">
-          {[
-            {
-              who: t("path1Who"),
-              name: t("path1Name"),
-              what: t("path1What"),
-              action: t("path1Action"),
-              href: "/request-a-quote" as const,
-            },
-            {
-              who: t("path2Who"),
-              name: t("path2Name"),
-              what: t("path2What"),
-              action: t("path2Action"),
-              href: "/green-coffee-offer-list" as const,
-            },
-          ].map((path) => (
-            <li
-              key={path.name}
-              className="group flex flex-col bg-background p-7 transition-colors hover:bg-page lg:p-9"
-            >
-              <p className="eyebrow">{path.who}</p>
-              {/* Was `.display-lg` — up to 4.8rem, which in a third of the
-                  width was a headline pretending to be a card title. */}
-              <h3 className="mt-4 font-heading text-3xl leading-tight font-bold">
-                {path.name}
-              </h3>
-              <p className="mt-4 text-base leading-7 text-muted-foreground">
-                {path.what}
-              </p>
-              {/* `mt-auto` is what puts the three actions on one baseline
-                  however unevenly the descriptions wrap. */}
-              <Link
-                href={path.href}
-                className="btn-secondary mt-auto w-fit pt-7 group-hover:bg-primary group-hover:text-primary-foreground"
-              >
-                {path.action}
-                <ArrowUpRight
-                  className="size-4 rtl:-scale-x-100"
-                  aria-hidden="true"
-                />
-              </Link>
-            </li>
-          ))}
-
-          {/*
-           * The gated path keeps its dark ground. It is the only one of the
-           * three that is permission-gated rather than public, and that single
-           * visual difference is what carries the public-site/portal separation
-           * without a section explaining it. It stays third and stays quieter
-           * in emphasis than the two public routes.
-           */}
-          <li className="flex flex-col bg-primary p-7 text-primary-foreground lg:p-9">
-            <p className="flex items-center gap-2.5">
-              <Lock
-                className="size-3.5 text-gold-contrast"
-                aria-hidden="true"
-              />
-              <span className="eyebrow !text-gold-contrast">
-                {t("path3Badge")}
-              </span>
-            </p>
-            <h3 className="mt-4 font-heading text-3xl leading-tight font-bold">
-              {t("path3Name")}
-            </h3>
-            <p className="mt-4 text-base leading-7 text-white/72">
-              {t("path3What")}
-            </p>
-            <div className="mt-auto flex flex-col items-start gap-3 pt-7">
-              {/*
-               * This band is the gated buyer path, so its action has to
-               * follow the visitor. A verified customer was being told to
-               * "Sign in" to a session they already held.
-               */}
-              {/*
-               * Outline rather than gold. Gold is the page's signal for the
-               * primary commercial action — requesting samples and pricing in
-               * the hero, and the offer request in the closing band. This path
-               * is the permission-gated one, and the audit is explicit that it
-               * should stay secondary in emphasis; giving it the same gold as
-               * the two public actions made three "primary" CTAs compete.
-               * Destination and persona map are untouched.
-               */}
-              <AuthCta
-                persona={persona}
-                className="btn-on-dark"
-                map={{
-                  anonymous: { label: actions("signin"), href: "/sign-in" },
-                  unverified: {
-                    label: cta("verifyEmail"),
-                    href: "/verify-email",
-                  },
-                  verified: {
-                    label: cta("viewLots"),
-                    href: "/green-coffee-offer-list",
-                  },
-                  blocked: {
-                    label: cta("contactSupport"),
-                    href: "/contact",
-                  },
-                  admin: null,
-                }}
-              />
-              {/*
-               * A business that is not yet approved needs somewhere to go
-               * that already exists. This is the ordinary commercial request
-               * route — no membership workflow, no separate application.
-               */}
-              <Link
-                href="/request-a-quote"
-                className="text-sm font-bold text-gold-contrast underline-offset-4 hover:underline"
-              >
-                {t("path3Access")}
-              </Link>
-            </div>
-          </li>
-        </ul>
+        <StackedFeaturePanels
+          panels={
+            [
+              {
+                key: "source",
+                eyebrow: t("path1Who"),
+                title: t("path1Name"),
+                description: t("path1What"),
+                image: {
+                  src: "/images/new%20edit/buying-source-coffee.png",
+                  alt: "",
+                },
+                action: (
+                  <Link href="/request-a-quote" className="btn-primary w-fit">
+                    {t("path1Action")}
+                    <ArrowUpRight
+                      className="size-4 rtl:-scale-x-100"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                ),
+              },
+              {
+                key: "lots",
+                eyebrow: t("path2Who"),
+                title: t("path2Name"),
+                description: t("path2What"),
+                image: {
+                  src: "/images/new%20edit/buying-available-lots.png",
+                  alt: "",
+                },
+                action: (
+                  <Link
+                    href="/green-coffee-offer-list"
+                    className="btn-primary w-fit"
+                  >
+                    {t("path2Action")}
+                    <ArrowUpRight
+                      className="size-4 rtl:-scale-x-100"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                ),
+              },
+              {
+                key: "trade",
+                eyebrow: t("path3Who"),
+                title: t("path3Name"),
+                description: t("path3What"),
+                badge: t("path3Badge"),
+                image: {
+                  src: "/images/new%20edit/buying-trade-with-hills.png",
+                  alt: "",
+                },
+                action: (
+                  <div className="flex flex-col items-start gap-3">
+                    {/*
+                     * Outline rather than gold. Gold is the page's signal for
+                     * the primary commercial action — requesting samples and
+                     * pricing in the hero, and the offer request in the
+                     * closing band. This path is the permission-gated one and
+                     * stays secondary in emphasis. Destination and persona
+                     * map are untouched from the previous layout.
+                     */}
+                    <AuthCta
+                      persona={persona}
+                      className="btn-on-dark"
+                      map={{
+                        anonymous: {
+                          label: actions("signin"),
+                          href: "/sign-in",
+                        },
+                        unverified: {
+                          label: cta("verifyEmail"),
+                          href: "/verify-email",
+                        },
+                        verified: {
+                          label: cta("viewLots"),
+                          href: "/green-coffee-offer-list",
+                        },
+                        blocked: {
+                          label: cta("contactSupport"),
+                          href: "/contact",
+                        },
+                        admin: null,
+                      }}
+                    />
+                    {/* A business that is not yet approved needs somewhere to
+                        go that already exists — the ordinary commercial
+                        request route, no membership workflow. */}
+                    <Link
+                      href="/request-a-quote"
+                      className="text-sm font-bold text-gold-contrast underline-offset-4 hover:underline"
+                    >
+                      {t("path3Access")}
+                    </Link>
+                  </div>
+                ),
+              },
+            ] satisfies StackedPanel[]
+          }
+        />
       </section>
 
       {/*
@@ -489,74 +378,46 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </SectionReveal>
       </section>
 
-      <section className="section-space-tight bg-page">
+      {/*
+       * Origins, as wide editorial bands (to-top.ch's "Was uns ausmacht"
+       * rows) on a dark ground. Every published origin renders as its own
+       * band — the old `origins.slice(0, 4)` cap is gone — and hover or
+       * keyboard focus fades that origin's own hero media up inside the band
+       * without changing its size; below `lg` the image is simply always on.
+       * All data comes from `editorial.ts`'s existing batched origin and
+       * hero-media reads — see `originRows` above — with no new query and no
+       * invented fields. The foliage plate at the foot is the hero's own
+       * foreground asset, reused as a quiet decorative ground.
+       */}
+      <section className="relative isolate overflow-hidden bg-primary py-20 text-primary-foreground md:py-28">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 flex justify-center opacity-[0.28]"
+        >
+          <Image
+            src="/images/new%20edit/hero-coffee-foreground.png"
+            alt=""
+            width={1672}
+            height={941}
+            sizes="100vw"
+            className="h-auto w-full min-w-[60rem] max-w-none shrink-0"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary via-primary/40 to-primary/10" />
+        </div>
         <div className="site-container">
-          <SectionReveal className="grid gap-8 md:grid-cols-[1fr_.7fr] md:items-end">
-            <div>
-              <p className="eyebrow">{nav("origins")}</p>
-              <h2 className="display-lg mt-5 max-w-4xl">{t("originsTitle")}</h2>
-            </div>
-            <p className="max-w-xl text-lg leading-8 text-muted-foreground">
+          <SectionReveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
+            <p className="eyebrow !text-gold-contrast">{nav("origins")}</p>
+            <h2 className="display-lg mt-5">{t("originsTitle")}</h2>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-white/72">
               {t("originsBody")}
             </p>
           </SectionReveal>
           {origins.length ? (
-            <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] border-s border-t border-border">
-              {homeOrigins.map((origin, index) => {
-                /*
-                 * Whatever an Administrator set as this origin's hero in the
-                 * media picker. Nothing is hardcoded per origin: changing the
-                 * hero in Admin changes this image with no code change, and an
-                 * origin with no hero simply falls through to the branded
-                 * plate below.
-                 */
-                const picture = originHeroMedia.get(origin.id);
-                return (
-                  <SectionReveal key={origin.id} delay={index * 0.05}>
-                    <Link
-                      href={`/coffee-origins/${origin.slug}`}
-                      className="group flex h-full flex-col border-e border-b border-border transition-colors hover:bg-card"
-                    >
-                      {picture ? (
-                        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                          <Image
-                            src={picture.url}
-                            alt={picture.alt}
-                            fill
-                            unoptimized
-                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                            className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                          />
-                        </div>
-                      ) : (
-                        <div className="surface-noise flex aspect-[16/10] items-end bg-primary p-5 text-primary-foreground">
-                          <Globe2
-                            className="size-6 text-gold-bright"
-                            aria-hidden="true"
-                          />
-                        </div>
-                      )}
-                      <span className="flex flex-1 flex-col p-6">
-                        <span className="eyebrow">
-                          {publicContinentLabel(
-                            origin.continent,
-                            locale as Locale,
-                          )}
-                        </span>
-                        <span
-                          lang={origin.lang}
-                          className="mt-3 block font-heading text-3xl leading-tight font-bold"
-                        >
-                          {origin.name}
-                        </span>
-                      </span>
-                    </Link>
-                  </SectionReveal>
-                );
-              })}
-            </div>
+            <OriginScrollList origins={originRows} />
           ) : (
-            <p className="empty-state mt-8">{t("originsEmpty")}</p>
+            <p className="empty-state mt-8 border-white/15 text-white/70">
+              {t("originsEmpty")}
+            </p>
           )}
         </div>
       </section>
