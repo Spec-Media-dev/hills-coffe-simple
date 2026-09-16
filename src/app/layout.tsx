@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo, Manrope, Readex_Pro } from "next/font/google";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { canonicalUrl } from "@/lib/env";
@@ -9,6 +10,20 @@ const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-manrope",
   display: "swap",
+});
+// Benito is bundled with the app, so display type never waits on a third-party
+// font request and keeps the editorial character of the supplied reference.
+const benito = localFont({
+  variable: "--font-benito",
+  display: "swap",
+  src: [
+    { path: "../../public/fonts/Benito-Thin.ttf", weight: "100" },
+    { path: "../../public/fonts/Benito-Light.ttf", weight: "300" },
+    { path: "../../public/fonts/Benito-Regular.ttf", weight: "400" },
+    { path: "../../public/fonts/Benito-Medium.ttf", weight: "500" },
+    { path: "../../public/fonts/Benito-Bold.ttf", weight: "700" },
+    { path: "../../public/fonts/Benito-Black.ttf", weight: "900" },
+  ],
 });
 const cairo = Cairo({
   subsets: ["arabic"],
@@ -88,7 +103,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body
-        className={`${manrope.variable} ${cairo.variable} ${readex.variable}`}
+        className={`${benito.variable} ${manrope.variable} ${cairo.variable} ${readex.variable}`}
       >
         {children}
       </body>

@@ -19,8 +19,6 @@ import {
 } from "motion/react";
 import { Link } from "@/i18n/navigation";
 
-export type HeroStat = { label: string; value: string };
-
 /*
  * Layer assignment, decided by looking at the pixels rather than the names.
  *
@@ -38,9 +36,9 @@ export type HeroStat = { label: string; value: string };
  *
  * Stacking (scene is one stacking context; the copy column has z-index auto
  * on purpose so its children take part directly):
- *   0 base · 1 wash · 2 depth · 3 bean · 4 front · 5 copy · 6 bottom band
- * The bean sits in front of the far hills and behind the bushes so that, like
- * the reference's sun, it sinks behind the nearest plane as the scene scrolls.
+ *   0 base · 1 wash / bean · 2 depth · 4 front · 5 copy · 6 partner band
+ * The bean starts behind the ridgeline and rises above it only through its
+ * position, so the mountain still reads as the foreground occluder.
  */
 const PARTNER_MARKS = [Building2, Warehouse, Truck, Leaf, ShieldCheck, Package];
 
@@ -61,7 +59,6 @@ export function HomeHeroLandscape({
   eyebrow,
   title,
   intro,
-  stats,
   beanCtaLabel,
   partnersLabel,
   partnersSrText,
@@ -69,13 +66,13 @@ export function HomeHeroLandscape({
   eyebrow: string;
   title: string;
   intro: string;
-  stats: HeroStat[];
   beanCtaLabel: string;
   partnersLabel: string;
   partnersSrText: string;
 }) {
   const sceneRef = useRef<HTMLDivElement>(null);
   const animate = useDesktopMotion();
+  const reducedMotion = useReducedMotion() === true;
   const { scrollYProgress } = useScroll({
     target: sceneRef,
     offset: ["start start", "end start"],
@@ -96,9 +93,23 @@ export function HomeHeroLandscape({
     [0, 1],
     animate ? [1, 0.55] : [1, 1],
   );
-  const depthY = useTransform(progress, [0, 1], animate ? ["0%", "24%"] : still);
-  const beanY = useTransform(progress, [0, 1], animate ? ["0%", "150%"] : still);
-  const copyY = useTransform(progress, [0, 1], animate ? ["0%", "-70%"] : still);
+  const depthY = useTransform(
+    progress,
+    [0, 1],
+    animate ? ["0%", "24%"] : still,
+  );
+  // The bean begins partially behind the ridgeline and rises as the visitor
+  // scrolls. Its previous direction was inverted, so it sank into the scene.
+  const beanY = useTransform(
+    progress,
+    [0, 1],
+    animate ? ["27%", "-62%"] : ["12%", "12%"],
+  );
+  const copyY = useTransform(
+    progress,
+    [0, 1],
+    animate ? ["0%", "-70%"] : still,
+  );
   const copyOpacity = useTransform(
     progress,
     [0, 0.6],
@@ -111,6 +122,10 @@ export function HomeHeroLandscape({
         ref={sceneRef}
         className="relative overflow-hidden lg:min-h-[clamp(54rem,135svh,78rem)]"
       >
+        <div
+          aria-hidden="true"
+          className="hero-aurora pointer-events-none absolute inset-0 z-[1]"
+        />
         {/* 0 · base plate. Cover-scaled so it has no top edge of its own; the
             wash hides the room it needs to sink into. */}
         <motion.div
@@ -143,48 +158,82 @@ export function HomeHeroLandscape({
             className="relative z-[5] flex flex-col items-center"
             style={{ y: copyY, opacity: copyOpacity }}
           >
-            <p className="eyebrow !text-gold-contrast">{eyebrow}</p>
-            <h1 className="display-hero mt-6 max-w-5xl text-balance">
+            <motion.p
+              className="eyebrow hero-eyebrow !text-gold-contrast"
+              initial={reducedMotion ? false : { opacity: 0, x: 28 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: 0.55,
+                delay: 0.08,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              {eyebrow}
+            </motion.p>
+            <motion.h1
+              className="display-hero mt-6 max-w-6xl text-balance"
+              initial={reducedMotion ? false : { opacity: 0, x: 72 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: 0.9,
+                delay: 0.14,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
               {title}
-            </h1>
-            <p className="mt-6 max-w-[58ch] text-base leading-8 text-white/82 md:text-lg lg:mt-7">
+            </motion.h1>
+            <motion.p
+              className="mt-7 max-w-[62ch] text-lg leading-8 text-white/82 md:text-xl lg:mt-8"
+              initial={reducedMotion ? false : { opacity: 0, x: 44 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: 0.7,
+                delay: 0.28,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
               {intro}
-            </p>
+            </motion.p>
           </motion.div>
 
-          {/* 3 · the bean, directly under the copy. A real link, so hover and
-              keyboard focus share one affordance. */}
-          <motion.div className="relative z-[3] mt-8 lg:mt-6" style={{ y: beanY }}>
-            <Link
-              href="/green-coffee-offer-list"
-              className="group relative block size-36 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-primary sm:size-44 lg:size-56"
-            >
-              <span className="sr-only">{beanCtaLabel}</span>
-              {/* Resting glow is faint; hover/focus brings up the green halo.
-                  Two rings so the falloff reads soft, not neon. */}
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -inset-[28%] rounded-full bg-[#9fd66f]/15 blur-3xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:bg-[#9fd66f]/45 group-focus-visible:scale-110 group-focus-visible:bg-[#9fd66f]/45"
-              />
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -inset-[8%] rounded-full bg-[#b6e592]/0 blur-xl transition-colors duration-500 ease-out group-hover:bg-[#b6e592]/35 group-focus-visible:bg-[#b6e592]/35"
-              />
-              <span
-                aria-hidden="true"
-                className="relative block size-full transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform group-hover:-translate-y-1 group-hover:scale-[1.04] group-hover:rotate-6 group-focus-visible:-translate-y-1 group-focus-visible:scale-[1.04] group-focus-visible:rotate-6"
+          {/* 3 · The bean has its own scene layer rather than living in the
+              copy's flex flow. Its resting position therefore never changes
+              when the headline wraps, while the mountain still occludes it. */}
+          <div className="pointer-events-none absolute inset-x-0 top-[clamp(28rem,52vh,38rem)] z-[1] flex justify-center lg:top-[clamp(27rem,49vh,40rem)]">
+            <motion.div className="pointer-events-auto" style={{ y: beanY }}>
+              <Link
+                href="/green-coffee-offer-list"
+                className="group relative block size-36 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-primary sm:size-44 lg:size-56"
               >
-                <Image
-                  src="/images/new%20edit/hero-green-coffee-bean.png"
-                  alt=""
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 14rem, (min-width: 640px) 11rem, 9rem"
-                  className="object-contain drop-shadow-[0_22px_40px_rgba(6,24,18,0.6)]"
+                <span className="sr-only">{beanCtaLabel}</span>
+                {/* Resting glow is faint; hover/focus brings up the green halo.
+                    Two rings so the falloff reads soft, not neon. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-[28%] rounded-full bg-[#9fd66f]/15 blur-3xl transition-all duration-500 ease-out group-hover:scale-110 group-hover:bg-[#9fd66f]/45 group-focus-visible:scale-110 group-focus-visible:bg-[#9fd66f]/45"
                 />
-              </span>
-            </Link>
-          </motion.div>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-[8%] rounded-full bg-[#b6e592]/0 blur-xl transition-colors duration-500 ease-out group-hover:bg-[#b6e592]/35 group-focus-visible:bg-[#b6e592]/35"
+                />
+                <span
+                  aria-hidden="true"
+                  className="hero-bean-float relative block size-full"
+                >
+                  <span className="relative block size-full transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform group-hover:-translate-y-1 group-hover:scale-[1.04] group-hover:rotate-6 group-focus-visible:-translate-y-1 group-focus-visible:scale-[1.04] group-focus-visible:rotate-6">
+                    <Image
+                      src="/images/new%20edit/hero-green-coffee-bean.png"
+                      alt=""
+                      fill
+                      priority
+                      sizes="(min-width: 1024px) 14rem, (min-width: 640px) 11rem, 9rem"
+                      className="object-contain drop-shadow-[0_22px_40px_rgba(6,24,18,0.6)]"
+                    />
+                  </span>
+                </span>
+              </Link>
+            </motion.div>
+          </div>
 
           {/* Gives the scene its landscape height below the bean on small
               screens; on lg the scene's own min-height governs. */}
@@ -229,46 +278,40 @@ export function HomeHeroLandscape({
 
         {/* 6 · bottom band over the bushes — the reference's "known from"
             row. Neutral placeholder marks until real logos arrive. */}
-        <div className="absolute inset-x-0 bottom-0 z-[6] bg-gradient-to-t from-primary via-primary/85 to-primary/0 pt-16">
-          <div className="site-container flex flex-wrap items-center justify-center gap-x-8 gap-y-3 pb-6 lg:justify-start lg:gap-x-10">
+        <div className="absolute inset-x-0 bottom-0 z-[6] bg-gradient-to-t from-primary via-primary/92 to-primary/0 pt-20">
+          <div className="site-container flex flex-col gap-5 border-t border-white/15 py-6 sm:flex-row sm:items-center sm:gap-6 lg:py-7">
             <span className="eyebrow shrink-0 !text-gold-contrast">
               {partnersLabel}
             </span>
+            <span
+              aria-hidden="true"
+              className="hidden h-12 w-px shrink-0 bg-white/20 sm:block"
+            />
             <span className="sr-only">{partnersSrText}</span>
             <ul
               aria-hidden="true"
-              className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 opacity-75"
+              className="grid w-full flex-1 grid-cols-3 items-center gap-3 text-white/65 sm:flex sm:justify-between sm:gap-6"
             >
               {PARTNER_MARKS.map((Icon, index) => (
                 <li
                   key={index}
-                  className={`h-9 w-20 items-center justify-center rounded-md border border-white/15 text-white/55 sm:w-24 ${index < 3 ? "flex" : "hidden sm:flex"}`}
+                  className="flex min-h-14 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] transition-transform duration-500 ease-[cubic-bezier(.22,1,.36,1)] hover:-translate-y-1 hover:rotate-3 sm:size-16 sm:min-h-0"
                 >
-                  <Icon className="size-4" aria-hidden="true" />
+                  <Icon
+                    className="size-6 sm:size-7"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
                 </li>
               ))}
             </ul>
           </div>
         </div>
+        <div
+          aria-hidden="true"
+          className="hero-grain pointer-events-none absolute inset-0 z-[7]"
+        />
       </div>
-
-      {/* The four checkable facts on their own solid ground under the scene,
-          so the composition above stays as spare as the reference. */}
-      {stats.length ? (
-        <dl className="site-container relative grid grid-cols-2 border-t border-white/15 md:grid-cols-4">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="border-white/15 py-5 pe-6 nth-[2n]:border-s nth-[2n]:pe-0 nth-[2n]:ps-6 nth-[n+3]:border-t md:py-6 md:pe-7 md:ps-7 md:nth-[-n+4]:border-t-0 md:nth-[n+2]:border-s md:first:ps-0"
-            >
-              <dt className="text-xs leading-5 text-white/70">{stat.label}</dt>
-              <dd className="mt-1 text-sm leading-6 font-semibold">
-                {stat.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
     </section>
   );
 }

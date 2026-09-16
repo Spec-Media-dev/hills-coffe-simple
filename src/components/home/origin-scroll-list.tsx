@@ -55,7 +55,7 @@ export function OriginScrollList({ origins }: { origins: OriginRowData[] }) {
               <Link
                 href={`/coffee-origins/${origin.slug}`}
                 className={cn(
-                  "group relative isolate flex min-h-[9.5rem] items-stretch overflow-hidden rounded-[1.25rem] ring-1 ring-white/10 outline-none transition-shadow duration-300 focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f2a22] sm:min-h-[8.5rem] lg:min-h-[9rem] lg:rounded-2xl",
+                  "group relative isolate flex min-h-[9.5rem] items-stretch overflow-hidden rounded-[1.25rem] ring-1 ring-white/10 outline-none transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f2a22] sm:min-h-[8.5rem] lg:min-h-[9rem] lg:rounded-2xl lg:will-change-transform lg:hover:z-10 lg:hover:-translate-y-1 lg:hover:scale-[1.028] lg:hover:rotate-[-0.2deg] lg:hover:shadow-[0_28px_70px_rgb(4_20_15/.42)] lg:focus-visible:z-10 lg:focus-visible:scale-[1.028]",
                   tone,
                 )}
               >
@@ -84,7 +84,8 @@ export function OriginScrollList({ origins }: { origins: OriginRowData[] }) {
                     "relative flex w-full flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:gap-8 sm:px-8 lg:px-10",
                     // On the light band the text must survive the dark image
                     // wash coming up behind it.
-                    light && "lg:group-hover:text-primary-foreground lg:group-focus-visible:text-primary-foreground",
+                    light &&
+                      "lg:group-hover:text-primary-foreground lg:group-focus-visible:text-primary-foreground",
                   )}
                 >
                   <span
@@ -133,7 +134,10 @@ export function OriginScrollList({ origins }: { origins: OriginRowData[] }) {
                     </span>
                     <span>{origin.coffeeCountLabel}</span>
                     {origin.media ? null : (
-                      <Globe2 className="size-4 opacity-70" aria-hidden="true" />
+                      <Globe2
+                        className="size-4 opacity-70"
+                        aria-hidden="true"
+                      />
                     )}
                   </span>
 

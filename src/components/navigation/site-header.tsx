@@ -6,6 +6,7 @@ import { LocaleSwitcher } from "./locale-switcher";
 import { MobileMenu } from "./mobile-menu";
 import { CatalogMegaMenu } from "./catalog-mega-menu";
 import { TopTicker } from "./top-ticker";
+import { ScrollAwareHeader } from "./scroll-aware-header";
 import { NavUnderline } from "@/components/motion/primitives";
 import { ThemeToggle } from "./theme-toggle";
 import { Link } from "@/i18n/navigation";
@@ -93,7 +94,7 @@ export async function SiteHeader() {
   return (
     <>
       <TopTicker items={tickerItems} />
-      <header className="site-header sticky top-0 z-40 border-b border-border/75 bg-background/92 backdrop-blur-xl">
+      <ScrollAwareHeader className="site-header sticky top-0 z-40 border-b border-border/75 bg-background/92 shadow-[0_12px_35px_rgb(23_60_50/.06)] backdrop-blur-xl">
         <div className="site-container flex h-20 items-center justify-between gap-3 sm:gap-4">
           <Link
             href="/"
@@ -227,7 +228,7 @@ export async function SiteHeader() {
             />
           </div>
         </div>
-      </header>
+      </ScrollAwareHeader>
     </>
   );
 }

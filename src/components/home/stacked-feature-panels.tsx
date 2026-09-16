@@ -8,6 +8,7 @@ import {
   motion,
   useReducedMotion,
   useScroll,
+  useSpring,
   useTransform,
   type MotionValue,
 } from "motion/react";
@@ -89,7 +90,7 @@ function StackedPanelItem({
    * pinned sticky element reports its pinned position — measuring it directly
    * would freeze the value the moment the transition starts.
    */
-  const cover = useTransform(scrollY, (y) => {
+  const rawCover = useTransform(scrollY, (y) => {
     if (reduced || isLast) return 0;
     const column = containerRef.current;
     const sheet = ref.current;
@@ -104,6 +105,13 @@ function StackedPanelItem({
     const start = nextTop - pinTop - height;
     const end = nextTop - pinTop;
     return clamp01((y - start) / (end - start));
+  });
+  // A short spring absorbs wheel/trackpad jitter while preserving the exact
+  // scroll state, so cards settle into their overlap instead of snapping.
+  const cover = useSpring(rawCover, {
+    stiffness: reduced ? 1000 : 240,
+    damping: reduced ? 100 : 32,
+    mass: 0.42,
   });
   const scale = useTransform(cover, [0, 1], [1, 0.94]);
   const dim = useTransform(cover, [0, 1], [0, 0.55]);
@@ -139,14 +147,6 @@ function StackedPanelItem({
         className="pointer-events-none absolute inset-0 bg-[#0b1f19]"
         style={{ opacity: dim }}
       />
-
-      {/* Big index, top-end like the reference's faded numerals. */}
-      <span
-        aria-hidden="true"
-        className="absolute top-6 end-7 font-heading text-[clamp(4rem,9vw,8.5rem)] leading-none font-extrabold text-white/12 select-none sm:top-4 sm:end-10"
-      >
-        {String(index + 1).padStart(2, "0")}
-      </span>
 
       <div className="relative flex w-full flex-col justify-end p-7 sm:p-10 lg:max-w-[46rem] lg:p-14">
         {panel.badge ? (

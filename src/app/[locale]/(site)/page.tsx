@@ -186,12 +186,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             eyebrow={t("heroEyebrow")}
             title={t("heroTitle")}
             intro={t("heroIntro")}
-            stats={[
-              { label: t("heroHubLabel"), value: t("heroHubValue") },
-              { label: t("heroOpsLabel"), value: t("heroOpsValue") },
-              { label: t("heroTraceLabel"), value: t("heroTraceValue") },
-              { label: t("heroSampleLabel"), value: t("heroSampleValue") },
-            ]}
             beanCtaLabel={t("heroBeanCta")}
             partnersLabel={t("heroPartnersLabel")}
             partnersSrText={t("heroPartnersSr")}
@@ -473,7 +467,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                     ))}
                   </dl>
                   <Link
-                    href={`/green-coffee-offer-list/${exampleOffer.slug}`}
+                    href="/green-coffee-offer-list"
                     className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-highlight"
                   >
                     {originsT("viewCoffee")}
