@@ -73,7 +73,7 @@ export function CatalogMegaMenu({
       </Link>
       <button
         type="button"
-        className="grid min-h-11 place-items-center px-1"
+        className="grid min-h-11 min-w-6 place-items-center px-1"
         aria-expanded={open}
         aria-controls="catalog-mega-menu"
         aria-label={labels.productsMenu}

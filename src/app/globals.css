@@ -280,6 +280,54 @@
         infinite;
       will-change: transform;
     }
+    @keyframes hero-entry {
+      from {
+        transform: translate3d(0, 1.25rem, 0);
+      }
+      to {
+        transform: translate3d(0, 0, 0);
+      }
+    }
+    .hero-entry {
+      animation: hero-entry 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .hero-entry-2 {
+      animation-delay: 0.08s;
+    }
+    .hero-entry-3 {
+      animation-delay: 0.16s;
+    }
+  }
+  /* The homepage has intentionally rich editorial content. Let Chromium
+     defer off-screen layout and paint while keeping every section in the DOM
+     for links, search, assistive technology and SEO. The intrinsic size keeps
+     the scrollbar stable until each section approaches the viewport. */
+  .home-deferred-section {
+    content-visibility: auto;
+    contain-intrinsic-block-size: 60rem;
+  }
+  /* CSS view timelines retain the page's gentle reveals without adding an
+     IntersectionObserver or animation runtime to the critical homepage JS.
+     Browsers without this progressive enhancement render the final state. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes home-section-enter {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 1.25rem, 0);
+        }
+        to {
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+      }
+      .home-section-reveal,
+      .home-image-reveal {
+        animation: home-section-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 28%;
+      }
+    }
   }
   [dir="rtl"] .display-xl {
     letter-spacing: -0.035em;
@@ -546,7 +594,6 @@ html:active-view-transition-type(back) ::view-transition-old(route-content) {
 html:active-view-transition-type(back) ::view-transition-new(route-content) {
   animation-name: hc-fade-in;
 }
-
 
 .home-hero .hero-eyebrow {
   font-size: 2rem;

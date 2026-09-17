@@ -1,9 +1,12 @@
-import Image from "next/image";
-import { ArrowUpRight, MapPin, PackageOpen } from "lucide-react";
+import { ArrowUpRight, MapPin } from "lucide-react";
 import type { OfferListItem } from "@/lib/data/catalog";
 import type { AwaitedReturn } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
 import { SectionReveal } from "@/components/motion/primitives";
+import {
+  CoffeeHighlightList,
+  type CoffeeHighlight,
+} from "@/components/home/coffee-highlight-list";
 
 type Warehouses = AwaitedReturn<
   typeof import("@/lib/data/site-content").getWarehouses
@@ -29,22 +32,6 @@ export function featuredCoffeeList(offers: OfferListItem[]): OfferListItem[] {
   ].slice(0, 4);
 }
 
-/**
- * Composition follows the number of featured coffees rather than forcing every
- * count into a four-up grid.
- *
- * One featured coffee in a four-column grid left three empty cells and made a
- * deliberate editorial choice look like missing data. One coffee now gets a
- * real feature — a large image beside its specification — and two, three or
- * four fall back to progressively tighter columns.
- */
-function layoutFor(count: number) {
-  if (count === 1) return "grid-cols-1 lg:grid-cols-[1.1fr_.9fr]";
-  if (count === 2) return "grid-cols-1 md:grid-cols-2";
-  if (count === 3) return "grid-cols-1 md:grid-cols-3";
-  return "grid-cols-1 md:grid-cols-2 xl:grid-cols-4";
-}
-
 export function FeaturedCoffeeSection({
   offers,
   media,
@@ -63,7 +50,6 @@ export function FeaturedCoffeeSection({
   viewLabel: string;
 }) {
   const unique = featuredCoffeeList(offers);
-  const single = unique.length === 1;
 
   /*
    * Nothing featured is a normal state, not a broken one. The full band —
@@ -111,85 +97,22 @@ export function FeaturedCoffeeSection({
           </Link>
         </SectionReveal>
 
-        <div
-          className={`mt-10 grid border-s border-t border-border ${layoutFor(unique.length)}`}
-        >
-          {unique.map((item) => {
-            const picture = media.get(item.coffeeId);
-            return (
-              <Link
-                key={item.coffeeId}
-                href={`/green-coffee-offer-list/${item.slug}`}
-                className={`group border-e border-b border-border bg-card transition-colors hover:bg-page ${
-                  single
-                    ? "grid grid-cols-1 lg:col-span-2 lg:grid-cols-[1.1fr_.9fr]"
-                    : "flex flex-col"
-                }`}
-              >
-                {/* Image first on every screen: the coffee is the subject. */}
-                {picture ? (
-                  <div
-                    className={`relative overflow-hidden bg-muted ${single ? "min-h-64 lg:min-h-[26rem]" : "aspect-[16/10]"}`}
-                  >
-                    <Image
-                      src={picture.url}
-                      alt={picture.alt}
-                      fill
-                      unoptimized
-                      sizes={
-                        single
-                          ? "(max-width: 1024px) 100vw, 55vw"
-                          : "(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                      }
-                      className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                    />
-                  </div>
-                ) : (
-                  /* A published coffee without media still holds its place —
-                     branded, not a broken frame, and never invented imagery. */
-                  <div
-                    className={`surface-noise flex items-end bg-primary p-6 text-primary-foreground ${single ? "min-h-64 lg:min-h-[26rem]" : "aspect-[16/10]"}`}
-                  >
-                    <PackageOpen
-                      className="size-8 text-gold-bright"
-                      aria-hidden="true"
-                    />
-                  </div>
-                )}
-
-                <div
-                  className={`flex flex-1 flex-col p-6 ${single ? "justify-center md:p-10" : ""}`}
-                >
-                  <p className="eyebrow">{item.origin}</p>
-                  <h3
-                    lang={item.nameLang}
-                    className={`mt-3 font-heading font-bold ${single ? "text-4xl leading-tight md:text-5xl" : "text-2xl leading-tight"}`}
-                  >
-                    {item.name}
-                  </h3>
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    {item.process}
-                    {item.cupScore ? ` · ${item.cupScore}` : ""}
-                  </p>
-                  <p className="mt-5 flex items-center gap-2 text-sm">
-                    <PackageOpen
-                      className="size-4 shrink-0 text-highlight"
-                      aria-hidden="true"
-                    />
-                    {item.bags} {bagsLabel} · {item.warehouse}
-                  </p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-highlight">
-                    {viewLabel}
-                    <ArrowUpRight
-                      className="size-4 rtl:-scale-x-100"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <CoffeeHighlightList
+          coffees={unique.map((item): CoffeeHighlight => ({
+            id: item.coffeeId,
+            slug: item.slug,
+            name: item.name,
+            nameLang: item.nameLang,
+            origin: item.origin,
+            process: item.process,
+            cupScore: item.cupScore,
+            bags: item.bags,
+            warehouse: item.warehouse,
+            media: media.get(item.coffeeId) ?? null,
+          }))}
+          bagsLabel={bagsLabel}
+          viewLabel={viewLabel}
+        />
       </div>
     </section>
   );

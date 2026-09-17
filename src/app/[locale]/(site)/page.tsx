@@ -20,7 +20,7 @@ import {
   ImageReveal,
   PageReveal,
   SectionReveal,
-} from "@/components/motion/primitives";
+} from "@/components/home/home-reveal";
 import { AuthCta } from "@/components/auth/auth-cta";
 import { getPublicPersona } from "@/lib/auth/persona";
 import { Link } from "@/i18n/navigation";
@@ -100,6 +100,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       slug: origin.slug,
       name: origin.name,
       lang: origin.lang,
+      countryCode: origin.country_code,
       continentLabel: publicContinentLabel(origin.continent, locale as Locale),
       coffeeCountLabel: originsT("coffeeCount", { count: origin.coffeeCount }),
       summary: origin.summary,
@@ -165,33 +166,27 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <PageReveal>
-        {page ? (
+      {page ? (
+        <PageReveal>
           <CmsPageView page={page} />
-        ) : (
-          /*
-           * Layered landscape hero (to-top.ch's interaction language, Hills
-           * Coffee content): the full-bleed HeroImageRotation photograph is
-           * replaced by three depth-composited PNG planes with scroll
-           * parallax, centred copy with no buttons (the header carries the
-           * navigation), the interactive bean as the one action, a
-           * placeholder partner band over the foreground, and the four facts
-           * on their own ground beneath. See `home-hero-landscape.tsx` for the
-           * asset-mapping note — two of the supplied hero PNGs are used
-           * opposite their filenames because their actual content (a full
-           * sky vs. a transparent one) decides which is the base plate and
-           * which is the depth layer.
-           */
-          <HomeHeroLandscape
-            eyebrow={t("heroEyebrow")}
-            title={t("heroTitle")}
-            intro={t("heroIntro")}
-            beanCtaLabel={t("heroBeanCta")}
-            partnersLabel={t("heroPartnersLabel")}
-            partnersSrText={t("heroPartnersSr")}
-          />
-        )}
-      </PageReveal>
+        </PageReveal>
+      ) : (
+        /*
+         * The landscape already owns its composited entry and scroll motion.
+         * Avoid a second PageReveal transform around it: nested transforms
+         * make the opening frame less settled on slower devices.
+         */
+        <HomeHeroLandscape
+          eyebrow={t("heroEyebrow")}
+          title={t("heroTitle")}
+          intro={t("heroIntro")}
+          beanCtaLabel={t("heroBeanCta")}
+          audienceLabel={t("heroAudienceLabel")}
+          audience={t("heroAudience")}
+          offerLabel={t("heroOfferLabel")}
+          offer={t("heroOffer")}
+        />
+      )}
 
       {/*
        * The three ways to buy, as sticky-overlapping panels (to-top.ch's
@@ -201,7 +196,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * passed into the client panel component as ready-made markup rather
        * than threading auth state across the server/client boundary.
        */}
-      <section className="border-t border-border bg-page pb-20 md:pb-28 lg:pb-36">
+      <section className="home-deferred-section border-t border-border bg-page pb-20 md:pb-28 lg:pb-36">
         <SectionReveal className="site-container flex flex-col items-center pt-16 pb-10 text-center md:pt-24 md:pb-14">
           <p className="eyebrow">{t("pathsEyebrow")}</p>
           <h2 className="display-lg mt-6 max-w-4xl">{t("pathsTitle")}</h2>
@@ -336,7 +331,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * account — and gets out of the way. The `AuthCta` persona map is
        * copied verbatim from that band; only the surrounding chrome changed.
        */}
-      <section className="border-b border-border bg-page py-8">
+      <section className="home-deferred-section border-b border-border bg-page py-8">
         <SectionReveal className="site-container flex flex-wrap items-center justify-between gap-6">
           <div className="max-w-2xl">
             <p className="font-heading text-lg font-bold text-foreground">
@@ -373,17 +368,11 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       {/*
-       * Origins, as wide editorial bands (to-top.ch's "Was uns ausmacht"
-       * rows) on a dark ground. Every published origin renders as its own
-       * band — the old `origins.slice(0, 4)` cap is gone — and hover or
-       * keyboard focus fades that origin's own hero media up inside the band
-       * without changing its size; below `lg` the image is simply always on.
-       * All data comes from `editorial.ts`'s existing batched origin and
-       * hero-media reads — see `originRows` above — with no new query and no
-       * invented fields. The foliage plate at the foot is the hero's own
-       * foreground asset, reused as a quiet decorative ground.
+       * Every published origin gets a card. The server still performs the
+       * same fixed-cost, batched media lookup; the client component only
+       * follows the in-view card to drive the decorative country treatment.
        */}
-      <section className="relative isolate overflow-hidden bg-primary py-20 text-primary-foreground md:py-28">
+      <section className="home-deferred-section relative isolate overflow-hidden bg-primary py-20 text-primary-foreground md:py-28">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 flex justify-center opacity-[0.28]"
@@ -398,22 +387,20 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-primary via-primary/40 to-primary/10" />
         </div>
-        <div className="site-container">
-          <SectionReveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
-            <p className="eyebrow !text-gold-contrast">{nav("origins")}</p>
-            <h2 className="display-lg mt-5">{t("originsTitle")}</h2>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-white/72">
-              {t("originsBody")}
-            </p>
-          </SectionReveal>
-          {origins.length ? (
-            <OriginScrollList origins={originRows} />
-          ) : (
-            <p className="empty-state mt-8 border-white/15 text-white/70">
+        {origins.length ? (
+          <OriginScrollList
+            origins={originRows}
+            eyebrow={nav("origins")}
+            title={t("originsTitle")}
+            intro={t("originsBody")}
+          />
+        ) : (
+          <div className="site-container">
+            <p className="empty-state border-white/15 text-white/70">
               {t("originsEmpty")}
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/*
@@ -427,7 +414,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * does not carry them, and listing them would be exactly the unearned
        * claim this section exists to argue against.
        */}
-      <section className="section-space-tight bg-page">
+      <section className="home-deferred-section section-space-tight bg-page">
         <div className="site-container">
           <div className="grid gap-12 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:gap-16">
             <ImageReveal className="relative aspect-[4/5] bg-muted lg:aspect-[3/4]">
@@ -548,7 +535,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                 </p>
                 <Link
                   href="/about"
-                  className="mt-4 inline-flex min-h-9 items-center gap-2 text-sm font-bold text-highlight"
+                  className="mt-4 inline-flex min-h-9 items-center gap-2 text-sm font-bold text-gold-contrast"
                 >
                   {actions("learn")}
                   <ArrowUpRight
@@ -579,7 +566,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * compact two-location panel and the Dubai/Egypt positioning that used
        * to head the old "How Hills works" band.
        */}
-      <section className="section-space-tight overflow-hidden bg-primary text-primary-foreground">
+      <section className="home-deferred-section section-space-tight overflow-hidden bg-primary text-primary-foreground">
         <div className="site-container grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
           <ImageReveal className="relative aspect-[4/3] lg:aspect-auto lg:min-h-[28rem]">
             <Image
@@ -644,7 +631,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </div>
       </section>
 
-      <section className="section-space-tight">
+      <section className="home-deferred-section section-space-tight">
         <div className="site-container">
           <SectionReveal className="flex items-end justify-between gap-6">
             <div>
@@ -677,7 +664,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                         src={articles[0].featuredMedia.url}
                         alt={articles[0].featuredMedia.alt}
                         fill
-                        unoptimized
                         sizes="(min-width:1024px) 50vw, 100vw"
                         className="object-cover transition-transform duration-500 group-hover:scale-[1.025]"
                       />
@@ -731,7 +717,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                             src={article.featuredMedia.url}
                             alt={article.featuredMedia.alt}
                             fill
-                            unoptimized
                             sizes="(min-width:1024px) 32vw, 100vw"
                             className="object-cover transition-transform duration-500 group-hover:scale-[1.025]"
                           />
@@ -771,7 +756,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * is now the visually primary action — the buyer has just read the
        * evidence, the origins and the logistics; this is the ask.
        */}
-      <section className="section-space-tight bg-primary text-primary-foreground">
+      <section className="home-deferred-section section-space-tight bg-primary text-primary-foreground">
         <SectionReveal className="site-container">
           <h2 className="display-lg max-w-3xl">{t("cta")}</h2>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75">

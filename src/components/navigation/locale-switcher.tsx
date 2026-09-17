@@ -60,7 +60,7 @@ export function LocaleSwitcher() {
       // h-11 to match the theme toggle and menu button beside it: at h-10 this
       // was a 40px target in a row where the project's floor is 44.
       className="flex h-11 min-h-11 items-center gap-2 rounded-full border border-border bg-background/70 px-3 text-xs font-bold tracking-wider uppercase transition hover:border-gold hover:text-gold"
-      aria-label={nextLocale === "ar" ? "العربية" : "English"}
+      aria-label={nextLocale === "ar" ? "AR — العربية" : "EN — English"}
     >
       <Languages className="size-4" aria-hidden="true" />
       <span>{nextLocale}</span>

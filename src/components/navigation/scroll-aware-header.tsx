@@ -1,17 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import {
-  motion,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-} from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Hides during a sustained downward read and returns as soon as the visitor
- * reverses direction. It animates only compositor-friendly properties.
+ * Hides during a sustained downward read and returns on reversal. It uses one
+ * passive browser scroll listener, batched with rAF; the visual transition is
+ * native CSS rather than a global animation runtime.
  */
 export function ScrollAwareHeader({
   children,
@@ -20,48 +15,68 @@ export function ScrollAwareHeader({
   children: React.ReactNode;
   className?: string;
 }) {
-  const { scrollY } = useScroll();
-  const reduced = useReducedMotion() === true;
   const [visible, setVisible] = useState(true);
-  const lastToggleY = useRef(0);
+  const visibleRef = useRef(true);
 
-  useMotionValueEvent(scrollY, "change", (current) => {
-    if (reduced) return;
-    const previous = scrollY.getPrevious() ?? 0;
-    const delta = current - previous;
-    if (current < 84) {
-      if (!visible) setVisible(true);
-      return;
-    }
-    // Ignore tiny wheel/trackpad noise, otherwise the bar would flicker.
-    if (Math.abs(delta) < 5 || Math.abs(current - lastToggleY.current) < 12)
-      return;
-    if (delta > 0 && visible) {
-      lastToggleY.current = current;
-      setVisible(false);
-    }
-    if (delta < 0 && !visible) {
-      lastToggleY.current = current;
-      setVisible(true);
-    }
-  });
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let lastY = window.scrollY;
+    let lastToggleY = 0;
+    let frame = 0;
+
+    const setHeaderVisible = (next: boolean) => {
+      if (visibleRef.current === next) return;
+      visibleRef.current = next;
+      setVisible(next);
+    };
+    const update = () => {
+      frame = 0;
+      if (reducedMotion.matches) {
+        setHeaderVisible(true);
+        return;
+      }
+      const current = window.scrollY;
+      const delta = current - lastY;
+      lastY = current;
+      if (current < 84) {
+        setHeaderVisible(true);
+        return;
+      }
+      if (Math.abs(delta) < 5 || Math.abs(current - lastToggleY) < 12) return;
+      if (delta > 0 && visibleRef.current) {
+        lastToggleY = current;
+        setHeaderVisible(false);
+      } else if (delta < 0 && !visibleRef.current) {
+        lastToggleY = current;
+        setHeaderVisible(true);
+      }
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    const onPreferenceChange = () => {
+      lastY = window.scrollY;
+      if (reducedMotion.matches) setHeaderVisible(true);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    reducedMotion.addEventListener("change", onPreferenceChange);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      reducedMotion.removeEventListener("change", onPreferenceChange);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   return (
-    <motion.header
-      className={cn(className)}
-      initial={false}
-      animate={
-        reduced || visible
-          ? { y: 0, opacity: 1 }
-          : { y: "-112%", opacity: 0.98 }
-      }
-      transition={
-        reduced
-          ? { duration: 0 }
-          : { type: "spring", stiffness: 310, damping: 32, mass: 0.55 }
-      }
+    <header
+      className={cn(
+        "transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none",
+        !visible && "pointer-events-none -translate-y-[112%] opacity-[0.98]",
+        className,
+      )}
     >
       {children}
-    </motion.header>
+    </header>
   );
 }
