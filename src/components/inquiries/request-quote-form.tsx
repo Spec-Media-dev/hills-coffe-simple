@@ -66,7 +66,7 @@ export function RequestQuoteForm({
     <form
       action={action}
       noValidate
-      className="grid gap-5 rounded-[1.5rem] border border-border bg-card p-7"
+      className="grid gap-5 rounded-[1.5rem] border border-border bg-card p-5 sm:p-7 max-w-full min-w-0"
     >
       <input
         name="website"
@@ -76,13 +76,13 @@ export function RequestQuoteForm({
         className="absolute -start-[9999px]"
       />
 
-      <label className="grid gap-2 text-sm font-bold">
+      <label className="grid gap-2 text-sm font-bold min-w-0">
         {quote("offer")}
         <select
           name="offerId"
           {...bind("offerId")}
           aria-invalid={Boolean(errors?.offerId?.length) || undefined}
-          className="h-12 rounded-xl border border-input bg-background px-4 font-normal"
+          className="h-12 w-full min-w-0 max-w-full rounded-xl border border-input bg-background px-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
         >
           <option value="">{quote("choose")}</option>
           {offers.map((offer) => (
@@ -94,25 +94,25 @@ export function RequestQuoteForm({
         {fieldError("offerId")}
       </label>
 
-      <label className="grid gap-2 text-sm font-bold">
+      <label className="grid gap-2 text-sm font-bold min-w-0">
         {quote("subject")}
         <input
           name="subject"
           {...bind("subject")}
           maxLength={160}
-          className="h-12 rounded-xl border border-input bg-background px-4 font-normal"
+          className="h-12 w-full min-w-0 max-w-full rounded-xl border border-input bg-background px-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
         />
         {fieldError("subject")}
       </label>
 
-      <label className="grid gap-2 text-sm font-bold">
+      <label className="grid gap-2 text-sm font-bold min-w-0">
         {quote("message")}
         <textarea
           name="message"
           {...bind("message")}
           rows={6}
           aria-invalid={Boolean(errors?.message?.length) || undefined}
-          className="rounded-xl border border-input bg-background p-4 font-normal"
+          className="w-full min-w-0 max-w-full resize-none rounded-xl border border-input bg-background p-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
         />
         {fieldError("message")}
       </label>

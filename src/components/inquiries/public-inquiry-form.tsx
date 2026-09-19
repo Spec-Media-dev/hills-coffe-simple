@@ -33,7 +33,7 @@ import {
 type Created = { requestCode: string };
 
 const inputClass =
-  "h-12 w-full rounded-xl border border-input bg-background px-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20";
+  "h-12 w-full min-w-0 max-w-full rounded-xl border border-input bg-background px-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20";
 
 /** One labelled field, with its error bound to it for assistive technology. */
 function Field({
@@ -66,7 +66,7 @@ function Field({
       .filter(Boolean)
       .join(" ") || undefined;
   return (
-    <div className="grid gap-2 text-sm font-bold">
+    <div className="grid gap-2 text-sm font-bold min-w-0">
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
@@ -235,7 +235,7 @@ export function PublicRfqForm() {
       ref={formRef}
       action={action}
       noValidate
-      className="grid gap-5 rounded-[1.5rem] border border-border bg-card p-7"
+      className="grid gap-5 rounded-[1.5rem] border border-border bg-card p-5 sm:p-7 max-w-full min-w-0"
     >
       <Honeypot />
       <Field
@@ -282,7 +282,7 @@ export function PublicRfqForm() {
         {...bind("subject")}
       />
 
-      <div className="grid gap-2 text-sm font-bold">
+      <div className="grid gap-2 text-sm font-bold min-w-0">
         <label htmlFor="rfq-message">{t("message")}</label>
         <textarea
           id="rfq-message"
@@ -299,7 +299,7 @@ export function PublicRfqForm() {
               .filter(Boolean)
               .join(" ") || undefined
           }
-          className={`rounded-xl border border-input bg-background p-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20 ${fieldError("message") ? "border-destructive" : ""}`}
+          className={`w-full min-w-0 max-w-full rounded-xl border border-input bg-background p-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20 ${fieldError("message") ? "border-destructive" : ""}`}
         />
         <span
           id="rfq-message-hint"
@@ -384,7 +384,7 @@ export function PublicSampleRequestForm({ offerId }: { offerId: string }) {
     );
 
   return (
-    <form ref={formRef} action={action} noValidate className="grid gap-4">
+    <form ref={formRef} action={action} noValidate className="grid gap-4 max-w-full min-w-0">
       <Honeypot />
       <input type="hidden" name="offerId" value={offerId} />
       <ol className="grid gap-2 rounded-xl bg-muted/60 p-4 text-xs text-muted-foreground">
@@ -457,7 +457,7 @@ export function PublicSampleRequestForm({ offerId }: { offerId: string }) {
         {...bind("countryCode")}
       />
 
-      <div className="grid gap-2 text-sm font-bold">
+      <div className="grid gap-2 text-sm font-bold min-w-0">
         <label htmlFor="sample-message">{t("message")}</label>
         <textarea
           id="sample-message"
@@ -469,7 +469,7 @@ export function PublicSampleRequestForm({ offerId }: { offerId: string }) {
           aria-describedby={
             fieldError("message") ? "sample-message-error" : undefined
           }
-          className={`rounded-xl border border-input bg-background p-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20 ${fieldError("message") ? "border-destructive" : ""}`}
+          className={`w-full min-w-0 max-w-full rounded-xl border border-input bg-background p-4 font-normal text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20 ${fieldError("message") ? "border-destructive" : ""}`}
         />
         {fieldError("message") ? (
           <span

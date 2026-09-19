@@ -147,6 +147,12 @@
   a {
     cursor: pointer;
   }
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+    min-width: 0;
+  }
   ::selection {
     background: var(--gold);
     color: #17251c;

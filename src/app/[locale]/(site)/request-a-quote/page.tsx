@@ -95,7 +95,7 @@ export default async function RequestQuotePage({
             // sign-in wall this branch used to be. The two signed-in branches
             // above are untouched: a verified customer still picks a specific
             // offer and raises a PRODUCT inquiry exactly as before (FR-076).
-            <div className="grid gap-8">
+            <div className="grid gap-8 min-w-0 max-w-full">
               <PublicRfqForm />
               <div>
                 <h2 className="text-lg font-bold">

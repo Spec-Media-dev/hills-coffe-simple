@@ -223,7 +223,7 @@ function InquiryForm({
     (outcome && !outcome.ok ? outcome.conflict?.requestCode : undefined);
 
   return (
-    <form action={action} noValidate className="mt-7 grid gap-5">
+    <form action={action} noValidate className="mt-7 grid gap-5 max-w-full min-w-0">
       <input type="hidden" name="offerId" value={offerId} />
       <input
         name="website"
@@ -233,7 +233,7 @@ function InquiryForm({
         className="absolute -start-[9999px]"
       />
 
-      <div className="grid gap-2">
+      <div className="grid gap-2 min-w-0">
         <label
           htmlFor="inquiry-message"
           className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
@@ -250,7 +250,7 @@ function InquiryForm({
           aria-describedby={
             errors?.message?.length ? "inquiry-message-error" : undefined
           }
-          className={`resize-none rounded-xl border bg-background p-4 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:ring-2 focus:ring-gold/20 ${
+          className={`w-full min-w-0 max-w-full resize-none rounded-xl border bg-background p-4 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:ring-2 focus:ring-gold/20 ${
             errors?.message?.length
               ? "border-destructive focus:border-destructive"
               : "border-input focus:border-gold"
