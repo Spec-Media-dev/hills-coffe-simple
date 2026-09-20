@@ -148,7 +148,7 @@ export function HomeHeroLandscape({
           {/* 3 · The bean has its own scene layer rather than living in the
               copy's flex flow. Its resting position therefore never changes
               when the headline wraps, while the mountain still occludes it. */}
-          <div className="pointer-events-none absolute inset-x-0 top-[clamp(28rem,52vh,38rem)] z-[1] flex justify-center lg:top-[clamp(27rem,49vh,40rem)]">
+          <div className="pointer-events-none absolute inset-x-0 top-[clamp(22.5rem,41vh,31rem)] z-[1] flex justify-center lg:top-[clamp(21.5rem,39vh,32rem)]">
             <motion.div className="pointer-events-auto" style={{ y: beanY }}>
               <Link
                 href="/green-coffee-offer-list"
