@@ -117,6 +117,7 @@ export function HomeHeroLandscape({
             alt=""
             fill
             priority
+            fetchPriority="high"
             sizes="100vw"
             className="object-cover object-[center_72%]"
           />
@@ -174,7 +175,8 @@ export function HomeHeroLandscape({
                       src="/images/new%20edit/hero-green-coffee-bean.png"
                       alt=""
                       fill
-                      priority
+                      loading="eager"
+                      fetchPriority="low"
                       sizes="(min-width: 1024px) 14rem, (min-width: 640px) 11rem, 9rem"
                       className="object-contain drop-shadow-[0_22px_40px_rgba(6,24,18,0.6)]"
                     />
@@ -203,7 +205,8 @@ export function HomeHeroLandscape({
             alt=""
             width={1672}
             height={941}
-            priority
+            loading="eager"
+            fetchPriority="low"
             sizes="100vw"
             className="h-auto w-full min-w-[44rem] max-w-none shrink-0"
           />
@@ -219,7 +222,8 @@ export function HomeHeroLandscape({
             alt=""
             width={1672}
             height={941}
-            priority
+            loading="eager"
+            fetchPriority="low"
             sizes="100vw"
             className="h-auto w-full min-w-[44rem] max-w-none shrink-0"
           />

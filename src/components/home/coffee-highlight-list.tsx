@@ -110,10 +110,10 @@ export function CoffeeHighlightList({
               onMouseEnter={() => setActiveIndex(index)}
               onFocus={() => setActiveIndex(index)}
               className={cn(
-                "group relative isolate flex overflow-hidden rounded-[1.4rem] outline-none ring-1 ring-black/5 transition-[min-height,transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-background lg:will-change-transform",
+                "group relative isolate flex overflow-hidden rounded-[1.4rem] outline-none ring-1 ring-black/5 transition-[min-height,transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none max-lg:transition-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-background lg:will-change-transform",
                 active
                   ? "min-h-[20rem] shadow-[0_24px_64px_rgb(13_42_33/.22)] lg:min-h-[24rem]"
-                  : "min-h-[10.25rem] lg:min-h-[11.5rem] lg:hover:-translate-y-1",
+                  : "min-h-[10.25rem] max-lg:min-h-[20rem] lg:min-h-[11.5rem] lg:hover:-translate-y-1",
                 CARD_TONES[index % CARD_TONES.length],
               )}
             >
@@ -121,7 +121,9 @@ export function CoffeeHighlightList({
                 aria-hidden="true"
                 className={cn(
                   "absolute inset-0 -z-10 overflow-hidden transition-opacity duration-700 ease-[cubic-bezier(.22,1,.36,1)]",
-                  active ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                  active
+                    ? "opacity-100"
+                    : "opacity-0 max-lg:opacity-100 lg:group-hover:opacity-100",
                 )}
               >
                 {coffee.media ? (
@@ -130,7 +132,7 @@ export function CoffeeHighlightList({
                     alt=""
                     fill
                     sizes="(max-width: 1024px) 100vw, min(78rem, 90vw)"
-                    className="object-cover transition-transform duration-[1400ms] ease-out motion-reduce:transition-none group-hover:scale-[1.04]"
+                    className="object-cover transition-transform duration-[1400ms] ease-out motion-reduce:transition-none lg:group-hover:scale-[1.04]"
                   />
                 ) : (
                   <span className="surface-noise absolute inset-0 bg-primary" />
@@ -179,7 +181,7 @@ export function CoffeeHighlightList({
                       "mt-3 block max-w-[24ch] font-heading font-extrabold tracking-[-0.03em] transition-[font-size] duration-700 ease-[cubic-bezier(.22,1,.36,1)]",
                       active
                         ? "text-4xl leading-[1.02] sm:text-5xl lg:text-6xl"
-                        : "text-2xl leading-tight lg:text-3xl",
+                        : "text-2xl leading-tight max-lg:text-4xl max-lg:leading-[1.02] lg:text-3xl",
                     )}
                   >
                     {coffee.name}

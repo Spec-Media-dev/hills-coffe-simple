@@ -240,7 +240,7 @@ export function OriginScrollList({
                       fill
                       sizes="(max-width: 1024px) 100vw, min(58rem, 48vw)"
                       className={cn(
-                        "object-cover transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none group-hover:scale-[1.06]",
+                        "object-cover transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none lg:group-hover:scale-[1.06]",
                         active
                           ? "scale-100 opacity-100"
                           : "scale-[1.03] opacity-35",
