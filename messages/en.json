@@ -539,6 +539,12 @@
       "checkRequestFields": "Check the highlighted fields and try again.",
       "completeProfileFirst": "Complete your account information before submitting this request.",
       "configuration": "Account service is not connected yet.",
+      "adminEmailCorrectionCompleted": "Admin login email corrected. Your session is being refreshed.",
+      "adminEmailCorrectionFailed": "We could not correct the admin login email. No confirmation link was retried.",
+      "adminEmailCorrectionForbidden": "This recovery is available only to an authorized administrator.",
+      "adminEmailCorrectionNotPending": "There is no pending admin email change to correct.",
+      "adminEmailCorrectionSessionRefreshFailed": "The admin login email was corrected, but this session could not refresh. Sign out, then sign in with the corrected email.",
+      "adminEmailCorrectionUnavailable": "Administrative email recovery is not configured yet.",
       "emailChangeSent": "Verification pending. We sent a confirmation link to your new email address.",
       "emailChangeResent": "We sent another confirmation link to your pending email address.",
       "favoriteRemoved": "Removed from your favourites.",
@@ -716,7 +722,12 @@
       "sessionTitle": "Session",
       "sessionIntro": "Sign out of the admin workspace on this device.",
       "detailsTitle": "Your details",
-      "detailsIntro": "These details identify you inside the admin workspace and on audit records."
+      "detailsIntro": "These details identify you inside the admin workspace and on audit records.",
+      "emailCorrectionDescription": "Complete the already pending email change without retrying an expired confirmation link.",
+      "emailCorrectionIntro": "This one-time recovery uses the pending address already stored by Supabase. It is available only to the signed-in administrator and confirms that address directly.",
+      "emailCorrectionPendingEmail": "Pending replacement email",
+      "emailCorrectionSubmit": "Correct admin login email",
+      "emailCorrectionNoPending": "There is no pending email change to correct. Start a new secure email-change request only if both confirmation inboxes are reachable."
     },
     "ops": {
       "operations": "Operations",

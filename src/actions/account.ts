@@ -18,10 +18,18 @@ import {
   type AvatarRejection,
 } from "@/lib/avatar";
 import { localizedPath } from "@/lib/auth/redirects";
-import { requireAccountOwner, requireVerifiedUser } from "@/lib/auth/session";
+import {
+  requireAccountOwner,
+  requireAdmin,
+  requireVerifiedUser,
+} from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServiceRoleClient,
+  hasServiceRoleCredentials,
+} from "@/lib/supabase/service-role";
 import {
   localeSchema,
   passwordSchema,
@@ -33,7 +41,10 @@ const localeFrom = (value: FormDataEntryValue | null): Locale =>
 
 const emailChangeRedirect = (locale: Locale, role: "USER" | "ADMIN") =>
   `${env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=${encodeURIComponent(
-    localizedPath(locale, role === "ADMIN" ? "/admin/account" : "/account/settings"),
+    localizedPath(
+      locale,
+      role === "ADMIN" ? "/admin/account" : "/account/settings",
+    ),
   )}`;
 
 /**
@@ -304,6 +315,78 @@ export async function resendEmailChangeAction(
   return ok("emailChangeResent");
 }
 
+/**
+ * One-time recovery for an Administrator stranded in Supabase's secure email
+ * change flow because the old mailbox is no longer reachable.
+ *
+ * This consumes only Auth's existing `new_email` value. It does not accept an
+ * email or user id from the browser, so it cannot become a general-purpose
+ * Admin email editor. Customer email changes retain Secure Email Change.
+ */
+export async function correctPendingAdminEmailAction(
+  _: ActionFormState,
+  formData: FormData,
+): Promise<ActionResult> {
+  void formData;
+
+  // Re-run the full live Admin gate inside the Server Action; the page layout
+  // is not an authorization boundary, and the service role is never trusted
+  // as the acting user.
+  const admin = await requireAdmin();
+  if (!admin) return fail("FORBIDDEN", "adminEmailCorrectionForbidden");
+  if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
+  if (!hasServiceRoleCredentials())
+    return fail("CONFIGURATION", "adminEmailCorrectionUnavailable");
+
+  // A pending target proves this is recovery of an already-started secure
+  // change. Once completed, Supabase clears it, making this a one-time path.
+  const newEmail = admin.pendingEmail?.trim().toLowerCase();
+  if (!newEmail) return fail("VALIDATION", "adminEmailCorrectionNotPending");
+
+  try {
+    const service = createSupabaseServiceRoleClient();
+    const { error } = await service.auth.admin.updateUserById(admin.id, {
+      email: newEmail,
+      email_confirm: true,
+    });
+    if (error) {
+      // Provider details stay server-side; no credential, provider response,
+      // or service-role configuration is exposed to the browser.
+      console.error("[admin-email-correction] update failed", {
+        userId: admin.id,
+        status: error.status,
+        code: error.code,
+      });
+      return fail("UNEXPECTED", "adminEmailCorrectionFailed");
+    }
+  } catch {
+    console.error("[admin-email-correction] update threw", {
+      userId: admin.id,
+    });
+    return fail("UNEXPECTED", "adminEmailCorrectionFailed");
+  }
+
+  // The service-role mutation does not update the browser's JWT. Refresh the
+  // ordinary cookie-bound session before re-rendering the account page.
+  const sessionClient = await createSupabaseServerClient();
+  const { data: refreshed, error: refreshError } =
+    await sessionClient.auth.refreshSession();
+  if (
+    refreshError ||
+    refreshed.user?.email?.trim().toLowerCase() !== newEmail
+  ) {
+    console.error("[admin-email-correction] session refresh failed", {
+      userId: admin.id,
+      code: refreshError?.code,
+    });
+    revalidatePath("/", "layout");
+    return fail("UNEXPECTED", "adminEmailCorrectionSessionRefreshFailed");
+  }
+
+  revalidatePath("/", "layout");
+  return ok("adminEmailCorrectionCompleted");
+}
+
 export async function changePasswordAction(
   _: ActionFormState,
   formData: FormData,
@@ -410,7 +493,9 @@ export async function toggleFavoriteAction(
 
 /** The code identifies the fault; the row data that may sit in the message does not. */
 function favoriteFailed(error: { code?: string }): ActionResult<never> {
-  console.error(`[account] favorite toggle failed: ${error.code ?? "upstream"}`);
+  console.error(
+    `[account] favorite toggle failed: ${error.code ?? "upstream"}`,
+  );
   return fail("UNEXPECTED", "saveFailed");
 }
 

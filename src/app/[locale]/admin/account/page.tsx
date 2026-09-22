@@ -3,7 +3,7 @@ import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { signOutAction } from "@/actions/auth";
 import {
-  ChangeEmailForm,
+  AdminEmailCorrectionForm,
   ChangePasswordForm,
   ProfileForm,
 } from "@/components/forms/account-forms";
@@ -101,22 +101,15 @@ export default async function AdminAccountPage({
           <div className="rounded-2xl border border-border bg-card p-6 md:p-7">
             <h2 className="text-xl">{security("emailTitle")}</h2>
             <p className="mt-2 mb-6 text-sm text-muted-foreground">
-              {security("emailIntro")}
+              {t("emailCorrectionDescription")}
             </p>
-            <ChangeEmailForm
-              locale={locale}
-              currentEmail={admin.email}
+            <AdminEmailCorrectionForm
               pendingEmail={admin.pendingEmail}
               labels={{
-                currentEmail: security("currentEmail"),
-                newEmail: security("newEmail"),
-                emailHint: security("emailHint"),
-                updateEmail: security("updateEmail"),
-                verificationPending: security("verificationPending", {
-                  email: "{email}",
-                }),
-                verificationPendingBody: security("verificationPendingBody"),
-                resendEmailVerification: security("resendEmailVerification"),
+                intro: t("emailCorrectionIntro"),
+                pendingEmail: t("emailCorrectionPendingEmail"),
+                submit: t("emailCorrectionSubmit"),
+                noPending: t("emailCorrectionNoPending"),
               }}
             />
           </div>

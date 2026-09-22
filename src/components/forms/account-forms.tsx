@@ -3,6 +3,7 @@
 import {
   changeEmailAction,
   changePasswordAction,
+  correctPendingAdminEmailAction,
   resendEmailChangeAction,
   updateProfileAction,
 } from "@/actions/account";
@@ -15,7 +16,8 @@ import {
   useFormAction,
 } from "@/components/forms/form-primitives";
 import { settled } from "@/lib/actions";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Labels = Record<string, string>;
 
@@ -157,6 +159,63 @@ export function ChangeEmailForm({
           </form>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Kept separate so this recovery-only capability cannot reach customer UI. */
+export function AdminEmailCorrectionForm({
+  pendingEmail,
+  labels,
+}: {
+  pendingEmail: string | null;
+  labels: Labels;
+}) {
+  const [state, action, pending] = useFormAction(
+    correctPendingAdminEmailAction,
+  );
+  const router = useRouter();
+  const refreshed = useRef(false);
+  const result = settled(state);
+
+  // The action renews the cookie-bound Supabase session. Re-render this route
+  // after success so the account identity card immediately uses the new email.
+  useEffect(() => {
+    if (
+      !refreshed.current &&
+      result?.ok &&
+      result.messageKey === "adminEmailCorrectionCompleted"
+    ) {
+      refreshed.current = true;
+      router.refresh();
+    }
+  }, [result, router]);
+
+  return (
+    <div className="grid max-w-xl gap-4">
+      <p className="text-sm text-muted-foreground">{labels.intro}</p>
+      {pendingEmail ? (
+        <>
+          <p className="rounded-xl border border-gold/35 bg-gold/10 px-4 py-3 text-sm">
+            <span className="font-bold">{labels.pendingEmail}: </span>
+            <span dir="ltr">{pendingEmail}</span>
+          </p>
+          <form action={action} className="grid gap-4">
+            <FormStatus state={state} />
+            <div>
+              <SubmitButton
+                label={labels.submit}
+                pending={pending}
+                variant="outline"
+              />
+            </div>
+          </form>
+        </>
+      ) : (
+        <p className="rounded-xl border border-border bg-page px-4 py-3 text-sm text-muted-foreground">
+          {labels.noPending}
+        </p>
+      )}
     </div>
   );
 }

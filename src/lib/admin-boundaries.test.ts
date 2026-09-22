@@ -93,6 +93,52 @@ describe("service-role boundary (P5-T03)", () => {
   });
 });
 
+describe("Admin pending-email recovery", () => {
+  const actionPath = "src/actions/account.ts";
+  const adminAccountPage = "src/app/[locale]/admin/account/page.tsx";
+  const customerSettingsPage =
+    "src/app/[locale]/(site)/account/settings/page.tsx";
+
+  it("uses the service role only after the live Administrator gate", () => {
+    const source = read(actionPath);
+    const start = source.indexOf(
+      "export async function correctPendingAdminEmailAction",
+    );
+    expect(start).toBeGreaterThan(-1);
+    const recovery = source.slice(
+      start,
+      source.indexOf("export async function changePasswordAction", start),
+    );
+    expect(recovery).toContain("await requireAdmin()");
+    expect(recovery).toContain("createSupabaseServiceRoleClient()");
+    expect(recovery).toContain("updateUserById(admin.id");
+    expect(recovery).toContain("email_confirm: true");
+  });
+
+  it("uses only Supabase's pending target and refreshes the session", () => {
+    const source = read(actionPath);
+    const start = source.indexOf(
+      "export async function correctPendingAdminEmailAction",
+    );
+    const recovery = source.slice(
+      start,
+      source.indexOf("export async function changePasswordAction", start),
+    );
+    expect(recovery).toContain("admin.pendingEmail");
+    expect(recovery).not.toContain('formData.get("email")');
+    expect(recovery).toContain("auth.refreshSession()");
+  });
+
+  it("keeps recovery out of the customer email-change UI", () => {
+    expect(read(adminAccountPage)).toContain("AdminEmailCorrectionForm");
+    expect(read(adminAccountPage)).not.toContain("ChangeEmailForm");
+    expect(read(customerSettingsPage)).toContain("ChangeEmailForm");
+    expect(read(customerSettingsPage)).not.toContain(
+      "AdminEmailCorrectionForm",
+    );
+  });
+});
+
 describe("Admin Users workspace (P5-T02)", () => {
   const dataPath = "src/lib/data/admin-users.ts";
   const actionPath = "src/actions/admin-users.ts";
