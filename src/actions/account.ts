@@ -342,6 +342,8 @@ export async function correctPendingAdminEmailAction(
   // change. Once completed, Supabase clears it, making this a one-time path.
   const newEmail = admin.pendingEmail?.trim().toLowerCase();
   if (!newEmail) return fail("VALIDATION", "adminEmailCorrectionNotPending");
+  if (formData.get("confirm_inaccessible_old_email") !== "true")
+    return fail("VALIDATION", "adminEmailCorrectionConfirmationRequired");
 
   try {
     const service = createSupabaseServiceRoleClient();

@@ -126,16 +126,19 @@ describe("Admin pending-email recovery", () => {
     );
     expect(recovery).toContain("admin.pendingEmail");
     expect(recovery).not.toContain('formData.get("email")');
+    expect(recovery).toContain(
+      'formData.get("confirm_inaccessible_old_email")',
+    );
     expect(recovery).toContain("auth.refreshSession()");
   });
 
-  it("keeps recovery out of the customer email-change UI", () => {
-    expect(read(adminAccountPage)).toContain("AdminEmailCorrectionForm");
-    expect(read(adminAccountPage)).not.toContain("ChangeEmailForm");
+  it("keeps normal email changes and recovery in their separate UI states", () => {
+    const admin = read(adminAccountPage);
+    expect(admin).toContain("admin.pendingEmail ?");
+    expect(admin).toContain("AdminPendingEmailForm");
+    expect(admin).toContain("ChangeEmailForm");
     expect(read(customerSettingsPage)).toContain("ChangeEmailForm");
-    expect(read(customerSettingsPage)).not.toContain(
-      "AdminEmailCorrectionForm",
-    );
+    expect(read(customerSettingsPage)).not.toContain("AdminPendingEmailForm");
   });
 });
 

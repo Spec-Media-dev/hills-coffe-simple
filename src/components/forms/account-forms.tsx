@@ -117,27 +117,29 @@ export function ChangeEmailForm({
         <span className="font-bold">{labels.currentEmail}: </span>
         <span dir="ltr">{currentEmail}</span>
       </p>
-      <form action={action} noValidate className="grid gap-5">
-        <input type="hidden" name="locale" value={locale} />
-        <FormField
-          label={labels.newEmail}
-          name="email"
-          type="email"
-          autoComplete="email"
-          error={errors?.email}
-          hint={labels.emailHint}
-          onValueChange={setEnteredEmail}
-          required
-        />
-        {sentThisVisit ? null : <FormStatus state={state} />}
-        <div>
-          <SubmitButton
-            label={labels.updateEmail}
-            pending={pending}
-            variant="outline"
+      {pendingTarget ? null : (
+        <form action={action} noValidate className="grid gap-5">
+          <input type="hidden" name="locale" value={locale} />
+          <FormField
+            label={labels.newEmail}
+            name="email"
+            type="email"
+            autoComplete="email"
+            error={errors?.email}
+            hint={labels.emailHint}
+            onValueChange={setEnteredEmail}
+            required
           />
-        </div>
-      </form>
+          <FormStatus state={state} />
+          <div>
+            <SubmitButton
+              label={labels.updateEmail}
+              pending={pending}
+              variant="outline"
+            />
+          </div>
+        </form>
+      )}
       {pendingTarget ? (
         <div className="grid gap-3 rounded-xl border border-gold/35 bg-gold/10 p-4 text-sm">
           <div role="status" aria-live="polite">
@@ -164,19 +166,24 @@ export function ChangeEmailForm({
 }
 
 /** Kept separate so this recovery-only capability cannot reach customer UI. */
-export function AdminEmailCorrectionForm({
+export function AdminPendingEmailForm({
+  locale,
   pendingEmail,
   labels,
 }: {
-  pendingEmail: string | null;
+  locale: Locale;
+  pendingEmail: string;
   labels: Labels;
 }) {
-  const [state, action, pending] = useFormAction(
+  const [recoveryState, recoveryAction, recovering] = useFormAction(
     correctPendingAdminEmailAction,
+  );
+  const [resendState, resendAction, resending] = useFormAction(
+    resendEmailChangeAction,
   );
   const router = useRouter();
   const refreshed = useRef(false);
-  const result = settled(state);
+  const result = settled(recoveryState);
 
   // The action renews the cookie-bound Supabase session. Re-render this route
   // after success so the account identity card immediately uses the new email.
@@ -193,29 +200,48 @@ export function AdminEmailCorrectionForm({
 
   return (
     <div className="grid max-w-xl gap-4">
-      <p className="text-sm text-muted-foreground">{labels.intro}</p>
-      {pendingEmail ? (
-        <>
-          <p className="rounded-xl border border-gold/35 bg-gold/10 px-4 py-3 text-sm">
-            <span className="font-bold">{labels.pendingEmail}: </span>
-            <span dir="ltr">{pendingEmail}</span>
-          </p>
-          <form action={action} className="grid gap-4">
-            <FormStatus state={state} />
-            <div>
-              <SubmitButton
-                label={labels.submit}
-                pending={pending}
-                variant="outline"
-              />
-            </div>
-          </form>
-        </>
-      ) : (
-        <p className="rounded-xl border border-border bg-page px-4 py-3 text-sm text-muted-foreground">
-          {labels.noPending}
-        </p>
-      )}
+      <p className="text-sm text-muted-foreground">{labels.guidance}</p>
+      <p className="rounded-xl border border-gold/35 bg-gold/10 px-4 py-3 text-sm">
+        <span className="font-bold">{labels.pendingEmail}: </span>
+        <span dir="ltr">{pendingEmail}</span>
+      </p>
+      <form action={resendAction} className="grid gap-3">
+        <input type="hidden" name="locale" value={locale} />
+        <div>
+          <SubmitButton
+            label={labels.resend}
+            pending={resending}
+            variant="outline"
+          />
+        </div>
+        <FormStatus state={resendState} />
+      </form>
+      <details className="rounded-xl border border-border bg-page px-4 py-3 text-sm">
+        <summary className="cursor-pointer font-bold">
+          {labels.recoveryTitle}
+        </summary>
+        <p className="mt-3 text-muted-foreground">{labels.recoveryIntro}</p>
+        <form action={recoveryAction} className="mt-4 grid gap-4">
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              className="mt-1 size-4"
+              name="confirm_inaccessible_old_email"
+              type="checkbox"
+              value="true"
+              required
+            />
+            <span>{labels.recoveryConfirmation}</span>
+          </label>
+          <div>
+            <SubmitButton
+              label={labels.submit}
+              pending={recovering}
+              variant="outline"
+            />
+          </div>
+          <FormStatus state={recoveryState} />
+        </form>
+      </details>
     </div>
   );
 }

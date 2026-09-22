@@ -3,7 +3,8 @@ import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { signOutAction } from "@/actions/auth";
 import {
-  AdminEmailCorrectionForm,
+  AdminPendingEmailForm,
+  ChangeEmailForm,
   ChangePasswordForm,
   ProfileForm,
 } from "@/components/forms/account-forms";
@@ -101,17 +102,42 @@ export default async function AdminAccountPage({
           <div className="rounded-2xl border border-border bg-card p-6 md:p-7">
             <h2 className="text-xl">{security("emailTitle")}</h2>
             <p className="mt-2 mb-6 text-sm text-muted-foreground">
-              {t("emailCorrectionDescription")}
+              {admin.pendingEmail
+                ? t("emailPendingDescription")
+                : security("emailIntro")}
             </p>
-            <AdminEmailCorrectionForm
-              pendingEmail={admin.pendingEmail}
-              labels={{
-                intro: t("emailCorrectionIntro"),
-                pendingEmail: t("emailCorrectionPendingEmail"),
-                submit: t("emailCorrectionSubmit"),
-                noPending: t("emailCorrectionNoPending"),
-              }}
-            />
+            {admin.pendingEmail ? (
+              <AdminPendingEmailForm
+                locale={locale}
+                pendingEmail={admin.pendingEmail}
+                labels={{
+                  guidance: t("emailPendingGuidance"),
+                  pendingEmail: t("emailCorrectionPendingEmail"),
+                  resend: security("resendEmailVerification"),
+                  recoveryTitle: t("emailRecoveryTitle"),
+                  recoveryIntro: t("emailCorrectionIntro"),
+                  recoveryConfirmation: t("emailRecoveryConfirmation"),
+                  submit: t("emailCorrectionSubmit"),
+                }}
+              />
+            ) : (
+              <ChangeEmailForm
+                locale={locale}
+                currentEmail={admin.email}
+                pendingEmail={null}
+                labels={{
+                  currentEmail: security("currentEmail"),
+                  newEmail: security("newEmail"),
+                  emailHint: security("emailHint"),
+                  updateEmail: security("updateEmail"),
+                  verificationPending: security("verificationPending", {
+                    email: "{email}",
+                  }),
+                  verificationPendingBody: security("verificationPendingBody"),
+                  resendEmailVerification: security("resendEmailVerification"),
+                }}
+              />
+            )}
           </div>
           <div className="rounded-2xl border border-border bg-card p-6 md:p-7">
             <h2 className="text-xl">{security("passwordTitle")}</h2>

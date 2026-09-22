@@ -540,6 +540,7 @@
       "completeProfileFirst": "Complete your account information before submitting this request.",
       "configuration": "Account service is not connected yet.",
       "adminEmailCorrectionCompleted": "Admin login email corrected. Your session is being refreshed.",
+      "adminEmailCorrectionConfirmationRequired": "Confirm that the current login inbox is inaccessible before using administrator recovery.",
       "adminEmailCorrectionFailed": "We could not correct the admin login email. No confirmation link was retried.",
       "adminEmailCorrectionForbidden": "This recovery is available only to an authorized administrator.",
       "adminEmailCorrectionNotPending": "There is no pending admin email change to correct.",
@@ -723,11 +724,13 @@
       "sessionIntro": "Sign out of the admin workspace on this device.",
       "detailsTitle": "Your details",
       "detailsIntro": "These details identify you inside the admin workspace and on audit records.",
-      "emailCorrectionDescription": "Complete the already pending email change without retrying an expired confirmation link.",
+      "emailPendingDescription": "A secure email change is pending. Confirm it from both inboxes, or use recovery only if the current inbox is inaccessible.",
+      "emailPendingGuidance": "The pending address remains inactive until confirmation. To avoid conflicting requests, choose either a fresh verification email or the exceptional recovery path below.",
       "emailCorrectionIntro": "This one-time recovery uses the pending address already stored by Supabase. It is available only to the signed-in administrator and confirms that address directly.",
       "emailCorrectionPendingEmail": "Pending replacement email",
       "emailCorrectionSubmit": "Correct admin login email",
-      "emailCorrectionNoPending": "There is no pending email change to correct. Start a new secure email-change request only if both confirmation inboxes are reachable."
+      "emailRecoveryTitle": "Cannot access the current inbox?",
+      "emailRecoveryConfirmation": "I confirm that I cannot access the current login email inbox and need this one-time administrator recovery."
     },
     "ops": {
       "operations": "Operations",
