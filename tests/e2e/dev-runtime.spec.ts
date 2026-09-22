@@ -42,7 +42,7 @@ const PAGE_FAMILIES = [
   { route: "/sign-up", label: "sign-up", hasJsonLd: false },
   { route: "/verify-email", label: "verify-email", hasJsonLd: false },
   { route: "/forgot-password", label: "forgot-password", hasJsonLd: false },
-  { route: "/dashboard-admin", label: "admin-entry", hasJsonLd: false },
+  { route: "/admin/login", label: "admin-entry", hasJsonLd: false },
 ];
 
 const arabic = (route: string) => (route === "/" ? "/ar" : `/ar${route}`);

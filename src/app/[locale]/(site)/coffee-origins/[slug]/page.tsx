@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { SafeMarkdown } from "@/components/content/safe-markdown";
 import { CatalogCard } from "@/components/catalog/catalog-card";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { Locale } from "@/i18n/routing";
 import { queryCatalog } from "@/lib/data/catalog-query";
 import {
@@ -12,7 +13,7 @@ import {
   getOriginRegions,
   getPublicOriginMedia,
 } from "@/lib/data/editorial";
-import { jsonLdScript, originPlaceJsonLd } from "@/lib/seo/collection";
+import { originPlaceJsonLd } from "@/lib/seo/collection";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 import { publicContinentLabel } from "@/lib/public-labels";
@@ -76,10 +77,7 @@ export default async function OriginPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
-      />
+      <JsonLd id={`origin-json-ld-${origin.id}`} data={jsonLd} />
       <section className="overflow-hidden bg-gold text-[#17251c]">
         <div className="site-container grid min-h-[42rem] gap-0 lg:grid-cols-[.9fr_1.1fr] lg:items-stretch">
           {heroMedia ? (

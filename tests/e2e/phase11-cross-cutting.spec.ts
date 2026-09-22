@@ -344,7 +344,7 @@ test.describe("Phase 11 cross-cutting quality", () => {
         page,
         people.admin.email,
         people.admin.password,
-        "/dashboard-admin",
+        "/admin/login",
       );
       await page.waitForURL(/\/admin$/, { timeout: 30_000 });
       await runAxe(page, testInfo, "p11-admin-dashboard");

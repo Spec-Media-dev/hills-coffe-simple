@@ -1,11 +1,50 @@
-import { permanentRedirect } from "next/navigation";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { AdminSignInForm } from "@/components/forms/auth-forms";
 import type { Locale } from "@/i18n/routing";
 import { localizedPath } from "@/lib/auth/redirects";
+import { getViewer, requireAdmin } from "@/lib/auth/session";
 
-// Legacy admin entry. The canonical admin sign-in route is /dashboard-admin.
-export default async function LegacyAdminLoginPage({
+export const metadata: Metadata = {
+  title: "Admin sign in",
+  robots: { index: false, follow: false },
+};
+
+/** The canonical Admin sign-in entry, kept inside the localized Admin tree. */
+export default async function AdminLoginPage({
   params,
 }: PageProps<"/[locale]/admin/login">) {
   const { locale } = (await params) as { locale: Locale };
-  permanentRedirect(localizedPath(locale, "/dashboard-admin"));
+  const [viewer, admin] = await Promise.all([getViewer(), requireAdmin()]);
+  if (admin) redirect(localizedPath(locale, "/admin"));
+  const t = await getTranslations("auth");
+  const actions = await getTranslations("actions");
+  return (
+    <AuthShell
+      eyebrow={t("adminEyebrow")}
+      title={t("adminTitle")}
+      body={t("adminBody")}
+      asideTitle={t("adminAsideTitle")}
+      asideBody={t("adminAsideBody")}
+    >
+      {viewer ? (
+        <p
+          role="status"
+          className="mb-5 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+        >
+          {t("adminNoAccess")}
+        </p>
+      ) : null}
+      <AdminSignInForm
+        locale={locale}
+        labels={{
+          email: t("email"),
+          password: t("password"),
+          submit: actions("signin"),
+        }}
+      />
+    </AuthShell>
+  );
 }

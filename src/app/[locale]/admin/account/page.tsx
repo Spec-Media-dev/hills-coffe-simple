@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { signOutAction } from "@/actions/auth";
+import { AvatarForm } from "@/components/forms/avatar-form";
 import {
   AdminPendingEmailForm,
   ChangeEmailForm,
@@ -9,7 +10,9 @@ import {
   ProfileForm,
 } from "@/components/forms/account-forms";
 import type { Locale } from "@/i18n/routing";
+import { AVATAR_MIME_TYPES } from "@/lib/avatar";
 import { requireAdmin } from "@/lib/auth/session";
+import { avatarInitials, getOwnAvatarUrl } from "@/lib/data/avatar";
 
 export const metadata: Metadata = {
   title: "Admin account",
@@ -18,16 +21,20 @@ export const metadata: Metadata = {
 
 export default async function AdminAccountPage({
   params,
+  searchParams,
 }: PageProps<"/[locale]/admin/account">) {
   const { locale } = (await params) as { locale: Locale };
+  const { email_change: emailChange } = await searchParams;
   // The admin layout already enforces the ADMIN role; this keeps the page
   // safe if it is ever rendered outside that layout.
   const admin = await requireAdmin();
   if (!admin) return null;
   const t = await getTranslations("admin.account");
+  const accountSettings = await getTranslations("account.settings");
   const profile = await getTranslations("account.profileForm");
   const security = await getTranslations("account.security");
   const actions = await getTranslations("actions");
+  const avatarUrl = await getOwnAvatarUrl();
 
   return (
     <div className="p-5 md:p-8">
@@ -56,6 +63,23 @@ export default async function AdminAccountPage({
                 {security("verified")}
               </span>
             ) : null}
+          </div>
+          <div className="mt-6 border-t border-border pt-6">
+            <AvatarForm
+              locale={locale}
+              currentUrl={avatarUrl}
+              initials={avatarInitials(admin.fullName, admin.email)}
+              accept={AVATAR_MIME_TYPES.join(",")}
+              labels={{
+                heading: accountSettings("photoHeading"),
+                hint: accountSettings("photoHint"),
+                choose: accountSettings("photoChoose"),
+                upload: accountSettings("photoUpload"),
+                remove: accountSettings("photoRemove"),
+                current: accountSettings("photoCurrent"),
+                none: accountSettings("photoNone"),
+              }}
+            />
           </div>
         </section>
 
@@ -106,6 +130,14 @@ export default async function AdminAccountPage({
                 ? t("emailPendingDescription")
                 : security("emailIntro")}
             </p>
+            {emailChange === "link_expired" ? (
+              <p
+                role="alert"
+                className="mb-6 rounded-xl bg-gold/10 p-3 text-sm font-medium text-foreground"
+              >
+                {t("emailChangeLinkExpired")}
+              </p>
+            ) : null}
             {admin.pendingEmail ? (
               <AdminPendingEmailForm
                 locale={locale}

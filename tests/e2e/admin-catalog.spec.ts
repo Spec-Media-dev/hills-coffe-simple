@@ -107,7 +107,7 @@ test.describe("Phase 6 Admin catalog flow", () => {
   });
 
   async function signIn(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(admin.email);
     await page.locator('input[name="password"]').fill(admin.password);
     await page.locator('button[type="submit"]').click();
@@ -719,7 +719,7 @@ test.describe("Phase 6 Admin catalog flow", () => {
       // ADMIN — a verified email does not confer customer entitlement.
       const adminContext = await context.browser()!.newContext();
       const adminPage = await adminContext.newPage();
-      await adminPage.goto("/dashboard-admin");
+      await adminPage.goto("/admin/login");
       await adminPage.locator('input[name="email"]').fill(admin.email);
       await adminPage.locator('input[name="password"]').fill(admin.password);
       await adminPage.locator('button[type="submit"]').click();

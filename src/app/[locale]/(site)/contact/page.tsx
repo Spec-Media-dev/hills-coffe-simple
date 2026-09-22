@@ -14,7 +14,8 @@ import {
 } from "@/lib/data/site-content";
 import { getViewer } from "@/lib/auth/session";
 import { env } from "@/lib/env";
-import { contactPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
+import { contactPageJsonLd } from "@/lib/seo/collection";
+import { JsonLd } from "@/components/seo/json-ld";
 import { organizationAndWebsiteJsonLd } from "@/lib/seo/organization";
 import {
   cmsMetadata,
@@ -80,10 +81,7 @@ export default async function ContactPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
-      />
+      <JsonLd id={`contact-json-ld-${locale}`} data={jsonLd} />
       {page ? (
         <CmsPageView page={page} />
       ) : (

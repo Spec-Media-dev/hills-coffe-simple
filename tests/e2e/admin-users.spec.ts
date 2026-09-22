@@ -40,7 +40,7 @@ test.describe("Phase 5 Admin Users workspace", () => {
   });
 
   async function signInAsAdmin(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(fixtures.admin.email);
     await page.locator('input[name="password"]').fill(fixtures.admin.password);
     await page.locator('button[type="submit"]').click();
@@ -283,7 +283,7 @@ test.describe("Phase 5 Admin Users workspace", () => {
       "/ar/admin/users",
     ]) {
       await page.goto(path);
-      await expect(page).toHaveURL(/dashboard-admin/);
+      await expect(page).toHaveURL(/admin\/login/);
     }
   });
 
@@ -292,7 +292,7 @@ test.describe("Phase 5 Admin Users workspace", () => {
   }) => {
     for (const path of ["/admin/users", "/ar/admin/users"]) {
       await page.goto(path);
-      await expect(page).toHaveURL(/dashboard-admin/);
+      await expect(page).toHaveURL(/admin\/login/);
     }
   });
 
@@ -323,7 +323,7 @@ test.describe("Phase 5 Admin Users workspace", () => {
     for (const path of ["/", "/ar"]) {
       await page.goto(path);
       await expect(page.locator('a[href*="/admin"]')).toHaveCount(0);
-      await expect(page.locator('a[href*="dashboard-admin"]')).toHaveCount(0);
+      await expect(page.locator('a[href*="admin/login"]')).toHaveCount(0);
     }
   });
 });

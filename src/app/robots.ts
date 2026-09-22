@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
 const privatePaths = [
   "/account",
   "/admin",
-  "/dashboard-admin",
+  "/admin/login",
   "/sign-in",
   "/verify-email",
   "/forgot-password",

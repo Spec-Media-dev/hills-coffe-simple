@@ -5,6 +5,7 @@ import { redirect } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { SafeMarkdown } from "@/components/content/safe-markdown";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { Locale } from "@/i18n/routing";
 import {
   getArticleBySlug,
@@ -76,12 +77,7 @@ export default async function ArticlePage({
   });
   return (
     <article>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd id={`article-json-ld-${article.id}`} data={jsonLd} />
       <header className="bg-primary text-primary-foreground">
         <SectionReveal className="site-container grid min-h-[34rem] gap-10 py-14 lg:grid-cols-[1fr_.85fr] lg:items-center lg:py-20">
           <div>

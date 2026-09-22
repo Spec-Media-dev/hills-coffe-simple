@@ -186,13 +186,15 @@ describe("CMS content is sanitized, not trusted (P8 §15)", () => {
 
     const article = code("src/app/[locale]/(site)/knowledge/[slug]/page.tsx");
     expect(article).toContain("SafeMarkdown");
-    // The one permitted sink is the JSON-LD script, which carries serialized
-    // structured data with `<` escaped; it never carries article prose.
-    const sinks = [...article.matchAll(/dangerouslySetInnerHTML/g)];
+    // The one permitted sink is the server-only JSON-LD helper, which carries
+    // serialized structured data with `<` escaped; it never carries article prose.
+    const jsonLd = code("src/components/seo/json-ld.tsx");
+    const sinks = [...jsonLd.matchAll(/dangerouslySetInnerHTML/g)];
     expect(sinks).toHaveLength(1);
-    const normalized = article.replace(/\s+/g, " ");
+    const normalized = jsonLd.replace(/\s+/g, " ");
     expect(normalized).toContain('type="application/ld+json"');
-    expect(normalized).toContain("JSON.stringify(jsonLd)");
+    expect(normalized).toContain("JSON.stringify(data)");
+    expect(article).toContain("<JsonLd");
     // The body is never handed to it.
     expect(normalized).not.toContain("__html: article.bodyMarkdown");
   });

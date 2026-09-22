@@ -30,7 +30,7 @@ const PRIVATE_PATHS = [
   "/account/requests",
   "/admin",
   "/admin/users",
-  "/dashboard-admin",
+  "/admin/login",
   "/sign-in",
   "/sign-up",
   "/verify-email",
@@ -223,7 +223,7 @@ test("robots.txt disallows private areas and points at the sitemap", async ({
 }) => {
   const body = await (await request.get("/robots.txt")).text();
   expect(body).toMatch(/Sitemap:\s*https?:\/\/\S+\/sitemap\.xml/);
-  for (const path of ["/account", "/admin", "/dashboard-admin"]) {
+  for (const path of ["/account", "/admin", "/admin/login"]) {
     expect(body, `robots.txt must disallow ${path}`).toContain(
       `Disallow: ${path}`,
     );

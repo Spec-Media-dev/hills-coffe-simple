@@ -93,7 +93,7 @@ test.describe("anonymous submissions reach the Admin Lead Inbox", () => {
   });
 
   async function signInAdmin(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(people.admin.email);
     await page.locator('input[name="password"]').fill(people.admin.password);
     await page.locator('button[type="submit"]').click();

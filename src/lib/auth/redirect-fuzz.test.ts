@@ -33,7 +33,7 @@ describe("redirect allow-list fuzz", () => {
       }
     });
   /*
-   * `/admin` and `/dashboard-admin` are intentionally *allowed* internal
+   * `/admin` and `/admin/login` are intentionally *allowed* internal
    * destinations: an Administrator signing in is redirected to the workspace,
    * and the auth callback sends a confirmed Admin there. This helper guards
    * against leaving the site, not against reaching a privileged route —
@@ -43,8 +43,8 @@ describe("redirect allow-list fuzz", () => {
    */
   it("allows internal admin destinations, which the route then authorizes", () => {
     expect(assertSafeRedirect("/admin", "en")).toBe("/admin");
-    expect(assertSafeRedirect("/dashboard-admin", "en")).toBe(
-      "/dashboard-admin",
+    expect(assertSafeRedirect("/admin/login", "en")).toBe(
+      "/admin/login",
     );
   });
 

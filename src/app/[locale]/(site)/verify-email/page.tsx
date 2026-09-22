@@ -48,9 +48,9 @@ export default async function VerifyEmailPage({
    * identity it had not established.
    *
    * So only a verified customer is forwarded to their account. Any other role
-   * goes to the public home page: never `/admin`, never `/dashboard-admin`.
+   * goes to the public home page: never `/admin`, never `/admin/login`.
    * The Admin workspace is reachable only by authenticating at
-   * `/dashboard-admin`.
+   * `/admin/login`.
    */
   if (viewer?.emailVerified)
     redirect(localizedPath(locale, viewer.role === "USER" ? "/account" : "/"));

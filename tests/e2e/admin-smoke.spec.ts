@@ -61,7 +61,7 @@ test.describe("Phase 6 Admin-wide smoke", () => {
   });
 
   async function signIn(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(fixtures.admin.email);
     await page
       .locator('input[name="password"]')
@@ -83,7 +83,7 @@ test.describe("Phase 6 Admin-wide smoke", () => {
       const url = new URL(page.url()).pathname;
       if (status >= 400) failures.push(`${route}: HTTP ${status}`);
       // Still authorized — never bounced back to the Admin entry.
-      if (/dashboard-admin/.test(url))
+      if (/admin\/login/.test(url))
         failures.push(`${route}: redirected to ${url}`);
       // The Admin shell replaces the public chrome entirely.
       if (await page.locator("footer").count())
@@ -127,7 +127,7 @@ test.describe("Phase 6 Admin-wide smoke", () => {
     const failures: string[] = [];
     for (const route of ADMIN_ROUTES) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
-      if (!/dashboard-admin/.test(page.url()))
+      if (!/admin\/login/.test(page.url()))
         failures.push(`${route}: anonymous reached ${page.url()}`);
     }
     expect(failures).toEqual([]);

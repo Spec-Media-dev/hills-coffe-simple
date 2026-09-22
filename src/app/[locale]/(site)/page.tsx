@@ -40,6 +40,7 @@ import { env } from "@/lib/env";
 import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
 import { organizationAndWebsiteJsonLd } from "@/lib/seo/organization";
 import { publicContinentLabel } from "@/lib/public-labels";
+import { JsonLd } from "@/components/seo/json-ld";
 
 export async function generateMetadata({
   params,
@@ -160,12 +161,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd id={`home-json-ld-${locale}`} data={jsonLd} />
       {page ? (
         <PageReveal>
           <CmsPageView page={page} />

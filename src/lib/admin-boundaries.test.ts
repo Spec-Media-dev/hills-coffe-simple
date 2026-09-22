@@ -98,6 +98,9 @@ describe("Admin pending-email recovery", () => {
   const adminAccountPage = "src/app/[locale]/admin/account/page.tsx";
   const customerSettingsPage =
     "src/app/[locale]/(site)/account/settings/page.tsx";
+  const callbackRoute = "src/app/auth/callback/route.ts";
+  const continuePage = "src/app/[locale]/continue/page.tsx";
+  const proxyPath = "src/proxy.ts";
 
   it("uses the service role only after the live Administrator gate", () => {
     const source = read(actionPath);
@@ -132,6 +135,23 @@ describe("Admin pending-email recovery", () => {
     expect(recovery).toContain("auth.refreshSession()");
   });
 
+  it("resends the active secure flow from the authenticated current email", () => {
+    const source = read(actionPath);
+    const start = source.indexOf(
+      "export async function resendEmailChangeAction",
+    );
+    const resend = source.slice(
+      start,
+      source.indexOf(
+        "export async function correctPendingAdminEmailAction",
+        start,
+      ),
+    );
+    expect(resend).toContain("email: viewer.email");
+    expect(resend).not.toContain("email: viewer.pendingEmail");
+    expect(resend).toContain("options: { emailRedirectTo:");
+  });
+
   it("keeps normal email changes and recovery in their separate UI states", () => {
     const admin = read(adminAccountPage);
     expect(admin).toContain("admin.pendingEmail ?");
@@ -139,6 +159,19 @@ describe("Admin pending-email recovery", () => {
     expect(admin).toContain("ChangeEmailForm");
     expect(read(customerSettingsPage)).toContain("ChangeEmailForm");
     expect(read(customerSettingsPage)).not.toContain("AdminPendingEmailForm");
+  });
+
+  it("returns stale admin email links to the protected pending state", () => {
+    const callback = read(callbackRoute);
+    expect(callback).toContain("providerReportedError");
+    expect(callback).toContain("adminEmailChangeFailurePath");
+    expect(callback).toContain("?email_change=link_expired");
+    expect(callback).toContain("auth.refreshSession()");
+    expect(read(continuePage)).toContain("?email_change=link_expired");
+    expect(read(adminAccountPage)).toContain('emailChange === "link_expired"');
+    const proxy = read(proxyPath);
+    expect(proxy).toContain("staleAdminEmailChange");
+    expect(proxy).toContain("/admin/account?email_change=link_expired");
   });
 });
 

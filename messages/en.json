@@ -473,7 +473,7 @@
       "emailHint": "You will stay signed in with your current address until the new one is confirmed.",
       "updateEmail": "Update email",
       "verificationPending": "Verification pending for {email}",
-      "verificationPendingBody": "The new address becomes active only after its confirmation link is opened.",
+      "verificationPendingBody": "The new address becomes active only after confirmation links from both the current and new inboxes are completed.",
       "resendEmailVerification": "Resend verification",
       "passwordTitle": "Password",
       "passwordIntro": "Confirm your current password, then choose a new one.",
@@ -546,8 +546,8 @@
       "adminEmailCorrectionNotPending": "There is no pending admin email change to correct.",
       "adminEmailCorrectionSessionRefreshFailed": "The admin login email was corrected, but this session could not refresh. Sign out, then sign in with the corrected email.",
       "adminEmailCorrectionUnavailable": "Administrative email recovery is not configured yet.",
-      "emailChangeSent": "Verification pending. We sent a confirmation link to your new email address.",
-      "emailChangeResent": "We sent another confirmation link to your pending email address.",
+      "emailChangeSent": "Verification pending. Secure email-change confirmation emails were sent to both the current and new inboxes.",
+      "emailChangeResent": "Fresh secure email-change confirmation email(s) were sent. Confirm both the current and pending inboxes, and do not use earlier links.",
       "favoriteRemoved": "Removed from your favourites.",
       "favoriteSaved": "Saved to your favourites.",
       "hidePassword": "Hide password",
@@ -730,7 +730,8 @@
       "emailCorrectionPendingEmail": "Pending replacement email",
       "emailCorrectionSubmit": "Correct admin login email",
       "emailRecoveryTitle": "Cannot access the current inbox?",
-      "emailRecoveryConfirmation": "I confirm that I cannot access the current login email inbox and need this one-time administrator recovery."
+      "emailRecoveryConfirmation": "I confirm that I cannot access the current login email inbox and need this one-time administrator recovery.",
+      "emailChangeLinkExpired": "This confirmation link has expired or was already used. Request a new verification email."
     },
     "ops": {
       "operations": "Operations",

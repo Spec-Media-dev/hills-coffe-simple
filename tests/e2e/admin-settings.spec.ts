@@ -39,7 +39,7 @@ test.describe("Phase 5 Admin settings independence", () => {
   });
 
   async function signIn(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(fixtures.admin.email);
     await page
       .locator('input[name="password"]')

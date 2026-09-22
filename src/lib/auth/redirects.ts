@@ -10,7 +10,7 @@ const knownRoots = [
   "/request-a-quote",
   "/about",
   "/admin",
-  "/dashboard-admin",
+  "/admin/login",
   "/sign-in",
   "/sign-up",
   "/verify-email",

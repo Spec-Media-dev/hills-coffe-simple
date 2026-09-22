@@ -183,7 +183,7 @@ export async function SiteHeader() {
                 links={
                   persona === "admin"
                     ? [
-                        { href: "/dashboard-admin", label: t("adminDashboard") },
+                        { href: "/admin/login", label: t("adminDashboard") },
                         { href: "/admin/account", label: t("account") },
                       ]
                     : [
@@ -222,7 +222,7 @@ export async function SiteHeader() {
                     href: "/verify-email",
                   },
                   // An Administrator is not a customer; the Admin workspace is
-                  // reached at /dashboard-admin, never through public nav.
+                  // reached at /admin/login, never through public nav.
                   admin: null,
                   blocked: { label: cta("contactSupport"), href: "/contact" },
                 }}

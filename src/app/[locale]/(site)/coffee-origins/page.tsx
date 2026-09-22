@@ -7,7 +7,8 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getOrigins, getPublicOriginHeroMedia } from "@/lib/data/editorial";
 import { publicContinentLabel } from "@/lib/public-labels";
-import { collectionPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
+import { collectionPageJsonLd } from "@/lib/seo/collection";
+import { JsonLd } from "@/components/seo/json-ld";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import { ImageReveal, SectionReveal } from "@/components/motion/primitives";
 
@@ -60,10 +61,7 @@ export default async function OriginsPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
-      />
+      <JsonLd id={`origins-json-ld-${locale}`} data={jsonLd} />
       {/*
        * The masthead used to end in a half-page `origin-map-field` — an
        * aria-hidden 2:1 rectangle of faint dots carrying no information, which

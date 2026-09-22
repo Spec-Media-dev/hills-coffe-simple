@@ -8,6 +8,7 @@ import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { OfferPriceDisclosure } from "@/components/catalog/offer-price-disclosure";
 import { InquiryPanel } from "@/components/inquiries/inquiry-panel";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
+import { JsonLd } from "@/components/seo/json-ld";
 import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/auth/session";
 import { getPublicPersona } from "@/lib/auth/persona";
@@ -265,12 +266,7 @@ export default async function CoffeePage({
   );
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd id={`offer-json-ld-${coffee.coffeeId}`} data={jsonLd} />
       <section className="overflow-hidden border-b border-border bg-page">
         <div className="site-container py-10 md:py-20">
           <Breadcrumbs

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { localizedUrl } from "@/lib/seo/metadata";
+import { JsonLd } from "@/components/seo/json-ld";
 
 export type BreadcrumbItem = { label: string; href?: string };
 
@@ -32,12 +33,7 @@ export async function Breadcrumbs({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd id={`breadcrumbs-${locale}`} data={jsonLd} />
       <nav
         aria-label={t("breadcrumb")}
         className={`text-sm ${inverted ? "text-white/70" : "text-muted-foreground"}`}

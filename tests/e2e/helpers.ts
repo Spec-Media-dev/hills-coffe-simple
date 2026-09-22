@@ -19,7 +19,7 @@ export const PUBLIC_ROUTES = [
   "/sign-up",
   "/verify-email",
   "/forgot-password",
-  "/dashboard-admin",
+  "/admin/login",
   "/ar",
 ];
 

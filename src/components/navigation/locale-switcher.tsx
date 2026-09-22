@@ -10,9 +10,9 @@ import type { Locale } from "@/i18n/routing";
  * client transition. Phase 0 reproduced three defects caused by the previous
  * `router.replace(pathname, { locale })` soft navigation:
  *
- *  - React logged "Encountered a script tag while rendering React component"
- *    because the transition re-rendered the JSON-LD `<script type="application/
- *    ld+json">` on the client, where React will not execute script tags.
+ *  - React previously logged a script-rendering warning when a transition
+ *    re-rendered JSON-LD on the client. This document navigation prevents
+ *    page-level structured data from being reconciled in a client render.
  *  - `<html lang>` and `<html dir>` went stale: the root layout owns them and a
  *    soft navigation does not re-render it, so Arabic rendered LTR under
  *    `lang="en"` until a manual reload.

@@ -20,20 +20,18 @@ test.describe("anonymous routing and auth boundaries", () => {
     for (const path of ["/admin", "/admin/products", "/admin/settings"]) {
       const response = await rawResponse(page, path);
       expect(response.status(), `${path} must issue a real redirect`).toBe(307);
-      expect(response.headers()["location"]).toMatch(/\/dashboard-admin$/);
+      expect(response.headers()["location"]).toMatch(/\/admin\/login$/);
     }
   });
 
-  test("legacy /admin/login permanently redirects to /dashboard-admin", async ({
+  test("canonical /admin/login renders for each locale", async ({
     page,
   }) => {
     const english = await rawResponse(page, "/admin/login");
-    expect(english.status()).toBe(308);
-    expect(english.headers()["location"]).toMatch(/\/dashboard-admin$/);
+    expect(english.status()).toBe(200);
 
     const arabic = await rawResponse(page, "/ar/admin/login");
-    expect(arabic.status()).toBe(308);
-    expect(arabic.headers()["location"]).toMatch(/\/ar\/dashboard-admin$/);
+    expect(arabic.status()).toBe(200);
   });
 
   test("arabic account and admin routes keep the /ar prefix when redirecting", async ({
@@ -47,13 +45,13 @@ test.describe("anonymous routing and auth boundaries", () => {
 
     const admin = await rawResponse(page, "/ar/admin");
     expect(admin.status()).toBe(307);
-    expect(admin.headers()["location"]).toMatch(/\/ar\/dashboard-admin$/);
+    expect(admin.headers()["location"]).toMatch(/\/ar\/admin\/login$/);
   });
 
   test("canonical admin login page renders for anonymous visitors", async ({
     page,
   }) => {
-    const response = await page.goto("/dashboard-admin", {
+    const response = await page.goto("/admin/login", {
       waitUntil: "domcontentloaded",
     });
     expect(response?.status()).toBe(200);
@@ -72,7 +70,7 @@ test.describe("anonymous routing and auth boundaries", () => {
   });
 
   test("arabic admin login renders in Arabic", async ({ page }) => {
-    const response = await page.goto("/ar/dashboard-admin", {
+    const response = await page.goto("/ar/admin/login", {
       waitUntil: "domcontentloaded",
     });
     expect(response?.status()).toBe(200);
@@ -126,7 +124,7 @@ test.describe("anonymous routing and auth boundaries", () => {
     const sitemap = await (await page.request.get("/sitemap.xml")).text();
     expect(sitemap).not.toContain("/account");
     expect(sitemap).not.toContain("/admin");
-    expect(sitemap).not.toContain("/dashboard-admin");
+    expect(sitemap).not.toContain("/admin/login");
   });
 });
 

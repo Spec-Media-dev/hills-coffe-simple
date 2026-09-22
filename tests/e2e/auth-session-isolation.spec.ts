@@ -286,7 +286,7 @@ for (const { persona, label } of DENIED)
 
 // ---------------------------------------------------------------- CASE G
 for (const locale of ["en", "ar"] as const)
-  test(`CASE G (${locale}): an Administrator reaches the workspace through /dashboard-admin`, async ({
+  test(`CASE G (${locale}): an Administrator reaches the workspace through /admin/login`, async ({
     page,
   }) => {
     const problems = collectRuntimeProblems(page);

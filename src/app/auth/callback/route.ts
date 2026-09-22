@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
   const requestedNext = request.nextUrl.searchParams.get("next");
   const locale = requestedNext?.startsWith("/ar") ? "ar" : "en";
   const next = assertSafeRedirect(requestedNext, locale);
+  const adminAccountPath = localizedPath(locale, "/admin/account");
+  const isAdminAccountCallback = next === adminAccountPath;
   const requestedReset = next === localizedPath(locale, "/reset-password");
   const recoveryHint = type === "recovery" || (type === null && requestedReset);
   // Keep redirects on the exact host that received the callback. Building an
@@ -58,6 +60,37 @@ export async function GET(request: NextRequest) {
   if (!isSupabaseConfigured()) return to(failurePath);
 
   const supabase = await createSupabaseServerClient();
+  /**
+   * A stale email-change link can arrive with no usable token and provider
+   * error fields in its URL. For a still-authenticated Administrator, return
+   * to the protected email section with a localised flash state instead of
+   * carrying Supabase's raw error onto a public route. The Admin page will
+   * independently re-read `new_email`, so it keeps showing a pending target
+   * until Auth actually clears it.
+   */
+  const adminEmailChangeFailurePath = async () => {
+    if (!isAdminAccountCallback) return failurePath;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return failurePath;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role,is_blocked")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!profile || profile.role !== "ADMIN" || profile.is_blocked)
+      return failurePath;
+    const { data: isAdmin, error } = await supabase.rpc("is_admin");
+    return !error && isAdmin === true
+      ? `${adminAccountPath}?email_change=link_expired`
+      : failurePath;
+  };
+  const providerReportedError =
+    request.nextUrl.searchParams.has("error") ||
+    request.nextUrl.searchParams.has("error_code");
+  if (providerReportedError) return to(await adminEmailChangeFailurePath());
+
   let exchanged = false;
 
   if (code) {
@@ -112,15 +145,36 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  if (!exchanged) return to(failurePath);
+  if (!exchanged) return to(await adminEmailChangeFailurePath());
 
   // Callback arrival is never evidence. Re-read both the user and resulting
   // session from Supabase before selecting any protected destination.
   const userResult = await supabase.auth.getUser();
   const sessionResult = await supabase.auth.getSession();
-  const user = userResult.data.user;
-  const session = sessionResult.data.session;
+  let user = userResult.data.user;
+  let session = sessionResult.data.session;
   if (!user || !session) return to(failurePath);
+
+  // Supabase Auth updates the current email only when its secure email-change
+  // flow is fully complete. Renew the session for the Admin account callback
+  // so the next protected render reads the authoritative, current email; if
+  // the first of the two confirmations was clicked, `new_email` remains and
+  // the Admin page remains in its pending state.
+  if (isAdminAccountCallback) {
+    const { data: refreshed, error: refreshError } =
+      await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.user || !refreshed.session) {
+      console.error(
+        "[auth-callback] admin email-change session refresh failed",
+        {
+          code: refreshError?.code,
+        },
+      );
+    } else {
+      user = refreshed.user;
+      session = refreshed.session;
+    }
+  }
 
   // PKCE code callbacks do not carry a reliable `type`. The signed flow value
   // binds a prior forgot-password request to this email without exposing it.

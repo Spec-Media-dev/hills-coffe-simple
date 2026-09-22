@@ -56,7 +56,7 @@ test.describe("Phase 8 runtime UI sweep", () => {
   });
 
   async function signInAdmin(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(people.admin.email);
     await page.locator('input[name="password"]').fill(people.admin.password);
     await page.locator('button[type="submit"]').click();
@@ -699,7 +699,7 @@ test.describe("Phase 8 runtime UI sweep", () => {
 
     // The signed-out Admin entry shell.
     await page.context().clearCookies();
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await expect(page.locator("header img").first()).toHaveAttribute(
       "src",
       stored,

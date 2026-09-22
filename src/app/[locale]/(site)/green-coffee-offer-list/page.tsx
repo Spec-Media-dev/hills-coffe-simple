@@ -10,6 +10,7 @@ import {
   SectionReveal,
 } from "@/components/motion/primitives";
 import { Breadcrumbs } from "@/components/seo/breadcrumbs";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getPublicPersona } from "@/lib/auth/persona";
@@ -22,7 +23,7 @@ import {
 } from "@/lib/data/catalog-query";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { publicOfferStatusKey } from "@/lib/public-labels";
-import { collectionPageJsonLd, jsonLdScript } from "@/lib/seo/collection";
+import { collectionPageJsonLd } from "@/lib/seo/collection";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import type { OfferStatus } from "@/lib/supabase/types.generated";
 
@@ -284,12 +285,7 @@ export default async function OfferListPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLdScript(jsonLd),
-        }}
-      />
+      <JsonLd id={`offers-json-ld-${locale}`} data={jsonLd} />
       <section className="border-b border-border bg-primary py-14 text-primary-foreground md:py-20">
         <SectionReveal className="site-container grid gap-10 lg:grid-cols-[1fr_.45fr] lg:items-end">
           <div>

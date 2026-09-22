@@ -133,14 +133,14 @@ test.describe("Phase 3 real Auth state machine", () => {
   test("USER at Admin entry is denied while ADMIN reaches the workspace", async ({
     page,
   }) => {
-    await submitCredentials(page, "/dashboard-admin", fixtures.verified);
+    await submitCredentials(page, "/admin/login", fixtures.verified);
     await expect(
       page.getByRole("alert").filter({ hasText: /cannot access/i }),
     ).toBeVisible();
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/dashboard-admin$/);
+    await expect(page).toHaveURL(/\/admin\/login$/);
 
-    await submitCredentials(page, "/dashboard-admin", fixtures.admin);
+    await submitCredentials(page, "/admin/login", fixtures.admin);
     await expect(page).toHaveURL(/\/admin$/);
   });
 
@@ -163,13 +163,13 @@ test.describe("Phase 3 real Auth state machine", () => {
     await page.goto("/account");
     await expect(page).toHaveURL(/\/sign-in\?next=/);
 
-    await submitCredentials(page, "/dashboard-admin", fixtures.admin);
+    await submitCredentials(page, "/admin/login", fixtures.admin);
     await expect(page).toHaveURL(/\/admin$/);
     await page.goto("/admin/account");
     await page.getByRole("button", { name: /sign out/i }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/dashboard-admin$/);
+    await expect(page).toHaveURL(/\/admin\/login$/);
   });
 
   test("genuine recovery token is single-use and reset invalidates its session", async ({

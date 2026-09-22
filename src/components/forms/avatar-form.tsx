@@ -11,7 +11,7 @@ import {
 } from "@/components/forms/form-primitives";
 
 /**
- * Customer profile photo control.
+ * Own-profile photo control for either supported account role.
  *
  * The browser-side `accept` and size hint are conveniences only — the server
  * re-reads the bytes, re-measures the size, and verifies the image signature
@@ -79,7 +79,7 @@ export function AvatarForm({
               while the visible control matches the design system. */}
           <input
             ref={inputRef}
-            id="account-avatar"
+            id="profile-avatar"
             type="file"
             name="avatar"
             accept={accept}
@@ -89,7 +89,7 @@ export function AvatarForm({
             className="sr-only"
           />
           <label
-            htmlFor="account-avatar"
+            htmlFor="profile-avatar"
             className="inline-flex h-11 min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-5 text-sm font-bold transition hover:border-gold focus-within:ring-2 focus-within:ring-ring"
           >
             <Upload className="size-4" aria-hidden="true" />

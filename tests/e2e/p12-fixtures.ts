@@ -70,7 +70,7 @@ export async function signInAs(
    * persona has to use its own entry point. Using /sign-in for it would test
    * the redirect, not the session.
    */
-  const entry = persona === "admin" ? "/dashboard-admin" : "/sign-in";
+  const entry = persona === "admin" ? "/admin/login" : "/sign-in";
   await page.goto(`${prefix}${entry}`, { waitUntil: "domcontentloaded" });
   await page.locator('input[name="email"]').fill(p12PersonaEmail(persona));
   await page.locator('input[name="password"]').fill(p12Run.password);

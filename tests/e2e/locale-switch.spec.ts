@@ -104,7 +104,7 @@ const EN_TO_AR: Array<[string, string]> = [
   ["/knowledge", "/ar/knowledge"],
   ["/contact", "/ar/contact"],
   ["/sign-in", "/ar/sign-in"],
-  ["/dashboard-admin", "/ar/dashboard-admin"],
+  ["/admin/login", "/ar/admin/login"],
 ];
 
 test.describe("locale switching", () => {

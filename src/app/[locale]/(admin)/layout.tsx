@@ -8,7 +8,7 @@ import type { Locale } from "@/i18n/routing";
 import { getSiteLogo } from "@/lib/data/site-logo";
 
 /**
- * Shell for the Admin entry routes (`/dashboard-admin`, legacy `/admin/login`).
+ * Shell for the canonical Admin entry route (`/admin/login`).
  *
  * These pages previously sat in the `(site)` group, so the Admin sign-in screen
  * rendered inside the public marketing header and footer. This group exists to

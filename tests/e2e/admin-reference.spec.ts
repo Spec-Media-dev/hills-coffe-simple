@@ -80,7 +80,7 @@ test.describe("Phase 6 closure — reference module flows", () => {
   });
 
   async function signIn(page: Page) {
-    await page.goto("/dashboard-admin");
+    await page.goto("/admin/login");
     await page.locator('input[name="email"]').fill(admin.email);
     await page.locator('input[name="password"]').fill(admin.password);
     await page.locator('button[type="submit"]').click();

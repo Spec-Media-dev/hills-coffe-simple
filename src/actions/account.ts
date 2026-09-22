@@ -136,7 +136,7 @@ export async function uploadAvatarAction(
   _: ActionFormState,
   formData: FormData,
 ): Promise<ActionResult> {
-  const viewer = await requireVerifiedUser();
+  const viewer = await requireAccountOwner();
   if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
   if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
 
@@ -203,7 +203,7 @@ export async function deleteAvatarAction(
   formData: FormData,
 ): Promise<ActionResult> {
   void formData;
-  const viewer = await requireVerifiedUser();
+  const viewer = await requireAccountOwner();
   if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
   if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
 
@@ -281,9 +281,10 @@ export async function changeEmailAction(
 
 /**
  * Supabase Auth retains the pending target in the authenticated user record.
- * Resending uses that provider-owned value rather than accepting a new address
- * from the browser, so a stale form cannot turn a resend into another email
- * change request.
+ * The resend endpoint looks up the already-existing change by the *current*
+ * registered email, never by the pending replacement address and never by a
+ * browser-supplied value. This resends the active Secure Email Change flow
+ * without creating a second request.
  */
 export async function resendEmailChangeAction(
   _: ActionFormState,
@@ -298,7 +299,7 @@ export async function resendEmailChangeAction(
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resend({
     type: "email_change",
-    email: viewer.pendingEmail,
+    email: viewer.email,
     options: { emailRedirectTo: emailChangeRedirect(locale, viewer.role) },
   });
   if (error) {
@@ -327,8 +328,6 @@ export async function correctPendingAdminEmailAction(
   _: ActionFormState,
   formData: FormData,
 ): Promise<ActionResult> {
-  void formData;
-
   // Re-run the full live Admin gate inside the Server Action; the page layout
   // is not an authorization boundary, and the service role is never trusted
   // as the acting user.
