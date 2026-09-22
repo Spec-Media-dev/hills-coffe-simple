@@ -173,6 +173,17 @@ describe("Admin pending-email recovery", () => {
     expect(proxy).toContain("staleAdminEmailChange");
     expect(proxy).toContain("/admin/account?email_change=link_expired");
   });
+
+  it("handles double-confirmation callbacks for first confirmation and completion", () => {
+    const callback = read(callbackRoute);
+    expect(callback).toContain("?email_change=first_confirmed");
+    expect(callback).toContain("email_change=success");
+    const admin = read(adminAccountPage);
+    expect(admin).toContain('emailChange === "first_confirmed"');
+    expect(admin).toContain('emailChange === "success"');
+    const fragment = read("src/components/auth/confirm-fragment.tsx");
+    expect(fragment).toContain("email_change=first_confirmed");
+  });
 });
 
 describe("Admin Users workspace (P5-T02)", () => {

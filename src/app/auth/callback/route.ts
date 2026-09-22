@@ -91,6 +91,16 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.has("error_code");
   if (providerReportedError) return to(await adminEmailChangeFailurePath());
 
+  const messageParam = request.nextUrl.searchParams.get("message");
+  const isFirstConfirmationAccepted = Boolean(
+    messageParam &&
+      (messageParam.toLowerCase().includes("confirmation link accepted") ||
+        messageParam.toLowerCase().includes("other email")),
+  );
+  if (isFirstConfirmationAccepted && isAdminAccountCallback) {
+    return to(`${adminAccountPath}?email_change=first_confirmed`);
+  }
+
   let exchanged = false;
 
   if (code) {
@@ -242,10 +252,13 @@ export async function GET(request: NextRequest) {
   if (profile.role === "ADMIN") {
     const { data: isAdmin, error } = await supabase.rpc("is_admin");
     if (!error && isAdmin === true) {
+      const destination = next.startsWith(localizedPath(locale, "/admin"))
+        ? next
+        : localizedPath(locale, "/admin");
       return to(
-        next.startsWith(localizedPath(locale, "/admin"))
-          ? next
-          : localizedPath(locale, "/admin"),
+        isAdminAccountCallback
+          ? `${destination}${destination.includes("?") ? "&" : "?"}email_change=success`
+          : destination,
       );
     }
   } else if (profile.role === "USER") {

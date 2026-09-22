@@ -64,6 +64,20 @@ export function ConfirmFragment({
       const accessToken = params.get("access_token");
       const refreshToken = params.get("refresh_token");
 
+      const message = params.get("message") || "";
+      const isFirstConfirmation =
+        message.toLowerCase().includes("confirmation link accepted") ||
+        message.toLowerCase().includes("other email") ||
+        (params.has("sb") && !params.has("error") && !params.has("error_code"));
+
+      if (isFirstConfirmation) {
+        const separator = next.includes("?") ? "&" : "?";
+        window.location.replace(
+          `${next}${separator}email_change=first_confirmed`,
+        );
+        return;
+      }
+
       if (!accessToken || !refreshToken) {
         window.location.replace(failurePath);
         return;

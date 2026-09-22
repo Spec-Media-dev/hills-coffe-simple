@@ -130,6 +130,24 @@ export default async function AdminAccountPage({
                 ? t("emailPendingDescription")
                 : security("emailIntro")}
             </p>
+            {emailChange === "first_confirmed" ? (
+              <p
+                role="status"
+                aria-live="polite"
+                className="mb-6 rounded-xl border border-gold/35 bg-gold/10 p-3 text-sm font-medium text-foreground"
+              >
+                {t("emailChangeFirstConfirmed")}
+              </p>
+            ) : null}
+            {emailChange === "success" ? (
+              <p
+                role="status"
+                aria-live="polite"
+                className="mb-6 rounded-xl bg-emerald-500/10 p-3 text-sm font-medium text-emerald-700 dark:text-emerald-300"
+              >
+                {t("emailChangeCompleted")}
+              </p>
+            ) : null}
             {emailChange === "link_expired" ? (
               <p
                 role="alert"

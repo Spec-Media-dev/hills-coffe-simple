@@ -59,7 +59,8 @@ export default async function proxy(request: NextRequest) {
     // left untouched. The Admin page re-reads Auth and keeps any pending
     // target visible until Supabase actually completes the change.
     const providerRejectedLink =
-      request.nextUrl.pathname === "/" &&
+      (request.nextUrl.pathname === "/" ||
+        request.nextUrl.pathname === "/ar") &&
       (request.nextUrl.searchParams.get("error_code") === "otp_expired" ||
         request.nextUrl.searchParams.get("error") === "access_denied");
     if (user && providerRejectedLink) {
@@ -74,9 +75,15 @@ export default async function proxy(request: NextRequest) {
       }
     }
   }
+  const isArabic =
+    request.nextUrl.pathname.startsWith("/ar") ||
+    request.cookies.get("NEXT_LOCALE")?.value === "ar";
+  const staleAdminPath = isArabic
+    ? "/ar/admin/account?email_change=link_expired"
+    : "/admin/account?email_change=link_expired";
   const response = staleAdminEmailChange
     ? NextResponse.redirect(
-        new URL("/admin/account?email_change=link_expired", request.url),
+        new URL(staleAdminPath, request.url),
         303,
       )
     : localeResponse(request);

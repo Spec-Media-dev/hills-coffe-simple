@@ -299,7 +299,7 @@ export async function resendEmailChangeAction(
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resend({
     type: "email_change",
-    email: viewer.email,
+    email: viewer.email.trim().toLowerCase(),
     options: { emailRedirectTo: emailChangeRedirect(locale, viewer.role) },
   });
   if (error) {
@@ -308,7 +308,11 @@ export async function resendEmailChangeAction(
       code: error.code,
       message: error.message,
     });
-    if (error.status === 429 || error.code === "over_email_send_rate_limit") {
+    if (
+      error.status === 429 ||
+      error.code === "over_email_send_rate_limit" ||
+      error.message?.toLowerCase().includes("rate limit")
+    ) {
       return fail("RATE_LIMITED", "tooManyRequests");
     }
     return fail("UNEXPECTED", "saveFailed");

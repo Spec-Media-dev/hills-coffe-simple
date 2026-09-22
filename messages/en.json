@@ -731,7 +731,9 @@
       "emailCorrectionSubmit": "Correct admin login email",
       "emailRecoveryTitle": "Cannot access the current inbox?",
       "emailRecoveryConfirmation": "I confirm that I cannot access the current login email inbox and need this one-time administrator recovery.",
-      "emailChangeLinkExpired": "This confirmation link has expired or was already used. Request a new verification email."
+      "emailChangeLinkExpired": "This confirmation link has expired or was already used. Request a new verification email.",
+      "emailChangeFirstConfirmed": "First confirmation received. Please check your other inbox and follow its confirmation link to complete the change.",
+      "emailChangeCompleted": "Your login email has been successfully updated."
     },
     "ops": {
       "operations": "Operations",
