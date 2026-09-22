@@ -31,6 +31,11 @@ import {
 const localeFrom = (value: FormDataEntryValue | null): Locale =>
   localeSchema.safeParse(value).data ?? "en";
 
+const emailChangeRedirect = (locale: Locale, role: "USER" | "ADMIN") =>
+  `${env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=${encodeURIComponent(
+    localizedPath(locale, role === "ADMIN" ? "/admin/account" : "/account/settings"),
+  )}`;
+
 /**
  * Field-level messages are catalog keys, resolved by the client in the active
  * locale. The server never returns pre-localized or provider text
@@ -234,18 +239,69 @@ export async function changeEmailAction(
     {
       // Return the confirming click to the settings page the caller actually
       // uses: an Administrator has no access to the customer account area.
-      emailRedirectTo: `${env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=${encodeURIComponent(
-        localizedPath(
-          locale,
-          viewer.role === "ADMIN" ? "/admin/account" : "/account/settings",
-        ),
-      )}`,
+      emailRedirectTo: emailChangeRedirect(locale, viewer.role),
     },
   );
   // The change only takes effect once the link sent to the new address is
   // followed, so nothing is committed here.
-  if (error) return fail("UNEXPECTED", "saveFailed");
+  if (error) {
+    console.error("[changeEmailAction] Supabase auth.updateUser failed:", {
+      status: error.status,
+      code: error.code,
+      message: error.message,
+    });
+    if (error.status === 429 || error.code === "over_email_send_rate_limit") {
+      return fail("RATE_LIMITED", "tooManyRequests");
+    }
+    if (
+      error.code === "email_exists" ||
+      error.status === 422 ||
+      error.message?.toLowerCase().includes("already been registered") ||
+      error.message?.toLowerCase().includes("already registered")
+    ) {
+      return fail("VALIDATION", "emailTaken", {
+        fieldErrors: { email: ["emailTaken"] },
+      });
+    }
+    return fail("UNEXPECTED", "saveFailed");
+  }
   return ok("emailChangeSent");
+}
+
+/**
+ * Supabase Auth retains the pending target in the authenticated user record.
+ * Resending uses that provider-owned value rather than accepting a new address
+ * from the browser, so a stale form cannot turn a resend into another email
+ * change request.
+ */
+export async function resendEmailChangeAction(
+  _: ActionFormState,
+  formData: FormData,
+): Promise<ActionResult> {
+  const locale = localeFrom(formData.get("locale"));
+  const viewer = await requireAccountOwner();
+  if (!viewer) return fail("AUTH_REQUIRED", "sessionExpired");
+  if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
+  if (!viewer.pendingEmail) return fail("VALIDATION", "saveFailed");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "email_change",
+    email: viewer.pendingEmail,
+    options: { emailRedirectTo: emailChangeRedirect(locale, viewer.role) },
+  });
+  if (error) {
+    console.error("[resendEmailChangeAction] Supabase auth.resend failed:", {
+      status: error.status,
+      code: error.code,
+      message: error.message,
+    });
+    if (error.status === 429 || error.code === "over_email_send_rate_limit") {
+      return fail("RATE_LIMITED", "tooManyRequests");
+    }
+    return fail("UNEXPECTED", "saveFailed");
+  }
+  return ok("emailChangeResent");
 }
 
 export async function changePasswordAction(

@@ -67,7 +67,7 @@ export function CatalogMegaMenu({
        */}
       <Link
         href="/green-coffee-offer-list"
-        className="flex min-h-11 items-center text-sm font-semibold"
+        className="flex min-h-11 items-center whitespace-nowrap text-sm font-semibold"
       >
         <NavUnderline>{labels.trigger}</NavUnderline>
       </Link>

@@ -52,7 +52,7 @@ export function TopTicker({ items }: { items: string[] }) {
   return (
     <div
       aria-hidden="true"
-      className="ticker border-b border-white/10 bg-primary text-primary-foreground"
+      className="ticker hidden border-b border-white/10 bg-primary text-primary-foreground sm:block"
     >
       <div className="ticker-track" dir="ltr">
        {Array.from({ length: 6 }, (_, copy) => (

@@ -9,6 +9,9 @@ export type Viewer = {
   id: string;
   email: string;
   emailVerified: boolean;
+  /** Supabase Auth's pending target; the active email remains `email` until confirmed. */
+  pendingEmail: string | null;
+  emailChangeSentAt: string | null;
   fullName: string;
   phone: string | null;
   companyName: string | null;
@@ -49,6 +52,8 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     id: user.id,
     email: user.email ?? "",
     emailVerified: Boolean(user.email_confirmed_at),
+    pendingEmail: user.new_email?.trim() || null,
+    emailChangeSentAt: user.email_change_sent_at ?? null,
     fullName: profile.full_name,
     phone: profile.phone,
     companyName: profile.company_name,
@@ -70,9 +75,8 @@ export async function requireUser() {
  *   authenticated AND email-confirmed AND role = USER AND NOT blocked
  *
  * All four conditions are required. In particular:
- *  - an ADMIN never passes, so an Administrator cannot inherit customer
- *    protected-price entitlement merely by having a confirmed email
- *    (Principle VI);
+ *  - an ADMIN never passes, so an Administrator cannot inherit a *customer*
+ *    capability merely by having a confirmed email (Principle VI);
  *  - a blocked customer never passes, even holding a previously-issued
  *    session, so a block takes effect at the application layer and not only
  *    in RLS (Principle VII).
@@ -100,6 +104,21 @@ export async function requireVerifiedUser() {
     "hills_is_verified_user",
   );
   return !error && entitled === true ? viewer : null;
+}
+
+/**
+ * Protected-price reader gate: a verified customer OR an authenticated Admin.
+ *
+ * Pricing inspection is intentionally the one shared capability. It does not
+ * merge the customer and Admin guards: customer-only actions continue to use
+ * `requireVerifiedUser()`, and Admin routes continue to use `requireAdmin()`.
+ * Each branch still invokes its live database RPC, so the session, profile
+ * role, and RLS policy remain the source of truth rather than a client role
+ * flag or an email allow-list.
+ */
+export async function requirePricingViewer() {
+  const customer = await requireVerifiedUser();
+  return customer ?? requireAdmin();
 }
 
 /**

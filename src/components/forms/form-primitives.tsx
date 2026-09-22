@@ -31,6 +31,7 @@ export function FormField({
   required,
   maxLength,
   hint,
+  onValueChange,
 }: {
   label: string;
   name: string;
@@ -42,6 +43,7 @@ export function FormField({
   required?: boolean;
   maxLength?: number;
   hint?: string;
+  onValueChange?: (value: string) => void;
 }) {
   const t = useAccountCopy();
   const id = `account-${name}`;
@@ -81,8 +83,10 @@ export function FormField({
             ? { defaultValue }
             : {
                 value,
-                onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                  setValue(event.target.value),
+                onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+                  setValue(event.target.value);
+                  onValueChange?.(event.target.value);
+                },
               })}
           autoComplete={autoComplete}
           dir={dir}

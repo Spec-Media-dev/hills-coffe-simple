@@ -56,13 +56,13 @@ describe("personaOf", () => {
 });
 
 describe("personaSeesPricing", () => {
-  it("grants the pricing presentation to verified customers only", () => {
+  it("grants the pricing presentation to verified customers and Admins", () => {
     expect(personaSeesPricing("verified")).toBe(true);
+    expect(personaSeesPricing("admin")).toBe(true);
     for (const persona of [
       "anonymous",
       "unverified",
       "blocked",
-      "admin",
     ] as const)
       expect(personaSeesPricing(persona), persona).toBe(false);
   });

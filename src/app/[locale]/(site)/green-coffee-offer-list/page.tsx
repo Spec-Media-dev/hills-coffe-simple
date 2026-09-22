@@ -155,16 +155,14 @@ export default async function OfferListPage({
   /*
    * Two reads scoped to the rows already on this page.
    *
-   * `getProtectedPriceTiers` is gated internally by `requireVerifiedUser()`;
-   * asking only for a persona that could possibly be entitled avoids a pointless
-   * round trip, but the gate — not this check — is what enforces the rule. An
-   * Administrator reaches the helper and still receives nothing.
+   * `getProtectedPriceTiers` is gated internally by the server-side pricing
+   * entitlement. Calling it for every reader keeps this page from duplicating
+   * a role check: anonymous and restricted readers receive an empty map, while
+   * verified customers and real Admin sessions receive only allowed tiers.
    */
   const [details, prices] = await Promise.all([
     getCatalogRowDetails(result.rows, locale as Locale),
-    persona === "verified"
-      ? getProtectedPriceTiers(result.rows.map((item) => item.id))
-      : Promise.resolve(new Map()),
+    getProtectedPriceTiers(result.rows.map((item) => item.id)),
   ]);
 
   const activeFilterCount = [
@@ -225,10 +223,11 @@ export default async function OfferListPage({
 
   /*
    * One banner above the results rather than a lock repeated on every row.
-   * `verified` gets nothing here because the prices themselves are the answer.
+   * Entitled customers and Admins get nothing here because the prices
+   * themselves are the answer.
    */
   const pricingNotice =
-    persona === "verified"
+    persona === "verified" || persona === "admin"
       ? null
       : persona === "unverified"
         ? {
@@ -240,33 +239,27 @@ export default async function OfferListPage({
               title: t("pricingBlockedTitle"),
               body: t("pricingBlockedBody"),
             }
-          : persona === "admin"
-            ? null
-            : { title: t("pricingLockedTitle"), body: t("pricingLockedBody") };
+          : { title: t("pricingLockedTitle"), body: t("pricingLockedBody") };
 
   /** One line, correct for whoever is reading it. */
   const pricingHeadline =
-    persona === "verified"
+    persona === "verified" || persona === "admin"
       ? t("pricingVisible")
       : persona === "unverified"
         ? t("pricingVerifyTitle")
         : persona === "blocked"
           ? t("pricingBlockedTitle")
-          : persona === "admin"
-            ? t("eyebrow")
-            : t("pricingLockedTitle");
+          : t("pricingLockedTitle");
 
   /** The sentence under the headline, matched to the same reader. */
   const pricingSubline =
-    persona === "verified"
+    persona === "verified" || persona === "admin"
       ? t("intro")
       : persona === "unverified"
         ? t("pricingVerifyBody")
         : persona === "blocked"
           ? t("pricingBlockedBody")
-          : persona === "admin"
-            ? t("intro")
-            : t("pricingLockedBody");
+          : t("pricingLockedBody");
 
   const itemLabels = {
     bags: t("bags"),

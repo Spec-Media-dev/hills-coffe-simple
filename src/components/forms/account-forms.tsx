@@ -3,6 +3,7 @@
 import {
   changeEmailAction,
   changePasswordAction,
+  resendEmailChangeAction,
   updateProfileAction,
 } from "@/actions/account";
 import type { Locale } from "@/i18n/routing";
@@ -13,6 +14,8 @@ import {
   fieldErrors,
   useFormAction,
 } from "@/components/forms/form-primitives";
+import { settled } from "@/lib/actions";
+import { useState } from "react";
 
 type Labels = Record<string, string>;
 
@@ -89,35 +92,72 @@ export function ChangeEmailForm({
   locale,
   labels,
   currentEmail,
+  pendingEmail,
 }: {
   locale: Locale;
   labels: Labels;
   currentEmail: string;
+  pendingEmail: string | null;
 }) {
   const [state, action, pending] = useFormAction(changeEmailAction);
+  const [resendState, resendAction, resending] = useFormAction(
+    resendEmailChangeAction,
+  );
+  const [enteredEmail, setEnteredEmail] = useState("");
   const errors = fieldErrors(state);
+  const outcome = settled(state);
+  const sentThisVisit =
+    outcome?.ok === true && outcome.messageKey === "emailChangeSent";
+  const pendingTarget = pendingEmail ?? (sentThisVisit ? enteredEmail : null);
   return (
-    <form action={action} noValidate className="grid max-w-xl gap-5">
-      <input type="hidden" name="locale" value={locale} />
-      <FormField
-        label={labels.newEmail}
-        name="email"
-        type="email"
-        autoComplete="email"
-        defaultValue={currentEmail}
-        error={errors?.email}
-        hint={labels.emailHint}
-        required
-      />
-      <FormStatus state={state} />
-      <div>
-        <SubmitButton
-          label={labels.updateEmail}
-          pending={pending}
-          variant="outline"
+    <div className="grid max-w-xl gap-5">
+      <p className="rounded-xl border border-border bg-page px-4 py-3 text-sm">
+        <span className="font-bold">{labels.currentEmail}: </span>
+        <span dir="ltr">{currentEmail}</span>
+      </p>
+      <form action={action} noValidate className="grid gap-5">
+        <input type="hidden" name="locale" value={locale} />
+        <FormField
+          label={labels.newEmail}
+          name="email"
+          type="email"
+          autoComplete="email"
+          error={errors?.email}
+          hint={labels.emailHint}
+          onValueChange={setEnteredEmail}
+          required
         />
-      </div>
-    </form>
+        {sentThisVisit ? null : <FormStatus state={state} />}
+        <div>
+          <SubmitButton
+            label={labels.updateEmail}
+            pending={pending}
+            variant="outline"
+          />
+        </div>
+      </form>
+      {pendingTarget ? (
+        <div className="grid gap-3 rounded-xl border border-gold/35 bg-gold/10 p-4 text-sm">
+          <div role="status" aria-live="polite">
+            <p className="font-bold">
+              {labels.verificationPending.replace("{email}", pendingTarget)}
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              {labels.verificationPendingBody}
+            </p>
+          </div>
+          <form action={resendAction}>
+            <input type="hidden" name="locale" value={locale} />
+            <SubmitButton
+              label={labels.resendEmailVerification}
+              pending={resending}
+              variant="outline"
+            />
+            <FormStatus state={resendState} />
+          </form>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

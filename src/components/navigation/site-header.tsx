@@ -10,7 +10,7 @@ import { ScrollAwareHeader } from "./scroll-aware-header";
 import { NavUnderline } from "@/components/motion/primitives";
 import { ThemeToggle } from "./theme-toggle";
 import { Link } from "@/i18n/navigation";
-import { requireVerifiedUser } from "@/lib/auth/session";
+import { getViewer } from "@/lib/auth/session";
 import { getPublicPersona } from "@/lib/auth/persona";
 import { AuthCta } from "@/components/auth/auth-cta";
 import { getCatalogFacets } from "@/lib/data/catalog-query";
@@ -24,11 +24,11 @@ export async function SiteHeader() {
   const t = await getTranslations("nav");
   const actions = await getTranslations("actions");
   const brand = await getTranslations("brand");
-  // Only a verified, unblocked customer gets the account affordance.
-  // requireVerifiedUser() rejects ADMIN and blocked sessions, so an
-  // Administrator is never rendered as a protected-pricing customer and a
-  // blocked customer's protected UI disappears (Constitution VI and VII).
-  const viewer = await requireVerifiedUser();
+  // This is a presentation check, deliberately separate from the server
+  // pricing entitlement gate. `getViewer()` reads the real Supabase session
+  // plus `profiles.role`, so both USER and ADMIN sessions persist across
+  // public-page requests.
+  const viewer = await getViewer();
   /*
    * `requireVerifiedUser()` still decides the account affordance, unchanged.
    * The persona is presentation only: it decides what the *call to action*
@@ -37,7 +37,8 @@ export async function SiteHeader() {
    */
   const persona = await getPublicPersona();
   const locale = (await getLocale()) as Locale;
-  const avatarUrl = viewer ? await getOwnAvatarUrl() : null;
+  const signedInViewer = viewer && !viewer.isBlocked ? viewer : null;
+  const avatarUrl = signedInViewer ? await getOwnAvatarUrl() : null;
   // Resolved once per render and shared with the mobile menu, which is a
   // client component and cannot read it itself.
   const logo = await getSiteLogo(locale);
@@ -108,13 +109,14 @@ export async function SiteHeader() {
               className="px-2 sm:px-3"
             />
           </Link>
-          {/* Tightened from gap-7 so the always-visible search field fits at
-            1280, where Arabic nav labels are widest. */}
+          {/* `whitespace-nowrap` is intentional: the header has a responsive
+            fallback below xl, so no primary label should split onto two lines
+            at the widths where this desktop nav is present. */}
           <nav
-            className="hidden items-center gap-5 xl:flex 2xl:gap-7"
+            className="hidden items-center gap-4 xl:flex 2xl:gap-6"
             aria-label={t("primary")}
           >
-            <Link href="/" className="text-sm font-semibold">
+            <Link href="/" className="whitespace-nowrap text-sm font-semibold">
               <NavUnderline>{t("home")}</NavUnderline>
             </Link>
             <CatalogMegaMenu
@@ -144,16 +146,16 @@ export async function SiteHeader() {
               }}
               origins={facets.origins}
             />
-            <Link href="/coffee-origins" className="text-sm font-semibold">
+            <Link href="/coffee-origins" className="whitespace-nowrap text-sm font-semibold">
               <NavUnderline>{t("origins")}</NavUnderline>
             </Link>
-            <Link href="/knowledge" className="text-sm font-semibold">
+            <Link href="/knowledge" className="whitespace-nowrap text-sm font-semibold">
               <NavUnderline>{t("knowledge")}</NavUnderline>
             </Link>
-            <Link href="/about" className="text-sm font-semibold">
+            <Link href="/about" className="whitespace-nowrap text-sm font-semibold">
               <NavUnderline>{t("about")}</NavUnderline>
             </Link>
-            <Link href="/contact" className="text-sm font-semibold">
+            <Link href="/contact" className="whitespace-nowrap text-sm font-semibold">
               <NavUnderline>{t("contact")}</NavUnderline>
             </Link>
           </nav>
@@ -168,21 +170,38 @@ export async function SiteHeader() {
             />
             <ThemeToggle label={t("theme")} />
             <LocaleSwitcher />
-            {viewer ? (
+            {signedInViewer &&
+            (persona === "verified" || persona === "admin") ? (
               <AccountMenu
                 locale={locale}
-                name={viewer.fullName || viewer.email}
-                initials={avatarInitials(viewer.fullName, viewer.email)}
+                name={signedInViewer.fullName || signedInViewer.email}
+                initials={avatarInitials(
+                  signedInViewer.fullName,
+                  signedInViewer.email,
+                )}
                 avatarUrl={avatarUrl}
-                links={[
-                  { href: "/account", label: t("account") },
-                  { href: "/account/settings", label: account("nav.settings") },
-                  {
-                    href: "/account/favorites",
-                    label: account("nav.favorites"),
-                  },
-                  { href: "/account/requests", label: account("nav.requests") },
-                ]}
+                links={
+                  persona === "admin"
+                    ? [
+                        { href: "/dashboard-admin", label: t("adminDashboard") },
+                        { href: "/admin/account", label: t("account") },
+                      ]
+                    : [
+                        { href: "/account", label: t("account") },
+                        {
+                          href: "/account/settings",
+                          label: account("nav.settings"),
+                        },
+                        {
+                          href: "/account/favorites",
+                          label: account("nav.favorites"),
+                        },
+                        {
+                          href: "/account/requests",
+                          label: account("nav.requests"),
+                        },
+                      ]
+                }
                 labels={{
                   open: account("menu.open"),
                   signOut: actions("signout"),

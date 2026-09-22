@@ -292,15 +292,16 @@ test.describe("P12-T03 ADMIN", () => {
     });
   });
 
-  test("holds no customer protected-pricing entitlement", async ({ page }) => {
-    // An Administrator is not a customer: role separation means the Admin
-    // session must not inherit protected pricing on the public catalog.
+  test("can inspect protected pricing through the server-approved Admin session", async ({ page }) => {
+    // Pricing inspection is a deliberate shared capability. The page still
+    // derives it from the authenticated Admin session; no browser role flag or
+    // public price data is involved.
     await signInAs(page, "admin");
     await page.goto("/green-coffee-offer-list", { waitUntil: "networkidle" });
     expect(
       PRICE_TEXT.test(await page.content()),
-      "Admin session inherited customer protected pricing",
-    ).toBe(false);
+      "an authenticated Admin should see protected per-kg pricing",
+    ).toBe(true);
   });
 
   test("blocks and unblocks only this run's fixture user", async ({ page }) => {

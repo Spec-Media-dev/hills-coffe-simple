@@ -67,11 +67,50 @@ function treatmentFor(origin: OriginRowData): OriginTreatment {
   };
 }
 
+function OriginMapGlyph({
+  treatment,
+  className = "size-28 text-gold-bright sm:size-32",
+}: {
+  treatment: OriginTreatment;
+  className?: string;
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 104 104"
+      className={cn("shrink-0", className)}
+    >
+      <path
+        d={treatment.mapPath}
+        fill="currentColor"
+        fillOpacity="0.18"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx={treatment.marker[0]}
+        cy={treatment.marker[1]}
+        r="4"
+        fill="currentColor"
+      />
+      <circle
+        cx={treatment.marker[0]}
+        cy={treatment.marker[1]}
+        r="8"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.45"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 /**
- * Every origin is rendered in the server HTML. This small client boundary
- * only follows the card nearest the reading position. On desktop, each card
- * sticks a little lower and covers the last; phone layouts remain a normal,
- * readable list. IntersectionObserver avoids per-scroll JavaScript work.
+ * Every origin is rendered in the server HTML. This client boundary tracks the
+ * active origin to drive the contextual map card on desktop, while on mobile
+ * each card carries its own corresponding map graphic directly.
  */
 export function OriginScrollList({
   origins,
@@ -84,56 +123,70 @@ export function OriginScrollList({
   title: string;
   intro: string;
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeId, setActiveId] = useState<string>(origins[0]?.id ?? "");
   const cardRefs = useRef<Array<HTMLAnchorElement | null>>([]);
-  const activeOrigin = origins[activeIndex] ?? origins[0];
+  const activeOrigin = origins.find((o) => o.id === activeId) ?? origins[0];
   const activeTreatment = activeOrigin ? treatmentFor(activeOrigin) : null;
 
   useEffect(() => {
-    if (origins.length < 2 || !("IntersectionObserver" in window)) return;
+    if (origins.length < 2) return;
 
-    const visibility = new Map<number, number>();
-    let frame = 0;
-    const settleActiveCard = () => {
-      frame = 0;
-      let next = 0;
-      let greatest = 0;
-      for (const [index, ratio] of visibility) {
-        if (ratio > greatest) {
-          greatest = ratio;
-          next = index;
+    let ticking = false;
+
+    const checkActiveCard = () => {
+      ticking = false;
+      // On desktop (lg:), cards stick and stack as the user scrolls down.
+      // A card is active once its top reaches or passes the sticky activation zone (~180px).
+      // We find the highest index whose top <= activationZone.
+      const activationZone = 180;
+      let nextIndex = 0;
+
+      for (let i = 0; i < origins.length; i++) {
+        const card = cardRefs.current[i];
+        if (!card) continue;
+        const rect = card.getBoundingClientRect();
+        if (rect.top <= activationZone) {
+          nextIndex = i;
         }
       }
-      if (greatest > 0) setActiveIndex(next);
-    };
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const index = Number(
-            (entry.target as HTMLElement).dataset.originIndex,
-          );
-          visibility.set(
-            index,
-            entry.isIntersecting ? entry.intersectionRatio : 0,
-          );
-        }
-        if (!frame) frame = window.requestAnimationFrame(settleActiveCard);
-      },
-      { rootMargin: "-20% 0px -28%", threshold: [0, 0.3, 0.55, 0.8] },
-    );
 
-    for (const card of cardRefs.current) if (card) observer.observe(card);
-    return () => {
-      observer.disconnect();
-      if (frame) window.cancelAnimationFrame(frame);
+      const nextOrigin = origins[nextIndex];
+      if (nextOrigin) {
+        setActiveId(nextOrigin.id);
+      }
     };
-  }, [origins.length]);
+
+    const onScrollOrResize = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(checkActiveCard);
+      }
+    };
+
+    onScrollOrResize();
+
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [origins]);
 
   if (!activeOrigin || !activeTreatment) return null;
 
   return (
     <div className="site-container grid gap-10 lg:grid-cols-[minmax(19rem,.78fr)_minmax(0,1.22fr)] lg:gap-14 xl:gap-20">
-      <aside className="origin-map-field relative isolate min-h-[29rem] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#10382f] p-7 text-primary-foreground shadow-[0_28px_80px_rgb(4_22_16/.3)] sm:p-10 lg:sticky lg:top-28 lg:h-[calc(100svh-9rem)] lg:min-h-[35rem]">
+      <div className="lg:hidden">
+        <p className="eyebrow">{eyebrow}</p>
+        <h2 className="display-lg mt-5 max-w-[12ch]">{title}</h2>
+        <p className="mt-5 max-w-[34ch] text-base leading-7 text-muted-foreground">
+          {intro}
+        </p>
+      </div>
+
+      <aside className="origin-map-field relative isolate hidden min-h-[29rem] overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#10382f] p-7 text-primary-foreground shadow-[0_28px_80px_rgb(4_22_16/.3)] sm:p-10 lg:sticky lg:top-28 lg:block lg:h-[calc(100svh-9rem)] lg:min-h-[35rem]">
         <div
           aria-hidden="true"
           className="absolute inset-0 -z-10 overflow-hidden"
@@ -156,55 +209,35 @@ export function OriginScrollList({
         </p>
 
         <div className="absolute inset-x-7 bottom-7 sm:inset-x-10 sm:bottom-10">
-          <div className="relative min-h-52 overflow-hidden rounded-[1.4rem] border border-white/20 bg-[#0a2b23]/55 p-5 backdrop-blur-sm">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 104 104"
-              className="absolute -end-3 -top-3 size-52 text-gold-bright/95 sm:-end-1 sm:size-56"
-            >
-              <path
-                d={activeTreatment.mapPath}
-                fill="currentColor"
-                fillOpacity="0.18"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinejoin="round"
+          <div className="relative flex items-center justify-between gap-4 overflow-hidden rounded-[1.4rem] border border-white/20 bg-[#0a2b23]/80 p-6 backdrop-blur-md">
+            <div className="min-w-0 flex-1">
+              <span className="block font-mono text-xs font-bold tracking-[0.2em] text-gold-bright">
+                {activeTreatment.coordinates}
+              </span>
+              <span className="mt-3 block font-heading text-5xl leading-none font-extrabold tracking-[-0.05em] text-white sm:text-6xl">
+                {activeTreatment.code}
+              </span>
+              <span
+                lang={activeOrigin.lang}
+                className="mt-2 block truncate text-base font-semibold text-white/90 sm:text-lg"
+              >
+                {activeOrigin.name}
+              </span>
+            </div>
+            <div className="shrink-0">
+              <OriginMapGlyph
+                treatment={activeTreatment}
+                className="size-24 text-gold-bright sm:size-28"
               />
-              <circle
-                cx={activeTreatment.marker[0]}
-                cy={activeTreatment.marker[1]}
-                r="4"
-                fill="currentColor"
-              />
-              <circle
-                cx={activeTreatment.marker[0]}
-                cy={activeTreatment.marker[1]}
-                r="8"
-                fill="none"
-                stroke="currentColor"
-                strokeOpacity="0.45"
-                strokeWidth="1.5"
-              />
-            </svg>
-            <span className="relative block font-mono text-xs font-bold tracking-[0.2em] text-gold-bright">
-              {activeTreatment.coordinates}
-            </span>
-            <span className="relative mt-8 block font-heading text-6xl leading-none font-extrabold tracking-[-0.07em] sm:text-7xl">
-              {activeTreatment.code}
-            </span>
-            <span
-              lang={activeOrigin.lang}
-              className="relative mt-3 block text-lg font-semibold"
-            >
-              {activeOrigin.name}
-            </span>
+            </div>
           </div>
         </div>
       </aside>
 
       <ul className="relative flex flex-col gap-5 pb-4 lg:gap-[7rem] lg:pb-[16rem]">
         {origins.map((origin, index) => {
-          const active = activeIndex === index;
+          const active = activeOrigin.id === origin.id;
+          const treatment = treatmentFor(origin);
           const light =
             index % CARD_TONES.length === 0 || index % CARD_TONES.length === 2;
           return (
@@ -222,10 +255,10 @@ export function OriginScrollList({
                 }}
                 data-origin-index={index}
                 href={`/coffee-origins/${origin.slug}`}
-                onMouseEnter={() => setActiveIndex(index)}
-                onFocus={() => setActiveIndex(index)}
+                onMouseEnter={() => setActiveId(origin.id)}
+                onFocus={() => setActiveId(origin.id)}
                 className={cn(
-                  "group relative isolate flex min-h-[21rem] overflow-hidden rounded-[1.6rem] outline-none ring-1 ring-black/5 transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-primary sm:min-h-[23rem] lg:min-h-[30rem] lg:will-change-transform lg:hover:-translate-y-1 lg:hover:shadow-[0_30px_80px_rgb(2_20_14/.38)]",
+                  "group relative isolate flex min-h-[25rem] overflow-hidden rounded-[1.6rem] outline-none ring-1 ring-black/5 transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-primary sm:min-h-[26rem] lg:min-h-[30rem] lg:will-change-transform lg:hover:-translate-y-1 lg:hover:shadow-[0_30px_80px_rgb(2_20_14/.38)]",
                   CARD_TONES[index % CARD_TONES.length],
                 )}
               >
@@ -270,13 +303,24 @@ export function OriginScrollList({
                     >
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    <ArrowUpRight
-                      className={cn(
-                        "size-5 shrink-0 transition-transform duration-500 group-hover:-translate-y-1 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1",
-                        light ? "text-highlight" : "text-gold-bright",
-                      )}
-                      aria-hidden="true"
-                    />
+                    <span className="flex items-center gap-3">
+                      <span className="block lg:hidden">
+                        <OriginMapGlyph
+                          treatment={treatment}
+                          className={cn(
+                            "size-14 sm:size-16",
+                            light ? "text-highlight" : "text-gold-bright",
+                          )}
+                        />
+                      </span>
+                      <ArrowUpRight
+                        className={cn(
+                          "size-5 shrink-0 transition-transform duration-500 group-hover:-translate-y-1 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1",
+                          light ? "text-highlight" : "text-gold-bright",
+                        )}
+                        aria-hidden="true"
+                      />
+                    </span>
                   </span>
 
                   <span className="max-w-[28rem]">

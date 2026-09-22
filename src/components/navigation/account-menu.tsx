@@ -11,11 +11,9 @@ import type { Locale } from "@/i18n/routing";
 export type AccountMenuLink = { href: string; label: string };
 
 /**
- * Signed-in customer affordance in the public header.
- *
- * Deliberately never renders an Admin entry: the master plan requires the
- * Admin portal to stay out of public navigation, and this component is only
- * given customer links by its server parent.
+ * Signed-in account affordance in the public header. The server parent supplies
+ * only destinations valid for the real session's role; this client component
+ * merely renders those already-authorized links.
  */
 export function AccountMenu({
   locale,

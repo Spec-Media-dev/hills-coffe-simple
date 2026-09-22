@@ -36,10 +36,8 @@ const translated = (
 
 function StateMessage({
   state,
-  locale,
 }: {
   state: ActionFormState;
-  locale: Locale;
 }) {
   const t = useTranslations("auth.responses");
   const result = settled(state);
@@ -50,26 +48,6 @@ function StateMessage({
       className={`rounded-xl p-3 text-sm ${result.ok ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-destructive/10 text-destructive"}`}
     >
       <p>{translated(t, result.messageKey)}</p>
-      {!result.ok && result.code === "ADMIN_PORTAL_REQUIRED" ? (
-        <Link
-          href="/dashboard-admin"
-          locale={locale}
-          /*
-           * This link is rendered inside a Server Action result, so the client
-           * route tree is the internally `/en`-rewritten one and the prefetch
-           * asks for `/en/dashboard-admin?_rsc=…`. The proxy 308s that back to
-           * the canonical `/dashboard-admin`, the router re-requests the
-           * prefixed form, and the two bounce until the browser gives up with
-           * ERR_TOO_MANY_REDIRECTS. Nothing is gained by prefetching a link
-           * that only appears in a refusal state, and the navigation itself is
-           * unaffected.
-           */
-          prefetch={false}
-          className="mt-2 inline-flex min-h-11 items-center font-bold underline underline-offset-4"
-        >
-          {t("adminPortalLink")}
-        </Link>
-      ) : null}
     </div>
   );
 }
@@ -229,7 +207,7 @@ function SignInFormBase({
         autoComplete="current-password"
         error={errors?.password}
       />
-      <StateMessage state={state} locale={locale} />
+      <StateMessage state={state} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
@@ -319,7 +297,7 @@ export function SignUpForm({
           {legal("title")}
         </Link>
       </p>
-      <StateMessage state={state} locale={locale} />
+      <StateMessage state={state} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
@@ -351,7 +329,7 @@ export function EmailActionForm({
         autoComplete="email"
         error={errors?.email}
       />
-      <StateMessage state={state} locale={locale} />
+      <StateMessage state={state} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );
@@ -383,7 +361,7 @@ export function ResetPasswordForm({
         autoComplete="new-password"
         error={errors?.confirmPassword}
       />
-      <StateMessage state={state} locale={locale} />
+      <StateMessage state={state} />
       <Submit label={labels.submit} pending={pending} />
     </form>
   );

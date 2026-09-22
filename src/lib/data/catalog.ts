@@ -35,6 +35,22 @@ export type OfferListItem = {
   sensory: string[];
   certifications: string[];
   tags: string[];
+  /** Public coffee metadata from the published coffee record and translation. */
+  detail: {
+    shortDescription: string | null;
+    farmCoopStation: string | null;
+    ownerProducer: string | null;
+    subregionTown: string | null;
+    aboutThisCoffee: string | null;
+    cultivation: string | null;
+    harvestPostHarvest: string | null;
+    processingStory: string | null;
+    traceability: string | null;
+    altitudeMinMeters: number | null;
+    altitudeMaxMeters: number | null;
+    farmSizeHectares: number | null;
+    harvestMonths: number[];
+  };
 };
 export type CatalogData = {
   offers: OfferListItem[];
@@ -295,6 +311,21 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
             : null;
           return translation?.name ? [translation.name] : [];
         }),
+        detail: {
+          shortDescription: coffeeT.translation.short_description,
+          farmCoopStation: coffeeT.translation.farm_coop_station,
+          ownerProducer: coffeeT.translation.owner_producer,
+          subregionTown: coffeeT.translation.subregion_town,
+          aboutThisCoffee: coffeeT.translation.about_this_coffee,
+          cultivation: coffeeT.translation.cultivation,
+          harvestPostHarvest: coffeeT.translation.harvest_post_harvest,
+          processingStory: coffeeT.translation.processing_story,
+          traceability: coffeeT.translation.traceability,
+          altitudeMinMeters: coffee.altitude_min_meters,
+          altitudeMaxMeters: coffee.altitude_max_meters,
+          farmSizeHectares: coffee.farm_size_hectares,
+          harvestMonths: coffee.harvest_months ?? [],
+        },
       },
     ];
   });
@@ -314,7 +345,29 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
 export async function getCoffeeBySlug(slug: string, locale: Locale) {
   const data = await getOfferList(locale);
   const offers = data.offers.filter((item) => item.slug === slug);
-  return offers.length ? { ...offers[0], offers } : null;
+  if (!offers.length) return null;
+
+  // Varieties are a normalized relation and intentionally English-only in the
+  // current schema. Fetch just this published coffee's rows rather than
+  // teaching the full-catalog loader about another global join.
+  let varieties: string[] = [];
+  if (isSupabaseConfigured()) {
+    const db = await createSupabaseServerClient();
+    const joins = await db
+      .from("coffee_varieties")
+      .select("variety_id")
+      .eq("coffee_id", offers[0].coffeeId);
+    const ids = [...new Set((joins.data ?? []).map((row) => row.variety_id))];
+    if (!joins.error && ids.length) {
+      const rows = await db.from("varieties").select("id,name").in("id", ids);
+      if (!rows.error)
+        varieties = (rows.data ?? [])
+          .map((row) => row.name?.trim() || null)
+          .filter((name): name is string => Boolean(name));
+    }
+  }
+
+  return { ...offers[0], offers, detail: { ...offers[0].detail, varieties } };
 }
 
 /**

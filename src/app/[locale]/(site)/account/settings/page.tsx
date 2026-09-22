@@ -120,9 +120,17 @@ export default async function AccountSettingsPage({
             <ChangeEmailForm
               locale={locale}
               currentEmail={viewer.email}
+              pendingEmail={viewer.pendingEmail}
               labels={{
-                email: security("newEmail"),
-                submit: security("updateEmail"),
+                currentEmail: security("currentEmail"),
+                newEmail: security("newEmail"),
+                emailHint: security("emailHint"),
+                updateEmail: security("updateEmail"),
+                verificationPending: security("verificationPending", {
+                  email: "{email}",
+                }),
+                verificationPendingBody: security("verificationPendingBody"),
+                resendEmailVerification: security("resendEmailVerification"),
               }}
             />
           </div>

@@ -187,7 +187,13 @@ export async function GET(request: NextRequest) {
 
   if (profile.role === "ADMIN") {
     const { data: isAdmin, error } = await supabase.rpc("is_admin");
-    if (!error && isAdmin === true) return to(localizedPath(locale, "/admin"));
+    if (!error && isAdmin === true) {
+      return to(
+        next.startsWith(localizedPath(locale, "/admin"))
+          ? next
+          : localizedPath(locale, "/admin"),
+      );
+    }
   } else if (profile.role === "USER") {
     const { data: isCustomer, error } = await supabase.rpc(
       "hills_is_verified_user",

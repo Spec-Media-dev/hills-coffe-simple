@@ -106,10 +106,17 @@ export default async function AdminAccountPage({
             <ChangeEmailForm
               locale={locale}
               currentEmail={admin.email}
+              pendingEmail={admin.pendingEmail}
               labels={{
+                currentEmail: security("currentEmail"),
                 newEmail: security("newEmail"),
                 emailHint: security("emailHint"),
                 updateEmail: security("updateEmail"),
+                verificationPending: security("verificationPending", {
+                  email: "{email}",
+                }),
+                verificationPendingBody: security("verificationPendingBody"),
+                resendEmailVerification: security("resendEmailVerification"),
               }}
             />
           </div>

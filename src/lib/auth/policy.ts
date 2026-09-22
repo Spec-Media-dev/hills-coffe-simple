@@ -48,9 +48,9 @@ export function adminSignInDecision(
  *
  * It lives beside the sign-in decisions because it is the same kind of thing:
  * a pure function from an already-resolved identity to a label. It grants
- * nothing. Protected pricing still goes through `requireVerifiedUser()` and
- * the `hills_is_verified_user()` RPC; Admin routes still go through
- * `requireAdmin()`. Changing an outcome here changes what a button *says*,
+ * nothing. Protected pricing still goes through the server-side
+ * `requirePricingViewer()` gate; customer and Admin routes retain their own
+ * separate guards. Changing an outcome here changes what a button *says*,
  * never what a request may read.
  *
  * Ordering is the substance. `blocked` is tested before both `admin` and
@@ -72,6 +72,6 @@ export function personaOf(
   return "verified";
 }
 
-/** True when the persona is the one the pricing presentation is written for. */
+/** True when the persona may be presented with protected pricing. */
 export const personaSeesPricing = (persona: PublicPersona) =>
-  persona === "verified";
+  persona === "verified" || persona === "admin";

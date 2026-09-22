@@ -32,7 +32,7 @@ const code = (path: string) =>
 describe("protected pricing stays isolated from the catalog (P6-T03)", () => {
   it("keeps the price table inside a short, deliberate allow-list", () => {
     // Four modules may name the price table, each for a stated reason:
-    //  - `data/pricing.ts`      customer reads, behind `requireVerifiedUser()`
+    //  - `data/pricing.ts`      approved price reads, behind server-side role checks
     //  - `actions/admin-catalog` Admin price management, behind `requireAdmin()`
     //  - `data/admin-catalog`    Admin tier counts, behind `requireAdmin()`
     //  - `types.generated`       the schema type map, no query at all
@@ -61,9 +61,9 @@ describe("protected pricing stays isolated from the catalog (P6-T03)", () => {
     expect(source).not.toMatch(/\bprice\b/);
   });
 
-  it("gates the price read on the verified-customer check", () => {
+  it("gates the price read on the verified-customer or Admin check", () => {
     const pricing = read("src/lib/data/pricing.ts");
-    expect(pricing).toContain("requireVerifiedUser");
+    expect(pricing).toContain("requirePricingViewer");
     expect(pricing).toContain("offer_price_tiers");
   });
 

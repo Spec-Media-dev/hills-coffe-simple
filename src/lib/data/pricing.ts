@@ -1,10 +1,13 @@
 import "server-only";
-import { requireAdmin, requireVerifiedUser } from "@/lib/auth/session";
+import { requireAdmin, requirePricingViewer } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function getProtectedPriceTiers(offerIds: string[]) {
-  const viewer = await requireVerifiedUser();
+  // This gate asks the live session/profile/RPC checks whether the reader is
+  // either a verified customer or an authenticated Admin. It is deliberately
+  // server-side; callers never decide entitlement from a presentation persona.
+  const viewer = await requirePricingViewer();
   if (!viewer || !isSupabaseConfigured() || offerIds.length === 0)
     return new Map<string, { minBags: number; pricePerKgUsd: number }[]>();
   const db = await createSupabaseServerClient();

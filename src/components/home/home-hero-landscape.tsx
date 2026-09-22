@@ -67,39 +67,44 @@ export function HomeHeroLandscape({
   offer: string;
 }) {
   const sceneRef = useRef<HTMLDivElement>(null);
-  const animate = useDesktopMotion();
+  const animateDesktop = useDesktopMotion();
+  const prefersReduced = useReducedMotion() === true;
   const { scrollYProgress } = useScroll({
     target: sceneRef,
     offset: ["start start", "end start"],
   });
   const progress = useSpring(scrollYProgress, {
-    stiffness: 190,
-    damping: 34,
-    mass: 0.4,
+    stiffness: 180,
+    damping: 32,
+    mass: 0.35,
   });
   const still = ["0%", "0%"];
-  const baseY = useTransform(progress, [0, 1], animate ? ["0%", "44%"] : still);
+  const baseY = useTransform(
+    progress,
+    [0, 1],
+    animateDesktop ? ["0%", "44%"] : still,
+  );
   const baseOpacity = useTransform(
     progress,
     [0, 1],
-    animate ? [1, 0.55] : [1, 1],
+    animateDesktop ? [1, 0.55] : [1, 1],
   );
   const depthY = useTransform(
     progress,
     [0, 1],
-    animate ? ["0%", "24%"] : still,
+    animateDesktop ? ["0%", "24%"] : still,
   );
   const beanY = useTransform(
     progress,
     [0, 1],
-    animate ? ["27%", "-62%"] : ["12%", "12%"],
+    prefersReduced ? ["0%", "0%"] : ["0%", "-55%"],
   );
 
   return (
     <section className="home-hero relative isolate overflow-hidden bg-primary text-primary-foreground">
       <div
         ref={sceneRef}
-        className="relative overflow-hidden lg:min-h-[clamp(54rem,135svh,78rem)]"
+        className="relative min-h-[100svh] overflow-hidden lg:min-h-[clamp(54rem,100svh,66rem)]"
       >
         <div
           aria-hidden="true"
@@ -133,7 +138,7 @@ export function HomeHeroLandscape({
 
         {/* Copy column — in flow, z-index auto (no stacking context), so the
             copy paints above every plane and the bean below the hills. */}
-        <div className="site-container relative flex flex-col items-center pt-14 text-center sm:pt-16 lg:pt-20">
+        <div className="site-container relative flex min-h-[100svh] flex-col items-center pt-14 text-center sm:pt-16 lg:min-h-0 lg:pt-20">
           <div className="relative z-[5] flex flex-col items-center">
             <p className="hero-entry hero-entry-1 eyebrow hero-eyebrow !text-gold-contrast">
               {eyebrow}
@@ -147,9 +152,10 @@ export function HomeHeroLandscape({
           </div>
 
           {/* 3 · The bean has its own scene layer rather than living in the
-              copy's flex flow. Its resting position therefore never changes
-              when the headline wraps, while the mountain still occludes it. */}
-          <div className="pointer-events-none absolute inset-x-0 top-[clamp(22.5rem,41vh,31rem)] z-[1] flex justify-center lg:top-[clamp(21.5rem,39vh,32rem)]">
+              copy's flex flow. It sits in front of / resting above the
+              mountain ridge area at z-[3], grounded in the composition, and
+              rises smoothly on scroll. */}
+          <div className="pointer-events-none absolute inset-x-0 top-[clamp(23rem,46vh,28rem)] z-[3] flex justify-center sm:top-[clamp(22rem,44vh,28rem)] lg:top-[clamp(21rem,41vh,29rem)]">
             <motion.div className="pointer-events-auto" style={{ y: beanY }}>
               <Link
                 href="/green-coffee-offer-list"
@@ -188,10 +194,7 @@ export function HomeHeroLandscape({
 
           {/* Gives the scene its landscape height below the bean on small
               screens; on lg the scene's own min-height governs. */}
-          <div
-            aria-hidden="true"
-            className="h-[clamp(22rem,95vw,36rem)] lg:hidden"
-          />
+          <div aria-hidden="true" className="flex-1 lg:hidden" />
         </div>
 
         {/* 2 · depth plane — the hills cutout. */}

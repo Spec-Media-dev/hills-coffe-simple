@@ -70,7 +70,7 @@ describe("data leak invariants", () => {
     const pricing = readFileSync(resolve("src/lib/data/pricing.ts"), "utf8");
     expect(catalog).not.toContain("offer_price_tiers");
     expect(pricing).toContain("offer_price_tiers");
-    expect(pricing).toContain("requireVerifiedUser");
+    expect(pricing).toContain("requirePricingViewer");
   });
   it("does not reintroduce the forbidden inquiry quantity field", () => {
     const inquiryAction = readFileSync(

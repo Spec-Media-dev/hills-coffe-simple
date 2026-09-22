@@ -161,14 +161,14 @@ export function HeaderSearch({
           }
         }}
         /*
-         * `xl:w-56` rather than the earlier `w-44`: at 176px the placeholder
+         * `xl:w-48` rather than the earlier `w-44`: it still leaves the prompt
          * was clipped mid-word ("Search coffees, o…"), which made a working
          * field look broken. The header has the room — logo, nav and the
          * utility cluster leave well over 400px of slack at 1280 — so the
          * field is widened to the point where the prompt reads, and grows
          * again once the container stops being the constraint.
          */
-        className={`absolute inset-x-0 top-full z-30 items-center gap-2 border-b border-border bg-background p-3 sm:static sm:inset-auto sm:z-auto sm:w-72 sm:border-0 sm:bg-transparent sm:p-0 xl:w-56 2xl:w-72 ${
+        className={`absolute inset-x-0 top-full z-30 items-center gap-2 border-b border-border bg-background p-3 sm:static sm:inset-auto sm:z-auto sm:w-72 sm:border-0 sm:bg-transparent sm:p-0 xl:w-48 2xl:w-64 ${
           open ? "flex" : "hidden xl:flex"
         }`}
       >
