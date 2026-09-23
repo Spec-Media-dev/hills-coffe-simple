@@ -32,10 +32,12 @@ export function ConfirmFragment({
   next,
   failurePath,
   settlePath,
+  flow,
 }: {
   next: string;
   failurePath: string;
   settlePath: string;
+  flow?: string;
 }) {
   const t = useTranslations("auth.responses");
   const [failed, setFailed] = useState(false);
@@ -61,8 +63,21 @@ export function ConfirmFragment({
         );
 
       const params = new URLSearchParams(raw);
+      if (params.has("error") || params.has("error_code")) {
+        setFailed(true);
+        window.location.replace(failurePath);
+        return;
+      }
+
       const accessToken = params.get("access_token");
       const refreshToken = params.get("refresh_token");
+      const rawType = params.get("type");
+      const type =
+        rawType === "signup" ||
+        rawType === "recovery" ||
+        rawType === "email_change"
+          ? rawType
+          : null;
 
       const message = params.get("message") || "";
       const isFirstConfirmation =
@@ -79,6 +94,7 @@ export function ConfirmFragment({
       }
 
       if (!accessToken || !refreshToken) {
+        setFailed(true);
         window.location.replace(failurePath);
         return;
       }
@@ -95,9 +111,12 @@ export function ConfirmFragment({
           return;
         }
         // Hand back to the server for authoritative classification.
-        window.location.replace(
-          `${settlePath}?settled=1&next=${encodeURIComponent(next)}`,
-        );
+        const settleParams = new URLSearchParams();
+        settleParams.set("settled", "1");
+        settleParams.set("next", next);
+        if (type) settleParams.set("type", type);
+        if (flow) settleParams.set("flow", flow);
+        window.location.replace(`${settlePath}?${settleParams.toString()}`);
       } catch {
         setFailed(true);
         window.location.replace(failurePath);
@@ -107,7 +126,7 @@ export function ConfirmFragment({
     // No cleanup-based cancellation: StrictMode's unmount/remount would
     // otherwise abort the in-flight navigation of the first, real run.
     void complete();
-  }, [next, failurePath, settlePath]);
+  }, [next, failurePath, settlePath, flow]);
 
   return (
     <main className="grid min-h-dvh place-items-center bg-page px-5 text-center">

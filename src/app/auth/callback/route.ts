@@ -140,8 +140,12 @@ export async function GET(request: NextRequest) {
     // the fragment survives this redirect because the Location carries none.
     // Previously this fell through to `link_expired`, which reported a
     // successful confirmation as a broken link and established no session.
+    const continueParams = new URLSearchParams();
+    continueParams.set("mode", "confirm");
+    continueParams.set("next", next);
+    if (flow) continueParams.set("flow", flow);
     const response = to(
-      `${localizedPath(locale, "/continue")}?mode=confirm&next=${encodeURIComponent(next)}`,
+      `${localizedPath(locale, "/continue")}?${continueParams.toString()}`,
     );
     // Proof, for the return trip only, that this browser was sent to the
     // fragment handler by this route moments ago.

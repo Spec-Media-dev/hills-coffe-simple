@@ -15,13 +15,17 @@ export default async function AuthContinuePage({
   searchParams,
 }: PageProps<"/[locale]/continue">) {
   const { locale } = (await params) as { locale: Locale };
-  const { next, mode } = await searchParams;
+  const { next, mode, flow } = await searchParams;
   const destination = assertSafeRedirect(next, locale, "/");
   const adminAccountPath = localizedPath(locale, "/admin/account");
+  const isResetDestination =
+    destination === localizedPath(locale, "/reset-password");
   const fragmentFailurePath =
     destination === adminAccountPath
       ? `${adminAccountPath}?email_change=link_expired`
-      : localizedPath(locale, "/verify-email?error=link_expired");
+      : isResetDestination
+        ? localizedPath(locale, "/sign-in?error=link_expired")
+        : localizedPath(locale, "/verify-email?error=link_expired");
 
   // `mode=confirm` means /auth/callback received a callback with nothing the
   // server could exchange, which is what an implicit-flow Supabase
@@ -33,6 +37,7 @@ export default async function AuthContinuePage({
         next={destination}
         failurePath={fragmentFailurePath}
         settlePath="/auth/callback"
+        flow={typeof flow === "string" ? flow : undefined}
       />
     );
 

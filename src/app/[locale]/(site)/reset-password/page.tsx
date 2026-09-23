@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ResetPasswordForm } from "@/components/forms/auth-forms";
 import type { Locale } from "@/i18n/routing";
-import { hasRecoveryMarker } from "@/lib/auth/recovery";
+import { hasValidRecoveryContext } from "@/lib/auth/recovery";
 import { Link } from "@/i18n/navigation";
 
 export const metadata: Metadata = {
@@ -15,14 +15,14 @@ export default async function ResetPage({
 }: PageProps<"/[locale]/reset-password">) {
   const { locale } = (await params) as { locale: Locale };
   const t = await getTranslations("auth");
-  const recovery = await hasRecoveryMarker();
+  const recovery = await hasValidRecoveryContext();
   return (
     <AuthShell
       eyebrow={t("resetTitle")}
       title={t("newPassword")}
       body={t("resetBody")}
-      asideTitle={t("verifyTitle")}
-      asideBody={t("verifyBody")}
+      asideTitle={t("resetAsideTitle")}
+      asideBody={t("resetAsideBody")}
     >
       {recovery ? (
         <ResetPasswordForm

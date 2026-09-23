@@ -369,14 +369,47 @@ export async function updatePasswordAction(
   });
   if (!parsed.success) return invalid(parsed);
   if (!isSupabaseConfigured()) return fail("CONFIGURATION", "configuration");
-  if (!(await hasValidRecoveryContext()))
+  if (!(await hasValidRecoveryContext())) {
+    await clearRecoveryContext();
     return fail("AUTH_REQUIRED", "recoveryRequired");
+  }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.password,
   });
-  if (error) return fail("UNEXPECTED", "passwordUpdateFailed");
+  if (error) {
+    console.error("[updatePasswordAction] Supabase auth.updateUser failed:", {
+      code: error.code,
+      status: error.status,
+    });
+    if (error.code === "same_password")
+      return fail("VALIDATION", "samePassword", {
+        fieldErrors: { password: ["samePassword"] },
+      });
+    if (error.code === "weak_password")
+      return fail("VALIDATION", "weakPassword", {
+        fieldErrors: { password: ["weakPassword"] },
+      });
+    if (isRateLimited(error)) return fail("RATE_LIMITED", "rateLimited");
+    if (
+      error.code === "reauthentication_needed" ||
+      error.message?.toLowerCase().includes("reauthentication")
+    ) {
+      await clearRecoveryContext();
+      return fail("AUTH_REQUIRED", "reauthenticationNeeded");
+    }
+    if (
+      error.name === "AuthSessionMissingError" ||
+      error.status === 401 ||
+      error.code === "session_expired" ||
+      error.code === "session_not_found"
+    ) {
+      await clearRecoveryContext();
+      return fail("AUTH_REQUIRED", "recoveryRequired");
+    }
+    return fail("UNEXPECTED", "passwordUpdateFailed");
+  }
 
   await clearRecoveryContext();
   await supabase.auth.signOut({ scope: "global" });
