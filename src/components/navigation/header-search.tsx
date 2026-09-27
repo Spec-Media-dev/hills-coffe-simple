@@ -4,6 +4,11 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { useLocale } from "next-intl";
+import {
+  SuggestionList,
+  useSearchCombobox,
+  type SuggestionLabels,
+} from "./search-suggestions";
 
 /**
  * Header search that opens in place.
@@ -56,8 +61,16 @@ import { useLocale } from "next-intl";
  */
 export function HeaderSearch({
   labels,
+  suggestionLabels,
 }: {
-  labels: { open: string; close: string; placeholder: string; submit: string };
+  labels: {
+    open: string;
+    close: string;
+    placeholder: string;
+    submit: string;
+    clear: string;
+  };
+  suggestionLabels: SuggestionLabels;
 }) {
   const router = useRouter();
   const locale = useLocale();
@@ -102,6 +115,16 @@ export function HeaderSearch({
     setOpen(false);
   };
 
+  // Typeahead: suggestions under the field while typing; Enter with nothing
+  // highlighted still runs `submit()` and opens the full results page.
+  const comboboxRef = useRef<HTMLDivElement>(null);
+  const combobox = useSearchCombobox({
+    value,
+    containerRef: comboboxRef,
+    onSubmitQuery: submit,
+    onNavigate: () => setOpen(false),
+  });
+
   return (
     <>
       <button
@@ -120,7 +143,7 @@ export function HeaderSearch({
          * the account menu is wider than the sign-in button). Phones reach
          * search through the drawer form instead.
          */
-        className={`size-11 shrink-0 place-items-center rounded-full border border-border transition hover:border-gold hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        className={`nav-chip size-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           // `xl:hidden` because from there up the field itself is on screen and
           // a trigger for it would be a second control doing nothing new.
           open ? "hidden" : "hidden sm:grid xl:hidden"
@@ -168,40 +191,71 @@ export function HeaderSearch({
          * field is widened to the point where the prompt reads, and grows
          * again once the container stops being the constraint.
          */
-        className={`absolute inset-x-0 top-full z-30 items-center gap-2 border-b border-border bg-background p-3 sm:static sm:inset-auto sm:z-auto sm:w-72 sm:border-0 sm:bg-transparent sm:p-0 xl:w-48 2xl:w-64 ${
+        className={`absolute inset-x-0 top-full z-30 items-center gap-2 border-b border-border bg-background p-3 sm:static sm:inset-auto sm:z-auto sm:w-72 sm:border-0 sm:bg-transparent sm:p-0 xl:w-56 2xl:w-64 ${
           open ? "flex" : "hidden xl:flex"
         }`}
       >
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">{labels.placeholder}</span>
-          <input
-            ref={inputRef}
-            name="q"
-            type="search"
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            placeholder={labels.placeholder}
-            data-testid="header-search-input"
-            className="h-11 w-full rounded-md border border-input bg-background ps-4 pe-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:h-10"
-          />
+        <div
+          ref={comboboxRef}
+          className="relative min-w-0 flex-1"
+          onBlur={combobox.onContainerBlur}
+        >
+          <label className="relative block">
+            <span className="sr-only">{labels.placeholder}</span>
+            <input
+              ref={inputRef}
+              name="q"
+              type="search"
+              value={value}
+              onChange={(event) => {
+                setValue(event.target.value);
+                combobox.setOpen(true);
+              }}
+              placeholder={labels.placeholder}
+              data-testid="header-search-input"
+              {...combobox.inputProps}
+              className="nav-field h-11 w-full rounded-full border ps-4 pe-[4.5rem] text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:h-10 [&::-webkit-search-cancel-button]:hidden"
+            />
+          </label>
+          {value ? (
+            <button
+              type="button"
+              onClick={() => {
+                setValue("");
+                inputRef.current?.focus();
+              }}
+              className="absolute end-9 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-current opacity-60 transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:end-8 xl:size-7"
+            >
+              <span className="sr-only">{labels.clear}</span>
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
           {/* `type="button"`, deliberately — see the note at the top of the
               file. It runs the same `submit()` the form does. */}
           <button
             type="button"
             onClick={submit}
             data-testid="header-search-submit"
-            className="absolute end-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:size-8"
+            className="absolute end-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-current opacity-70 transition hover:text-gold-contrast hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:size-8"
           >
             <span className="sr-only">{labels.submit}</span>
             <Search className="size-4" aria-hidden="true" />
           </button>
-        </label>
+          {/* Positioned against this field, outside any overflow clip: the
+              header bar has none, so the list is never cut off. */}
+          <SuggestionList
+            combobox={combobox}
+            labels={suggestionLabels}
+            variant="glass"
+            className="absolute end-0 top-[calc(100%+0.75rem)] z-50 w-[min(26rem,calc(100vw-1.5rem))]"
+          />
+        </div>
         {/* Nothing to close once the field is permanently on screen. */}
         <button
           type="button"
           onClick={() => close()}
           data-testid="header-search-close"
-          className="grid size-11 shrink-0 place-items-center rounded-full border border-border transition hover:border-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
+          className="nav-chip grid size-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
         >
           <span className="sr-only">{labels.close}</span>
           <X className="size-4" aria-hidden="true" />

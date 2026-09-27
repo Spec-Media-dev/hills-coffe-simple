@@ -40,6 +40,7 @@ import { env } from "@/lib/env";
 import { cmsMetadata, localizedMetadata } from "@/lib/seo/metadata";
 import { organizationAndWebsiteJsonLd } from "@/lib/seo/organization";
 import { publicContinentLabel } from "@/lib/public-labels";
+import { originMapFor } from "@/lib/origin-maps";
 import { JsonLd } from "@/components/seo/json-ld";
 
 export async function generateMetadata({
@@ -96,16 +97,22 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   ]);
   const originRows: OriginRowData[] = origins.map((origin) => {
     const media = originHeroMedia.get(origin.id);
+    const continentLabel = publicContinentLabel(
+      origin.continent,
+      locale as Locale,
+    );
     return {
       id: origin.id,
       slug: origin.slug,
       name: origin.name,
       lang: origin.lang,
       countryCode: origin.country_code,
-      continentLabel: publicContinentLabel(origin.continent, locale as Locale),
+      continentLabel,
       coffeeCountLabel: originsT("coffeeCount", { count: origin.coffeeCount }),
       summary: origin.summary,
       media: media ?? null,
+      // Only this origin's outline is serialized to the client component.
+      map: originMapFor(origin.country_code, origin.name, continentLabel),
     };
   });
 
@@ -192,7 +199,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * passed into the client panel component as ready-made markup rather
        * than threading auth state across the server/client boundary.
        */}
-      <section className="home-deferred-section border-t border-border bg-page pb-20 md:pb-28 lg:pb-36">
+      <section className="home-deferred-section bg-page pb-20 md:pb-28 lg:pb-36">
         <SectionReveal className="site-container flex flex-col items-center pt-16 pb-10 text-center md:pt-24 md:pb-14">
           <p className="eyebrow">{t("pathsEyebrow")}</p>
           <h2 className="display-lg mt-6 max-w-4xl">{t("pathsTitle")}</h2>
@@ -368,7 +375,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
        * same fixed-cost, batched media lookup; the client component only
        * follows the in-view card to drive the decorative country treatment.
        */}
-      <section className="home-deferred-section relative isolate overflow-hidden bg-primary py-20 text-primary-foreground md:py-28">
+      <section className="home-deferred-section relative isolate overflow-clip bg-primary py-20 text-primary-foreground md:py-28 lg:py-32">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 flex justify-center opacity-[0.28]"

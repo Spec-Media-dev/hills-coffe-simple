@@ -5,8 +5,12 @@ import { useTheme } from "next-themes";
 
 export function ThemeToggle({
   label = "Toggle color theme",
+  // The public header draws this on its green glass bar; the admin chrome
+  // keeps the default page-surface treatment.
+  className = "grid size-11 place-items-center rounded-full border border-border bg-background/70 text-foreground transition hover:border-gold hover:text-gold",
 }: {
   label?: string;
+  className?: string;
 }) {
   const { resolvedTheme, setTheme } = useTheme();
 
@@ -14,7 +18,7 @@ export function ThemeToggle({
     <button
       type="button"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      className="grid size-11 place-items-center rounded-full border border-border bg-background/70 text-foreground transition hover:border-gold hover:text-gold"
+      className={className}
       aria-label={label}
     >
       <Moon className="size-4 dark:hidden" />

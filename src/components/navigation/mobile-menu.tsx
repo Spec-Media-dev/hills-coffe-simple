@@ -6,6 +6,11 @@ import { createPortal } from "react-dom";
 import { BrandMark, type BrandLogo } from "@/components/brand/mark";
 import { Link } from "@/i18n/navigation";
 import { DrawerReveal } from "@/components/motion/primitives";
+import {
+  SuggestionList,
+  useSearchCombobox,
+  type SuggestionLabels,
+} from "./search-suggestions";
 
 type Item = { href: string; label: string };
 
@@ -19,6 +24,7 @@ export function MobileMenu({
   actionLabel,
   origins,
   labels,
+  suggestionLabels,
 }: {
   items: Item[];
   openLabel: string;
@@ -33,9 +39,11 @@ export function MobileMenu({
   labels: {
     searchPlaceholder: string;
     searchSubmit: string;
+    searchClear: string;
     origins: string;
     originsAll: string;
   };
+  suggestionLabels: SuggestionLabels;
 }) {
   const [open, setOpen] = useState(false);
   const dialogId = useId();
@@ -92,7 +100,7 @@ export function MobileMenu({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="grid size-11 touch-manipulation place-items-center rounded-full border border-border transition-colors hover:border-gold hover:text-gold focus-visible:ring-2 focus-visible:ring-ring"
+        className="nav-chip grid size-11 touch-manipulation place-items-center rounded-full focus-visible:ring-2 focus-visible:ring-ring"
         aria-expanded={open}
         aria-controls={dialogId}
         aria-haspopup="dialog"
@@ -155,30 +163,11 @@ export function MobileMenu({
                  * submitting, so the navigation was cancelled and Enter did
                  * nothing. The navigation itself tears the drawer down.
                  */}
-                <form
-                  role="search"
-                  action="/search"
-                  method="get"
-                  className="relative mt-6"
-                >
-                  <label>
-                    <span className="sr-only">{labels.searchPlaceholder}</span>
-                    <input
-                      name="q"
-                      type="search"
-                      placeholder={labels.searchPlaceholder}
-                      data-testid="mobile-search-input"
-                      className="h-12 w-full rounded-xl border border-input bg-background ps-4 pe-12 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="absolute end-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground"
-                  >
-                    <span className="sr-only">{labels.searchSubmit}</span>
-                    <Search className="size-4" aria-hidden="true" />
-                  </button>
-                </form>
+                <DrawerSearch
+                  labels={labels}
+                  suggestionLabels={suggestionLabels}
+                  onNavigate={() => setOpen(false)}
+                />
                 <nav className="flex flex-col pt-6" aria-label={openLabel}>
                   {items.map((item, index) => (
                     <Link
@@ -234,6 +223,98 @@ export function MobileMenu({
             document.body,
           )
         : null}
+    </div>
+  );
+}
+
+/**
+ * The drawer's search field, with the same suggestions as the header shown
+ * in the drawer's own flow (a phone has no room for a floating dropdown).
+ *
+ * Enter with nothing highlighted still performs the original plain GET form
+ * submission via `requestSubmit()` — deliberately not a client navigation,
+ * see the note above about the drawer unmounting mid-submit. Choosing a
+ * suggestion navigates client-side and then closes the drawer.
+ */
+function DrawerSearch({
+  labels,
+  suggestionLabels,
+  onNavigate,
+}: {
+  labels: {
+    searchPlaceholder: string;
+    searchSubmit: string;
+    searchClear: string;
+  };
+  suggestionLabels: SuggestionLabels;
+  onNavigate: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const combobox = useSearchCombobox({
+    value,
+    containerRef,
+    onSubmitQuery: () => {
+      if (value.trim()) formRef.current?.requestSubmit();
+    },
+    onNavigate,
+  });
+
+  return (
+    <div ref={containerRef} className="mt-6" onBlur={combobox.onContainerBlur}>
+      <form
+        ref={formRef}
+        role="search"
+        action="/search"
+        method="get"
+        className="relative"
+      >
+        <label>
+          <span className="sr-only">{labels.searchPlaceholder}</span>
+          <input
+            ref={inputRef}
+            name="q"
+            type="search"
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              combobox.setOpen(true);
+            }}
+            placeholder={labels.searchPlaceholder}
+            data-testid="mobile-search-input"
+            {...combobox.inputProps}
+            className="h-12 w-full rounded-xl border border-input bg-background ps-4 pe-[5.5rem] text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-search-cancel-button]:hidden"
+          />
+        </label>
+        {value ? (
+          <button
+            type="button"
+            onClick={() => {
+              setValue("");
+              inputRef.current?.focus();
+            }}
+            className="absolute end-11 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground"
+          >
+            <span className="sr-only">{labels.searchClear}</span>
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        ) : null}
+        <button
+          type="submit"
+          className="absolute end-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground"
+        >
+          <span className="sr-only">{labels.searchSubmit}</span>
+          <Search className="size-4" aria-hidden="true" />
+        </button>
+      </form>
+      <SuggestionList
+        combobox={combobox}
+        labels={suggestionLabels}
+        variant="surface"
+        className="mt-2"
+      />
     </div>
   );
 }

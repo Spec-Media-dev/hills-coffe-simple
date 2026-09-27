@@ -13,7 +13,11 @@ import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/auth/session";
 import { getPublicPersona } from "@/lib/auth/persona";
 import { getActiveSampleRequestForCoffee } from "@/lib/data/inquiries";
-import { getCoffeeBySlug, getPublicCoffeeMedia } from "@/lib/data/catalog";
+import {
+  getCoffeeBySlug,
+  getPublicCoffeeMedia,
+  resolvePublishedCoffee,
+} from "@/lib/data/catalog";
 import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { localizedMetadata, localizedUrl } from "@/lib/seo/metadata";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -51,29 +55,55 @@ export default async function CoffeePage({
 }: PageProps<"/[locale]/green-coffee-offer-list/[slug]">) {
   const { slug, locale } = await params;
   setRequestLocale(locale);
-  const coffee = await getCoffeeBySlug(slug, locale as Locale);
+  // The slug → id step is memoized per request and shared with
+  // `getCoffeeBySlug`, so knowing the id early costs no extra query.
+  const resolved = await resolvePublishedCoffee(slug);
+  if (!resolved) notFound();
+  /*
+   * Everything that needs only the coffee's id is requested together with the
+   * coffee itself. These used to be awaited one after another, which put the
+   * whole-catalog read, the image lookup, the session checks and the
+   * sample-request check in series.
+   *
+   * The sample request is asked before the buttons render, so a customer who
+   * already holds an active sample request for this coffee is shown that state
+   * instead of an action the server would refuse. It returns null for anyone
+   * not entitled to create one, so "none" and "not entitled" are
+   * indistinguishable here.
+   */
+  const [
+    coffee,
+    coffeeMedia,
+    t,
+    actions,
+    catalog,
+    inquiry,
+    publicInquiry,
+    requests,
+    viewer,
+    persona,
+    activeSample,
+  ] = await Promise.all([
+    getCoffeeBySlug(slug, locale as Locale),
+    getPublicCoffeeMedia(resolved.id, locale as Locale),
+    getTranslations("product"),
+    getTranslations("actions"),
+    getTranslations("catalog"),
+    getTranslations("inquiry"),
+    getTranslations("publicInquiry"),
+    getTranslations("account.requests"),
+    getViewer(),
+    getPublicPersona(),
+    getActiveSampleRequestForCoffee(resolved.id),
+  ]);
   if (!coffee) notFound();
-  const coffeeMedia = await getPublicCoffeeMedia(
-    coffee.coffeeId,
-    locale as Locale,
+  // Needs the offer ids, so it follows the coffee. `getProtectedPriceTiers`
+  // performs its own server-side entitlement check, exactly as before.
+  const prices = await getProtectedPriceTiers(
+    coffee.offers.map((item) => item.id),
   );
   const mainMedia =
     coffeeMedia.find((item) => item.role === "MAIN") ?? coffeeMedia[0] ?? null;
-  const t = await getTranslations("product");
-  const actions = await getTranslations("actions");
-  const catalog = await getTranslations("catalog");
-  const inquiry = await getTranslations("inquiry");
-  const publicInquiry = await getTranslations("publicInquiry");
-  const requests = await getTranslations("account.requests");
-  const viewer = await getViewer();
-  const persona = await getPublicPersona();
-  /*
-   * Asked before the buttons render, so a customer who already holds an active
-   * sample request for this coffee is shown that state instead of an action
-   * the server would refuse. Returns null for anyone not entitled to create
-   * one, so "none" and "not entitled" are indistinguishable here.
-   */
-  const activeSample = await getActiveSampleRequestForCoffee(coffee.coffeeId);
   /** What to say when this offer has no protected tier for this reader. */
   const noPriceLabel =
     persona === "verified"
@@ -85,8 +115,6 @@ export default async function CoffeePage({
           : persona === "admin"
             ? catalog("pricingOnRequest")
             : actions("pricing");
-  const prices: Map<string, { minBags: number; pricePerKgUsd: number }[]> =
-    await getProtectedPriceTiers(coffee.offers.map((item) => item.id));
   const favorite = viewer
     ? (
         await (
@@ -203,8 +231,13 @@ export default async function CoffeePage({
       : []),
   ];
   const visibleIdentityDetails = identityDetails.filter(
-    (detail): detail is { icon: typeof MapPin; label: string; value: string | number } =>
-      detail.value !== null,
+    (
+      detail,
+    ): detail is {
+      icon: typeof MapPin;
+      label: string;
+      value: string | number;
+    } => detail.value !== null,
   );
   const totalAvailableBags = coffee.offers.reduce(
     (sum, o) => sum + (Number.isFinite(o.bags) ? o.bags : 0),
@@ -237,18 +270,23 @@ export default async function CoffeePage({
     },
     {
       label: t("totalStock"),
-      value: totalAvailableBags > 0 ? `${totalAvailableBags} ${catalog("bags")}` : null,
+      value:
+        totalAvailableBags > 0
+          ? `${totalAvailableBags} ${catalog("bags")}`
+          : null,
     },
     {
       label: catalog("certifications"),
-      value: coffee.certifications.length ? coffee.certifications.join(", ") : null,
+      value: coffee.certifications.length
+        ? coffee.certifications.join(", ")
+        : null,
     },
     {
       label: catalog("tags"),
       value: coffee.tags.length ? coffee.tags.join(", ") : null,
     },
-  ].filter(
-    (fact): fact is { label: string; value: string } => Boolean(fact.value),
+  ].filter((fact): fact is { label: string; value: string } =>
+    Boolean(fact.value),
   );
   const coffeeStories = [
     { label: t("story"), value: coffee.detail.aboutThisCoffee },
@@ -261,8 +299,8 @@ export default async function CoffeePage({
       value: coffee.detail.processingStory ?? coffee.detail.harvestPostHarvest,
     },
     { label: t("traceability"), value: coffee.detail.traceability },
-  ].filter(
-    (story): story is { label: string; value: string } => Boolean(story.value),
+  ].filter((story): story is { label: string; value: string } =>
+    Boolean(story.value),
   );
   return (
     <>
@@ -395,7 +433,10 @@ export default async function CoffeePage({
               {coffeeFacts.length ? (
                 <dl className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
                   {coffeeFacts.map((fact) => (
-                    <div key={fact.label} className="border-t border-border pt-3">
+                    <div
+                      key={fact.label}
+                      className="border-t border-border pt-3"
+                    >
                       <dt className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                         {fact.label}
                       </dt>
@@ -410,7 +451,10 @@ export default async function CoffeePage({
             {coffeeStories.length ? (
               <div className="grid content-start gap-6">
                 {coffeeStories.map((story) => (
-                  <article key={story.label} className="border-s-2 border-gold/55 ps-5">
+                  <article
+                    key={story.label}
+                    className="border-s-2 border-gold/55 ps-5"
+                  >
                     <h3 className="font-heading text-xl">{story.label}</h3>
                     <p className="mt-2 whitespace-pre-line leading-relaxed text-muted-foreground">
                       {story.value}

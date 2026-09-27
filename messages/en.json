@@ -1489,12 +1489,22 @@
     "submit": "Search",
     "prompt": "Search coffees, origins and knowledge from one place.",
     "resultsFor": "Results for “{q}”",
-    "count": "{count} results",
+    "count": "{count, plural, one {# result} other {# results}}",
     "empty": "Nothing matches “{q}”.",
     "emptyHint": "Try a different word, or browse the full catalog.",
     "coffees": "Coffees",
     "origins": "Origins",
     "articles": "Knowledge",
-    "pages": "Pages"
+    "pages": "Pages",
+    "clear": "Clear search",
+    "suggestions": "Suggestions",
+    "searching": "Searching…",
+    "noSuggestions": "No quick matches for “{q}”.",
+    "noSuggestionsHint": "Press Enter to search everything.",
+    "viewAll": "See all results for “{q}”",
+    "suggestionCount": "{count} suggestions available",
+    "loading": "Loading results…",
+    "coffeesShown": "Showing {shown} of {total} matching coffees",
+    "viewAllCoffees": "Open all matches in the catalog"
   }
 }

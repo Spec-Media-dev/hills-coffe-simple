@@ -69,6 +69,12 @@
   --forest-light: #245548;
   --radius: 0.75rem;
   --shadow-soft: 0 18px 60px rgb(28 42 30 / 0.08);
+  /* The floating header's reserved height: top gutter + glass bar + bottom
+     gutter. The home hero pulls itself up by exactly this much so the
+     landscape runs underneath the glass. Kept in step with the classes on
+     `ScrollAwareHeader` in site-header.tsx (pt-2 + h-14 + 0.5rem below `sm`,
+     pt-3 + h-16 + 0.5rem from `sm`). */
+  --site-header-h: 4.5rem;
   /* Native controls the page cannot paint — the select popup, scrollbars,
      date pickers — follow the theme from here, so no component has to force a
      scheme of its own and get it wrong in the other theme. */
@@ -105,6 +111,12 @@
   --shadow-soft: 0 20px 70px rgb(0 0 0 / 0.25);
 }
 
+@media (min-width: 640px) {
+  :root {
+    --site-header-h: 5.25rem;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -117,6 +129,18 @@
     html {
       scroll-behavior: smooth;
     }
+  }
+  /* Lenis (components/motion/smooth-scroll.tsx) drives the real document
+     scroll, so only its documented structural rules are needed. */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-smooth iframe {
+    pointer-events: none;
   }
   body {
     /* `next/font` places its font variables on body, not :root. Define these
@@ -205,31 +229,67 @@
   .bg-gold .text-muted-foreground {
     color: #3b260f;
   }
+  /*
+   * Editorial display tokens.
+   *
+   * Benito is a narrow, high-contrast display face. At the previous settings
+   * (-0.045em to -0.06em tracking, line-height at or below 1, and weight 800,
+   * which resolves to the Black cut since the family ships 700 and 900) the
+   * counters closed up and neighbouring glyphs touched — "rr" in "Current",
+   * "ss" in "business". The fix is the whole set, not tracking alone: the Bold
+   * cut, near-neutral tracking, a touch of word spacing, and leading that gives
+   * ascenders and descenders their own room. Arabic is never tracked, since
+   * letter-spacing breaks its joins.
+   */
   .display-xl {
     font-family: var(--font-display);
     font-size: clamp(3rem, 8vw, 7.2rem);
-    line-height: 0.94;
-    letter-spacing: -0.06em;
-    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.016em;
+    word-spacing: 0.04em;
+    font-weight: 700;
   }
   .display-hero {
     font-family: var(--font-display);
     /* The floor governs every phone: 10.5vw only overtakes 3.25rem above
        ~495px. At the previous 4rem floor a single long word — "accountability"
        in the About hero — measured 395px against a 355px column and was
-       clipped off the side of a 375px screen. */
+       clipped off the side of a 375px screen. The tighter phone tracking is
+       part of that same budget and only opens up once the column is wide. */
     font-size: clamp(3.5rem, 10.5vw, 9.5rem);
-    line-height: 0.88;
-    letter-spacing: -0.055em;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
     font-weight: 500;
     /* Last resort for a word no type scale can fit: break it rather than let
        it paint outside the page. */
     overflow-wrap: break-word;
   }
+  @media (min-width: 768px) {
+    .display-hero {
+      line-height: 0.93;
+      letter-spacing: -0.03em;
+      word-spacing: 0.04em;
+    }
+  }
   [dir="rtl"] .display-hero {
     font-size: clamp(3.5rem, 9vw, 8rem);
-    line-height: 1.03;
-    letter-spacing: -0.04em;
+    line-height: 1.08;
+    letter-spacing: 0;
+    word-spacing: normal;
+  }
+  /* Card and panel titles: the same face at a smaller size, sharing one
+     setting instead of a different negative tracking on every card. */
+  .display-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.004em;
+    word-spacing: 0.035em;
+  }
+  [dir="rtl"] .display-title {
+    line-height: 1.2;
+    letter-spacing: 0;
+    word-spacing: normal;
   }
   /* The home hero headline is the one place the display face carries a whole
      sentence inside a half-width column rather than three words across the
@@ -239,26 +299,22 @@
      catalog heroes still want the larger scale. */
   .home-hero .display-hero {
     /* Give the opening statement the scale of the supplied editorial
-       reference while keeping a readable two-to-three-line measure. */
-    font-size: clamp(3.35rem, 6.25vw, 7.65rem);
-    line-height: 0.86;
-    letter-spacing: -0.05em;
+       reference while keeping a readable two-to-three-line measure. One fluid
+       ramp instead of per-breakpoint sizes: 3rem on phones, ~6.1rem at
+       1440px, capped at 7rem on very wide screens. */
+    max-width: 13em;
+    font-size: clamp(3rem, 1.1rem + 5.4vw, 7rem);
+    line-height: 0.95;
+    letter-spacing: -0.022em;
+    word-spacing: 0.05em;
     font-weight: 400;
   }
   [dir="rtl"] .home-hero .display-hero {
-    font-size: clamp(2.25rem, 3.9vw, 3.9rem);
-    line-height: 1.14;
-  }
-  /* Composited transforms only: the hero bean can feel alive without causing
-     layout work while the scroll-driven landscape is moving. */
-  @keyframes hero-bean-float {
-    0%,
-    100% {
-      transform: translate3d(0, 0, 0) rotate(-2deg);
-    }
-    50% {
-      transform: translate3d(0, -0.75rem, 0) rotate(2deg);
-    }
+    max-width: 18em;
+    font-size: clamp(2.25rem, 1.4rem + 2.8vw, 4rem);
+    line-height: 1.18;
+    letter-spacing: 0;
+    word-spacing: normal;
   }
   .hero-aurora {
     background:
@@ -285,11 +341,6 @@
     opacity: 0.13;
   }
   @media (prefers-reduced-motion: no-preference) {
-    .hero-bean-float {
-      animation: hero-bean-float 7s cubic-bezier(0.45, 0.05, 0.55, 0.95)
-        infinite;
-      will-change: transform;
-    }
     @keyframes hero-entry {
       from {
         transform: translate3d(0, 1.25rem, 0);
@@ -315,46 +366,99 @@
   @media (min-width: 1024px) {
     .home-deferred-section {
       content-visibility: auto;
-      contain-intrinsic-block-size: 60rem;
+      /* `auto` makes the browser remember each section's real rendered
+         height. With a bare 60rem, every section that scrolled back out of
+         view collapsed to the placeholder again, so scrolling upward kept
+         resizing the page above the reader — the page lurched. */
+      contain-intrinsic-block-size: auto 60rem;
     }
   }
   /* CSS view timelines retain the page's gentle reveals without adding an
      IntersectionObserver or animation runtime to the critical homepage JS.
      Browsers without this progressive enhancement render the final state. */
+  /*
+   * One motion language for the homepage.
+   *
+   *   .home-section-reveal — a block (heading, copy, a group) rises ~2rem and
+   *                          eases from partial opacity as it enters.
+   *   .home-image-reveal   — the frame stays put; the image inside settles
+   *                          from a slight zoom, like a lens finding focus.
+   *   .home-reveal-item    — cards: a smaller rise, staggered by
+   *                          `--reveal-index` so a list arrives in sequence.
+   *
+   * Every one is driven by the element's position in the viewport rather than
+   * by a timer, so it is exactly reversible: scroll back up and the content
+   * eases back the same way, with no "already played" state to get stuck in.
+   * Content never starts invisible — the page is always readable mid-reveal —
+   * and browsers without view timelines simply show the settled layout.
+   */
   @supports (animation-timeline: view()) {
-    @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-      @keyframes home-section-enter {
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes home-reveal-rise {
         from {
-          opacity: 0;
-          transform: translate3d(0, 1.25rem, 0);
+          opacity: var(--reveal-from-opacity, 0.35);
+          transform: translate3d(0, var(--reveal-distance, 2.25rem), 0);
         }
         to {
           opacity: 1;
           transform: translate3d(0, 0, 0);
         }
       }
+      @keyframes home-reveal-focus {
+        from {
+          transform: scale(1.07);
+        }
+        to {
+          transform: scale(1);
+        }
+      }
       .home-section-reveal,
-      .home-image-reveal {
-        animation: home-section-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+      .home-reveal-item {
+        animation: home-reveal-rise linear both;
         animation-timeline: view();
-        animation-range: entry 0% cover 28%;
+        animation-timing-function: cubic-bezier(0.2, 0.7, 0.25, 1);
+        animation-range: entry 0% cover 30%;
+      }
+      .home-reveal-item {
+        --reveal-distance: 1.5rem;
+        --reveal-from-opacity: 0.5;
+        /* Each later card finishes a little later in the same scroll. */
+        animation-range: entry calc(var(--reveal-index, 0) * 4%)
+          cover calc(22% + var(--reveal-index, 0) * 4%);
+      }
+      .home-image-reveal > img {
+        animation: home-reveal-focus linear both;
+        animation-timeline: view();
+        animation-timing-function: cubic-bezier(0.2, 0.7, 0.25, 1);
+        animation-range: entry 0% cover 55%;
+      }
+      @media (max-width: 767px) {
+        .home-section-reveal {
+          --reveal-distance: 1.25rem;
+        }
+        .home-reveal-item {
+          --reveal-distance: 1rem;
+        }
       }
     }
   }
   [dir="rtl"] .display-xl {
-    letter-spacing: -0.035em;
-    line-height: 1.1;
+    letter-spacing: 0;
+    word-spacing: normal;
+    line-height: 1.12;
   }
   .display-lg {
     font-family: var(--font-display);
-    font-size: clamp(2.35rem, 5vw, 4.8rem);
-    line-height: 1;
-    letter-spacing: -0.045em;
-    font-weight: 800;
+    font-size: clamp(2.35rem, 1.5rem + 3.4vw, 4.6rem);
+    line-height: 1.06;
+    letter-spacing: -0.006em;
+    word-spacing: 0.04em;
+    font-weight: 700;
   }
   [dir="rtl"] .display-lg {
-    letter-spacing: -0.025em;
-    line-height: 1.15;
+    letter-spacing: 0;
+    word-spacing: normal;
+    line-height: 1.18;
   }
   .text-balance {
     text-wrap: balance;
@@ -607,13 +711,381 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
   animation-name: hc-fade-in;
 }
 
-.home-hero .hero-eyebrow {
-  font-size: 2rem;
+/* ------------------------------------------------------------------------
+ * Floating glass navigation.
+ *
+ * Always a deep, translucent green — in the light theme it must not become
+ * white glass and in the dark theme it must not become black glass. The dark
+ * theme gets a slightly lifted green so the bar still separates from the
+ * near-black page. Text on it is cream in both themes.
+ * ---------------------------------------------------------------------- */
+.nav-glass {
+  --nav-ink: #f3ecdd;
+  --gold-text: var(--gold-bright);
+  --ring: var(--gold-bright);
+  color: var(--nav-ink);
+  background: linear-gradient(
+    180deg,
+    rgb(32 78 63 / 0.8) 0%,
+    rgb(19 54 44 / 0.84) 100%
+  );
+  border: 1px solid rgb(206 232 196 / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 22px 44px -22px rgb(6 26 20 / 0.6),
+    0 2px 10px rgb(6 26 20 / 0.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
+  backdrop-filter: blur(18px) saturate(1.45);
+}
+.dark .nav-glass {
+  background: linear-gradient(
+    180deg,
+    rgb(44 100 78 / 0.66) 0%,
+    rgb(27 70 55 / 0.72) 100%
+  );
+  border-color: rgb(170 222 182 / 0.16);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 22px 48px -20px rgb(0 0 0 / 0.7);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav-glass {
+    background: rgb(22 58 47 / 0.97);
+  }
+}
+/* Round controls and fields sitting on the glass. */
+.nav-chip {
+  border: 1px solid rgb(243 236 221 / 0.16);
+  background: rgb(243 236 221 / 0.06);
+  color: var(--nav-ink, currentColor);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.nav-chip:hover {
+  border-color: rgb(241 191 124 / 0.55);
+  background: rgb(243 236 221 / 0.1);
+  color: var(--gold-contrast);
+}
+.nav-field {
+  border-color: rgb(243 236 221 / 0.16);
+  background: rgb(6 26 20 / 0.26);
+  color: var(--nav-ink, currentColor);
+}
+.nav-field::placeholder {
+  color: rgb(243 236 221 / 0.58);
+}
+/* The header's suggestion dropdown. Nearly opaque rather than a second blur:
+   a blurred child of the already-blurred bar would only blur the bar itself
+   (the bar is its backdrop root), and the list must stay legible over any
+   page content. Same green in both themes, like the bar. */
+.search-suggest-glass {
+  --gold-text: var(--gold-bright);
+  --ring: var(--gold-bright);
+  background: linear-gradient(
+    180deg,
+    rgb(24 64 52 / 0.98) 0%,
+    rgb(16 48 39 / 0.98) 100%
+  );
+  border: 1px solid rgb(206 232 196 / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 28px 60px -24px rgb(4 20 15 / 0.7);
+}
+.dark .search-suggest-glass {
+  background: linear-gradient(
+    180deg,
+    rgb(36 86 67 / 0.98) 0%,
+    rgb(24 64 50 / 0.98) 100%
+  );
 }
 
-@media (min-width: 768px) {
-  .home-hero .hero-eyebrow {
-    font-size: 1.25rem;
+/* ------------------------------------------------------------------------
+ * Home hero — a scroll scene, modelled on how the TO TOP reference is built
+ * rather than on how it looks:
+ *
+ *   headline block (in flow)
+ *   landscape block (in flow, pulled up under the headline, clipped)
+ *     far plate · wash · mid plate · bean · near plate · ending shade · band
+ *   organic edge into the cream page
+ *
+ * Nothing is pinned. The scene is long because the landscape itself is tall
+ * (the plates are drawn wider than the viewport on desktop, which makes them
+ * taller) and because it ends in a deep-green tail that carries the
+ * "Built for / What Hills does" band. The layers are then moved by scroll at
+ * different rates (home-hero-landscape.tsx), so the first viewport shows the
+ * headline and the ridge, the next one travels through the valley while the
+ * bean rises, and the last one settles into the band and the edge.
+ * ---------------------------------------------------------------------- */
+.home-hero {
+  /* Run the landscape underneath the floating header. */
+  margin-top: calc(-1 * var(--site-header-h));
+  /* The scene's height is fractional (it follows vw/svh), so its last pixel
+     row is shared between the cream edge and the section's own ground. Ending
+     the ground in the page colour keeps that row cream instead of a faint
+     green seam under the edge. */
+  background: linear-gradient(
+    to bottom,
+    var(--primary) calc(100% - 4px),
+    var(--page) calc(100% - 4px)
+  );
+}
+.hero-scene {
+  container-type: inline-size;
+}
+.hero-scene > * {
+  /* Plate width is driven by the viewport so the rendered plate height is
+     known in CSS; every other measure in the scene hangs off it. */
+  --plate-w: max(100cqw, 44rem, 95svh);
+  --plate-h: calc(var(--plate-w) * 0.5628);
+  /* How far the landscape tucks up under the headline. */
+  --land-overlap: clamp(4.5rem, 12svh, 6.5rem);
+  /* The deep-green run below the plates that carries the band. */
+  --land-tail: 11rem;
+}
+@media (min-width: 640px) {
+  .hero-scene > * {
+    --land-tail: clamp(7rem, 14svh, 10rem);
+  }
+}
+@media (min-width: 1024px) {
+  .hero-scene > * {
+    /* Wider than the viewport: the crop loses a little of each side and
+       gains the height that makes the scene worth scrolling through. */
+    --plate-w: max(117cqw, 105svh);
+    --land-overlap: clamp(7rem, 16svh, 10rem);
+    --land-tail: clamp(7.5rem, 16svh, 11rem);
+  }
+}
+.hero-copy {
+  padding-top: calc(var(--site-header-h) + clamp(1.75rem, 7svh, 5.5rem));
+}
+.hero-land {
+  height: calc(var(--plate-h) + var(--land-tail));
+  margin-top: calc(-1 * var(--land-overlap));
+}
+.hero-plate {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--plate-w);
+  margin-left: calc(var(--plate-w) / -2);
+}
+.hero-plate-img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+}
+/* The far plate's own sky melts into the forest instead of showing an edge
+   as it sinks. */
+.hero-plate-base .hero-plate-img {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 34%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 34%);
+}
+.hero-wash {
+  height: calc(var(--plate-h) * 0.62);
+  background: linear-gradient(
+    to bottom,
+    var(--primary) 0%,
+    var(--primary) 20%,
+    color-mix(in srgb, var(--primary) 60%, transparent) 55%,
+    color-mix(in srgb, var(--primary) 0%, transparent) 100%
+  );
+}
+.hero-bean-slot {
+  /* Below the headline, in the valley, and never tucked under the intro. */
+  top: max(
+    calc(var(--plate-h) * 0.2),
+    calc(var(--land-overlap) + 1.25rem)
+  );
+}
+/* The near plate ends above the land's tail; feather that edge so it never
+   reads as a horizontal line through the ending. */
+.hero-plate-front .hero-plate-img {
+  -webkit-mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 86%, transparent 100%);
+}
+.hero-ending-shade {
+  height: calc(var(--plate-h) * 0.6 + var(--land-tail));
+  /* Fully opaque a little above where the plates end, so the tail and the
+     cream edge sit on one continuous deep green. */
+  background: linear-gradient(
+    to bottom,
+    rgb(9 32 25 / 0) 0%,
+    rgb(9 32 25 / 0.55) 36%,
+    rgb(9 32 25 / 0.9) calc(100% - var(--land-tail) - 7rem),
+    rgb(9 32 25) calc(100% - var(--land-tail) - 1.5rem)
+  );
+}
+.home-hero .hero-eyebrow {
+  font-size: clamp(0.72rem, 0.58rem + 0.55vw, 1.1rem);
+  line-height: 1.5;
+  letter-spacing: 0.22em;
+}
+[dir="rtl"] .home-hero .hero-eyebrow {
+  letter-spacing: 0;
+}
+.hero-intro {
+  max-width: 58ch;
+  font-size: clamp(1rem, 0.9rem + 0.45vw, 1.3rem);
+  line-height: 1.6;
+  text-shadow: 0 2px 22px rgb(6 24 18 / 0.55);
+}
+.hero-ending-text {
+  max-width: 38ch;
+  font-size: clamp(1rem, 0.92rem + 0.35vw, 1.25rem);
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.88);
+}
+.hero-edge {
+  height: clamp(1.25rem, 3.6vw, 3.75rem);
+  margin-top: calc(-1 * clamp(1.25rem, 3.6vw, 3.75rem) + 1px);
+  fill: var(--page);
+}
+[dir="rtl"] .hero-edge {
+  transform: scaleX(-1);
+}
+/* The landscape settles into place once on load, like the reference: a
+   compositor-only rise of the layer stack, desktop only. */
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  @keyframes hero-land-settle {
+    from {
+      transform: translate3d(0, 3.5rem, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  .hero-land-layers {
+    animation: hero-land-settle 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* ------------------------------------------------------------------------
+ * Branded ground for a highlight or origin card without a usable image: deep
+ * forest, a warm light at one corner and faint contour lines — a terrain
+ * map rather than an empty green block. Painted beneath every image too, so
+ * an image that fails to load falls back to this instead of a gap.
+ * ---------------------------------------------------------------------- */
+.highlight-fallback {
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 90% at 88% 8%,
+      rgb(227 170 100 / 0.2),
+      transparent 55%
+    ),
+    radial-gradient(90% 120% at 6% 100%, rgb(52 108 86 / 0.55), transparent 60%),
+    linear-gradient(135deg, #123a30 0%, #1c4a3e 55%, #0e2d25 100%);
+}
+.highlight-fallback::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background: repeating-radial-gradient(
+    ellipse at 68% 42%,
+    transparent 0 1.35rem,
+    rgb(241 191 124 / 0.085) 1.35rem calc(1.35rem + 1px)
+  );
+}
+.highlight-fallback[data-tone="1"]::before {
+  background-position: 18% 30%;
+}
+.highlight-fallback[data-tone="2"] {
+  background:
+    radial-gradient(120% 90% at 12% 10%, rgb(227 170 100 / 0.22), transparent 55%),
+    linear-gradient(160deg, #173f34 0%, #245548 60%, #133a30 100%);
+}
+.highlight-fallback[data-tone="3"]::before {
+  background-position: 80% 70%;
+}
+
+/* ------------------------------------------------------------------------
+ * Origins — the sticky number and country outline.
+ * ---------------------------------------------------------------------- */
+.origin-odometer {
+  display: block;
+  height: 1.1em;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: clamp(5.5rem, 8.5vw, 9rem);
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--gold-contrast);
+  font-variant-numeric: tabular-nums;
+}
+.origin-odometer-track {
+  display: flex;
+  flex-direction: column;
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.origin-odometer-track > span {
+  display: block;
+  height: 1.1em;
+}
+.origin-stage-map {
+  opacity: 0;
+  transform: translate3d(0, 0.9rem, 0) scale(0.965);
+  transition:
+    opacity 600ms ease,
+    transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.origin-stage-map[data-active="true"] {
+  opacity: 1;
+  transform: none;
+}
+.origin-map-svg {
+  display: block;
+  overflow: visible;
+  color: var(--gold-bright);
+}
+.origin-map-land {
+  fill: rgb(227 170 100 / 0.1);
+  stroke: currentColor;
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.origin-map-grid {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.35;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.origin-map-initials {
+  fill: currentColor;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+.origin-map-marker circle:first-child {
+  fill: none;
+  stroke: var(--gold-contrast);
+  stroke-opacity: 0.55;
+  stroke-width: 1.25px;
+  vector-effect: non-scaling-stroke;
+}
+.origin-map-marker circle:last-child {
+  fill: var(--gold-contrast);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .origin-stage-map[data-active="true"] .origin-map-marker circle:first-child {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: origin-marker-pulse 2.8s ease-out infinite;
+  }
+}
+@keyframes origin-marker-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
   }
 }
 @keyframes hc-enter-forward {

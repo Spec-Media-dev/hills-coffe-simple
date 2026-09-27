@@ -32,7 +32,14 @@ import type { Locale } from "@/i18n/routing";
  *
  * `replace` (not `assign`) preserves the previous switcher's history behavior.
  */
-export function LocaleSwitcher() {
+export function LocaleSwitcher({
+  // h-11 to match the theme toggle and menu button beside it: at h-10 this
+  // was a 40px target in a row where the project's floor is 44. The public
+  // header passes its own glass-bar treatment; admin keeps this default.
+  className = "flex h-11 min-h-11 items-center gap-2 rounded-full border border-border bg-background/70 px-3 text-xs font-bold tracking-wider uppercase transition hover:border-gold hover:text-gold",
+}: {
+  className?: string;
+} = {}) {
   const locale = useLocale() as Locale;
   const pathname = usePathname();
   const nextLocale: Locale = locale === "en" ? "ar" : "en";
@@ -57,9 +64,7 @@ export function LocaleSwitcher() {
         const { search, hash } = window.location;
         window.location.replace(`${target}${search}${hash}`);
       }}
-      // h-11 to match the theme toggle and menu button beside it: at h-10 this
-      // was a 40px target in a row where the project's floor is 44.
-      className="flex h-11 min-h-11 items-center gap-2 rounded-full border border-border bg-background/70 px-3 text-xs font-bold tracking-wider uppercase transition hover:border-gold hover:text-gold"
+      className={className}
       aria-label={nextLocale === "ar" ? "AR — العربية" : "EN — English"}
     >
       <Languages className="size-4" aria-hidden="true" />

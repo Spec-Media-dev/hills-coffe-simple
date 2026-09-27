@@ -1495,6 +1495,16 @@
     "coffees": "القهوة",
     "origins": "المناشئ",
     "articles": "المعرفة",
-    "pages": "الصفحات"
+    "pages": "الصفحات",
+    "clear": "مسح البحث",
+    "suggestions": "اقتراحات",
+    "searching": "جارٍ البحث…",
+    "noSuggestions": "لا توجد نتائج سريعة لـ ”{q}“.",
+    "noSuggestionsHint": "اضغط Enter للبحث في كل المحتوى.",
+    "viewAll": "عرض كل النتائج لـ ”{q}“",
+    "suggestionCount": "{count} اقتراحات متاحة",
+    "loading": "جارٍ تحميل النتائج…",
+    "coffeesShown": "عرض {shown} من {total} قهوة مطابقة",
+    "viewAllCoffees": "فتح كل النتائج في الكتالوج"
   }
 }

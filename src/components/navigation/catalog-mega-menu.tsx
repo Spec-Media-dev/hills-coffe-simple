@@ -47,7 +47,7 @@ export function CatalogMegaMenu({
   return (
     <div
       ref={rootRef}
-      className="relative flex h-20 items-center"
+      className="relative flex h-16 items-center"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onBlur={(event) => {
@@ -98,7 +98,7 @@ export function CatalogMegaMenu({
             <nav
               id="catalog-mega-menu"
               aria-label={labels.trigger}
-              className="grid grid-cols-[1.22fr_1fr] overflow-hidden border border-border bg-card shadow-[0_28px_80px_rgb(23_60_50/.2)]"
+              className="grid grid-cols-[1.22fr_1fr] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-[0_28px_80px_rgb(23_60_50/.2)]"
             >
               <div className="bg-primary p-7 text-primary-foreground">
                 <p className="eyebrow !text-gold-contrast">{labels.trigger}</p>

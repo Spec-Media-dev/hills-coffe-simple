@@ -2,7 +2,13 @@
 
 import { useId, useState } from "react";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronDown,
+  MapPin,
+  Package,
+  Sprout,
+} from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { AccordionExpand } from "@/components/motion/primitives";
 import type { CatalogRow, CatalogRowDetail } from "@/lib/data/catalog-query";
@@ -54,18 +60,60 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+/**
+ * The coffee image, or the branded Hills ground when there is none. The
+ * fallback is painted underneath the image too, so a URL that fails to load
+ * leaves the designed ground rather than a broken-image icon.
+ */
+function CoffeeThumb({
+  item,
+  sizes,
+  className,
+}: {
+  item: CatalogRow;
+  sizes: string;
+  className: string;
+}) {
+  return (
+    <div
+      className={`highlight-fallback relative grid shrink-0 place-items-center overflow-hidden ${className}`}
+    >
+      <Sprout
+        className="relative size-5 text-gold-contrast/80"
+        aria-hidden="true"
+      />
+      {item.imageUrl ? (
+        <Image
+          src={item.imageUrl}
+          alt={item.imageAlt}
+          fill
+          sizes={sizes}
+          className="object-cover"
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function CatalogItem({
   item,
   detail,
   price,
   statusLabel,
   labels,
+  variant = "row",
 }: {
   item: CatalogRow;
   detail?: CatalogRowDetail;
   price?: number;
   statusLabel: string;
   labels: CatalogItemLabels;
+  /**
+   * `row` is the catalog list. `result` is the search-results card: the same
+   * data, fields and expand panel, with the image shown at every width and
+   * the key facts summarised before expanding.
+   */
+  variant?: "row" | "result";
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -113,87 +161,149 @@ export function CatalogItem({
     { label: labels.sensory, value: joined(detail?.sensory) },
   ].filter((field) => field.value !== null && field.value !== undefined);
 
+  const expandButton = (
+    <button
+      type="button"
+      onClick={() => setOpen((value) => !value)}
+      aria-expanded={open}
+      aria-controls={panelId}
+      className="grid size-11 shrink-0 place-items-center rounded-full border border-border transition-colors hover:border-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span className="sr-only">{open ? labels.collapse : labels.expand}</span>
+      <ChevronDown
+        className={`size-4 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+        aria-hidden="true"
+      />
+    </button>
+  );
+  const href = `/green-coffee-offer-list/${item.slug}`;
+
   return (
-    <article className="border border-border bg-card transition-colors duration-300 hover:border-highlight">
-      <div className="grid gap-4 p-4 md:grid-cols-[auto_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center md:gap-5 md:p-5">
-        <div className="relative hidden size-16 shrink-0 overflow-hidden bg-muted md:block">
-          {item.imageUrl ? (
-            <Image
-              src={item.imageUrl}
-              alt={item.imageAlt}
-              fill
-              unoptimized
-              sizes="64px"
-              className="object-cover"
-            />
-          ) : (
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 grid place-items-center text-xl opacity-30"
-            >
-              ☕
-            </span>
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <p className="eyebrow">{item.origin}</p>
-          <h2 className="mt-1.5 truncate text-lg font-bold md:text-xl">
+    <article
+      className={
+        variant === "result"
+          ? "overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_0_rgb(0_0_0/.02)] transition-[border-color,box-shadow] duration-300 hover:border-highlight/60 hover:shadow-[var(--shadow-soft)]"
+          : "border border-border bg-card transition-colors duration-300 hover:border-highlight"
+      }
+    >
+      {variant === "result" ? (
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-4 p-4 sm:gap-x-5 sm:p-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+          <CoffeeThumb
+            item={item}
+            sizes="(min-width: 640px) 112px, 80px"
+            className="size-20 rounded-xl sm:size-28"
+          />
+          <div className="min-w-0">
+            <p className="eyebrow">{item.origin}</p>
+            <h2 className="display-title mt-2 text-2xl sm:text-[1.75rem]">
+              <Link
+                href={href}
+                className="rounded transition-colors hover:text-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {item.name}
+              </Link>
+            </h2>
+            {[item.region, item.process, item.grade].some(Boolean) ? (
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                {[item.region, item.process, item.grade]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
+            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-semibold text-foreground/80">
+              <li className="flex items-center gap-1.5">
+                <MapPin
+                  className="size-3.5 shrink-0 text-highlight"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{labels.warehouse}: </span>
+                {item.warehouse}
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Package
+                  className="size-3.5 shrink-0 text-highlight"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{labels.bags}: </span>
+                <span dir="ltr">{`${item.bags} × ${item.bagWeightKg} kg`}</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 rounded-full bg-gold"
+                />
+                <span className="sr-only">{labels.status}: </span>
+                {statusLabel}
+              </li>
+            </ul>
+          </div>
+          <div className="col-span-2 flex items-center justify-between gap-3 border-t border-border pt-4 md:col-span-1 md:flex-col md:items-end md:border-0 md:pt-0">
             <Link
-              href={`/green-coffee-offer-list/${item.slug}`}
-              className="rounded transition-colors hover:text-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              href={href}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-xs font-bold text-primary-foreground transition-colors hover:bg-forest-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {item.name}
+              {labels.view}
+              <ArrowUpRight
+                className="size-3.5 rtl:-scale-x-100"
+                aria-hidden="true"
+              />
             </Link>
-          </h2>
-          <p className="mt-1 truncate text-sm text-muted-foreground">
-            {[item.region, item.process, item.grade]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+            {expandButton}
+          </div>
         </div>
+      ) : (
+        <div className="grid gap-4 p-4 md:grid-cols-[auto_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center md:gap-5 md:p-5">
+          <CoffeeThumb
+            item={item}
+            sizes="64px"
+            className="hidden size-16 md:grid"
+          />
 
-        <p className="text-sm text-muted-foreground md:text-center">
-          <span className="md:sr-only">{labels.warehouse}: </span>
-          {item.warehouse}
-        </p>
-
-        <p className="text-sm md:text-center" dir="ltr">
-          <span className="sr-only">{labels.bags}: </span>
-          {`${item.bags} × ${item.bagWeightKg} kg`}
-        </p>
-
-        <div className="flex items-center justify-between gap-3 md:justify-end">
-          {price == null ? null : (
-            /*
-             * A template literal, not `${"$"}{expr} / kg` as JSX children.
-             * Adjacent JSX children become separate text nodes, which React
-             * serializes with `<!-- -->` separators — so the markup read
-             * `$<!-- -->7.50<!-- --> / kg` and every price scan that matches
-             * rendered HTML silently stopped matching. One node keeps the
-             * output identical to what the catalog card produced before.
-             */
-            <p className="font-bold text-highlight" dir="ltr">
-              {`$${price.toFixed(2)} / kg`}
+          <div className="min-w-0">
+            <p className="eyebrow">{item.origin}</p>
+            <h2 className="mt-1.5 truncate text-lg font-bold md:text-xl">
+              <Link
+                href={`/green-coffee-offer-list/${item.slug}`}
+                className="rounded transition-colors hover:text-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {item.name}
+              </Link>
+            </h2>
+            <p className="mt-1 truncate text-sm text-muted-foreground">
+              {[item.region, item.process, item.grade]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
-          )}
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            aria-expanded={open}
-            aria-controls={panelId}
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-border transition-colors hover:border-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span className="sr-only">
-              {open ? labels.collapse : labels.expand}
-            </span>
-            <ChevronDown
-              className={`size-4 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
+          </div>
+
+          <p className="text-sm text-muted-foreground md:text-center">
+            <span className="md:sr-only">{labels.warehouse}: </span>
+            {item.warehouse}
+          </p>
+
+          <p className="text-sm md:text-center" dir="ltr">
+            <span className="sr-only">{labels.bags}: </span>
+            {`${item.bags} × ${item.bagWeightKg} kg`}
+          </p>
+
+          <div className="flex items-center justify-between gap-3 md:justify-end">
+            {price == null ? null : (
+              /*
+               * A template literal, not `${"$"}{expr} / kg` as JSX children.
+               * Adjacent JSX children become separate text nodes, which React
+               * serializes with `<!-- -->` separators — so the markup read
+               * `$<!-- -->7.50<!-- --> / kg` and every price scan that matches
+               * rendered HTML silently stopped matching. One node keeps the
+               * output identical to what the catalog card produced before.
+               */
+              <p className="font-bold text-highlight" dir="ltr">
+                {`$${price.toFixed(2)} / kg`}
+              </p>
+            )}
+            {expandButton}
+          </div>
         </div>
-      </div>
+      )}
 
       {/*
        * The region exists in the DOM whether or not it is expanded, so

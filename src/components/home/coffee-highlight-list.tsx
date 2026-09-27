@@ -2,8 +2,15 @@
 
 import Image from "next/image";
 import { ArrowUpRight, PackageOpen } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  type MotionValue,
+} from "motion/react";
 import { Link } from "@/i18n/navigation";
+import { useMotionTier } from "@/hooks/use-motion-tier";
 import { cn } from "@/lib/utils";
 
 export type CoffeeHighlight = {
@@ -19,22 +26,50 @@ export type CoffeeHighlight = {
   media: { url: string; alt: string } | null;
 };
 
-const CARD_TONES = [
-  "bg-[#17483d] text-primary-foreground",
-  "bg-[#245548] text-primary-foreground",
-  "bg-[#e4d19a] text-foreground",
-  "bg-[#2a6250] text-primary-foreground",
-];
+/** Largest width reduction of a card far from the reading line (6%). */
+const MAX_DROP = 0.06;
+/** Extra shade laid over a card that is not the one being read. */
+const MAX_DIM = 0.42;
 
 /**
- * A deliberately small client boundary around the catalogue's editorial
- * highlights. The list content and every link still render on the server;
- * JavaScript only chooses the currently read card on large screens.
+ * Which card dominates is a pure function of where each card sits in the
+ * viewport — never of scroll direction — so scrolling down and back up pass
+ * through exactly the same states.
  *
- * IntersectionObserver is used instead of a scroll listener, so the active
- * card follows natural reading position without running work on every scroll
- * event. Hover and keyboard focus use that same active state to reveal the
- * coffee photograph immediately.
+ * `progress` is 0 when the card's centre is at the bottom of the viewport and
+ * 1 when it reaches the top; 0.5 is the reading line. The first card keeps
+ * full width everywhere below that line (it is what you arrive at from
+ * above) and the last card keeps it everywhere above (what you leave on).
+ * Returns 0 for the dominant card and 1 for a card at the viewport edge.
+ */
+function distanceFromReadingLine(
+  progress: number,
+  first: boolean,
+  last: boolean,
+) {
+  let offset = progress - 0.5;
+  if (first && offset < 0) offset = 0;
+  if (last && offset > 0) offset = 0;
+  const a = Math.min(1, Math.abs(offset) / 0.5);
+  return a * a * (3 - 2 * a); // smoothstep: gentle at the centre
+}
+
+/**
+ * The catalogue's editorial highlights as a scroll-aware stack.
+ *
+ * On a desktop with a mouse, the card nearest the reading line is the widest
+ * and fully lit, its neighbours sit a few percent narrower and slightly
+ * shaded, and the hand-off between them follows the scroll continuously.
+ * This works for any number of cards. Width is expressed as a uniform
+ * `scale` on the card — a composited transform, so scrolling never triggers
+ * layout — and the shade is an opacity. Motion writes both straight to the
+ * DOM; React does not re-render while the page scrolls.
+ *
+ * Hovering a card while the next one is still mostly below the fold lifts
+ * the next card a little into view as a preview. That is hover-only and
+ * therefore desktop-only; it never moves the page's scroll position.
+ *
+ * Phones and tablets get a calm, full-width list.
  */
 export function CoffeeHighlightList({
   coffees,
@@ -45,187 +80,188 @@ export function CoffeeHighlightList({
   bagsLabel: string;
   viewLabel: string;
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const cardRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const tier = useMotionTier();
+  const full = tier === "full" && coffees.length > 1;
+  // Index of the hovered card whose successor is being previewed.
+  const [previewFrom, setPreviewFrom] = useState<number | null>(null);
+  const itemRefs = useRef<Array<HTMLLIElement | null>>([]);
 
-  useEffect(() => {
-    if (coffees.length < 2) return;
-
-    const desktop = window.matchMedia("(min-width: 1024px)");
-    if (!desktop.matches || !("IntersectionObserver" in window)) return;
-
-    const visibility = new Map<number, number>();
-    let frame = 0;
-    const settleActiveCard = () => {
-      frame = 0;
-      let next = activeIndex;
-      let greatest = 0;
-      for (const [index, ratio] of visibility) {
-        if (ratio > greatest) {
-          greatest = ratio;
-          next = index;
-        }
-      }
-      if (greatest > 0) setActiveIndex(next);
-    };
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const index = Number(
-            (entry.target as HTMLElement).dataset.highlightIndex,
-          );
-          visibility.set(
-            index,
-            entry.isIntersecting ? entry.intersectionRatio : 0,
-          );
-        }
-        if (!frame) frame = window.requestAnimationFrame(settleActiveCard);
-      },
-      { rootMargin: "-22% 0px -32%", threshold: [0, 0.3, 0.55, 0.8] },
-    );
-
-    for (const card of cardRefs.current) if (card) observer.observe(card);
-    return () => {
-      observer.disconnect();
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-    // The observer is deliberately created once for this rendered coffee set.
-    // `activeIndex` is only its initial fallback, not an input to observation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coffees.length]);
+  const startPreview = (index: number) => {
+    if (!full) return;
+    const next = itemRefs.current[index + 1];
+    // Only when the next card is actually waiting below the fold; a card
+    // already on screen needs no preview.
+    const waiting =
+      next !== undefined &&
+      next !== null &&
+      next.getBoundingClientRect().top > window.innerHeight * 0.62;
+    setPreviewFrom(waiting ? index : null);
+  };
 
   return (
-    <ul className="mt-10 flex flex-col gap-3 lg:mt-14 lg:gap-4">
-      {coffees.map((coffee, index) => {
-        const active = activeIndex === index;
-        const light = index % CARD_TONES.length === 2;
-        return (
-          <li key={coffee.id}>
-            <Link
-              ref={(node) => {
-                cardRefs.current[index] = node;
-              }}
-              data-highlight-index={index}
-              href={`/green-coffee-offer-list/${coffee.slug}`}
-              onMouseEnter={() => setActiveIndex(index)}
-              onFocus={() => setActiveIndex(index)}
-              className={cn(
-                "group relative isolate flex overflow-hidden rounded-[1.4rem] outline-none ring-1 ring-black/5 transition-[min-height,transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none max-lg:transition-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-background lg:will-change-transform",
-                active
-                  ? "min-h-[20rem] shadow-[0_24px_64px_rgb(13_42_33/.22)] lg:min-h-[24rem]"
-                  : "min-h-[10.25rem] max-lg:min-h-[20rem] lg:min-h-[11.5rem] lg:hover:-translate-y-1",
-                CARD_TONES[index % CARD_TONES.length],
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "absolute inset-0 -z-10 overflow-hidden transition-opacity duration-700 ease-[cubic-bezier(.22,1,.36,1)]",
-                  active
-                    ? "opacity-100"
-                    : "opacity-0 max-lg:opacity-100 lg:group-hover:opacity-100",
-                )}
-              >
-                {coffee.media ? (
-                  <Image
-                    src={coffee.media.url}
-                    alt=""
-                    fill
-                    sizes="(max-width: 1024px) 100vw, min(78rem, 90vw)"
-                    className="object-cover transition-transform duration-[1400ms] ease-out motion-reduce:transition-none lg:group-hover:scale-[1.04]"
-                  />
-                ) : (
-                  <span className="surface-noise absolute inset-0 bg-primary" />
-                )}
-                <span className="absolute inset-0 bg-gradient-to-r from-[#102e26]/95 via-[#102e26]/72 via-[52%] to-[#102e26]/26 rtl:bg-gradient-to-l" />
-              </span>
-
-              <span className="relative flex w-full flex-col justify-between gap-7 p-6 sm:p-8 lg:grid lg:grid-cols-[4.5rem_minmax(0,1fr)_auto] lg:items-center lg:gap-8 lg:px-10 lg:py-8">
-                <span
-                  className={cn(
-                    "font-mono text-sm font-bold tabular-nums",
-                    active || !light ? "text-gold-contrast" : "text-highlight",
-                  )}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-
-                <span className="min-w-0">
-                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span
-                      className={cn(
-                        "eyebrow",
-                        active || !light
-                          ? "!text-gold-contrast"
-                          : "!text-highlight",
-                      )}
-                    >
-                      {coffee.origin}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-xs font-semibold",
-                        active || !light
-                          ? "text-white/85"
-                          : "text-foreground/65",
-                      )}
-                    >
-                      {[coffee.process, coffee.cupScore]
-                        .filter((value) => value !== null && value !== "")
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <span
-                    lang={coffee.nameLang}
-                    className={cn(
-                      "mt-3 block max-w-[24ch] font-heading font-extrabold tracking-[-0.03em] transition-[font-size] duration-700 ease-[cubic-bezier(.22,1,.36,1)]",
-                      active
-                        ? "text-4xl leading-[1.02] sm:text-5xl lg:text-6xl"
-                        : "text-2xl leading-tight max-lg:text-4xl max-lg:leading-[1.02] lg:text-3xl",
-                    )}
-                  >
-                    {coffee.name}
-                  </span>
-                </span>
-
-                <span
-                  className={cn(
-                    "flex shrink-0 flex-col gap-4 text-sm lg:items-end lg:text-end",
-                    active || !light ? "text-white/90" : "text-foreground/78",
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <PackageOpen
-                      className={cn(
-                        "size-4 shrink-0",
-                        active || !light
-                          ? "text-gold-contrast"
-                          : "text-highlight",
-                      )}
-                      aria-hidden="true"
-                    />
-                    {coffee.bags} {bagsLabel} · {coffee.warehouse}
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-2 font-bold",
-                      active || !light
-                        ? "text-gold-contrast"
-                        : "text-highlight",
-                    )}
-                  >
-                    {viewLabel}
-                    <ArrowUpRight
-                      className="size-4 rtl:-scale-x-100"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </span>
-              </span>
-            </Link>
-          </li>
-        );
-      })}
+    <ul
+      className="mt-10 flex flex-col gap-3 lg:mt-14 lg:gap-5"
+      onMouseLeave={() => setPreviewFrom(null)}
+    >
+      {coffees.map((coffee, index) => (
+        <HighlightCard
+          key={coffee.id}
+          coffee={coffee}
+          index={index}
+          count={coffees.length}
+          full={full}
+          lift={
+            previewFrom === index
+              ? "hovered"
+              : previewFrom !== null && previewFrom + 1 === index
+                ? "preview"
+                : "rest"
+          }
+          itemRef={(node) => {
+            itemRefs.current[index] = node;
+          }}
+          onPointerEnter={() => startPreview(index)}
+          bagsLabel={bagsLabel}
+          viewLabel={viewLabel}
+        />
+      ))}
     </ul>
+  );
+}
+
+function HighlightCard({
+  coffee,
+  index,
+  count,
+  full,
+  lift,
+  itemRef,
+  onPointerEnter,
+  bagsLabel,
+  viewLabel,
+}: {
+  coffee: CoffeeHighlight;
+  index: number;
+  count: number;
+  full: boolean;
+  lift: "rest" | "hovered" | "preview";
+  itemRef: (node: HTMLLIElement | null) => void;
+  onPointerEnter: () => void;
+  bagsLabel: string;
+  viewLabel: string;
+}) {
+  const ref = useRef<HTMLLIElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["center end", "center start"],
+  });
+  const first = index === 0;
+  const last = index === count - 1;
+  const scale = useTransform(scrollYProgress, (p) =>
+    full ? 1 - MAX_DROP * distanceFromReadingLine(p, first, last) : 1,
+  );
+  const dim = useTransform(scrollYProgress, (p) =>
+    full ? MAX_DIM * distanceFromReadingLine(p, first, last) : 0,
+  );
+
+  return (
+    <motion.li
+      ref={(node) => {
+        ref.current = node;
+        itemRef(node);
+      }}
+      style={{ scale }}
+      animate={{
+        y: lift === "hovered" ? -6 : lift === "preview" ? -18 : 0,
+      }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="origin-center"
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") onPointerEnter();
+      }}
+    >
+      <Link
+        href={`/green-coffee-offer-list/${coffee.slug}`}
+        style={{ ["--reveal-index" as string]: index }}
+        className={cn(
+          "home-reveal-item group relative isolate flex min-h-[13.5rem] overflow-hidden rounded-[1.4rem] text-primary-foreground outline-none ring-1 ring-black/5 transition-shadow duration-500 focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-background sm:min-h-[14.5rem] lg:min-h-[clamp(14rem,30svh,17.5rem)] lg:rounded-[1.6rem]",
+          lift === "preview"
+            ? "shadow-[0_28px_70px_rgb(13_42_33/.34)]"
+            : "shadow-[0_18px_48px_rgb(13_42_33/.16)]",
+        )}
+      >
+        <span aria-hidden="true" className="absolute inset-0 -z-10">
+          {/* The branded ground is always painted first, so a record with no
+              image — or an image that fails to load — still gets a designed
+              card rather than a flat green block or a gap. */}
+          <span
+            className="highlight-fallback absolute inset-0"
+            data-tone={index % 4}
+          />
+          {coffee.media ? (
+            <Image
+              src={coffee.media.url}
+              alt=""
+              fill
+              sizes="(max-width: 1024px) 100vw, min(80rem, 94vw)"
+              className="object-cover transition-transform duration-[1400ms] ease-out motion-reduce:transition-none lg:group-hover:scale-[1.04]"
+            />
+          ) : null}
+          <span className="absolute inset-0 bg-gradient-to-r from-[#0d2a22]/94 via-[#0f2e26]/70 via-[52%] to-[#102e26]/22 rtl:bg-gradient-to-l" />
+          <DimLayer dim={dim} />
+        </span>
+
+        <span className="relative flex w-full flex-col justify-between gap-6 p-6 sm:p-8 lg:grid lg:grid-cols-[4.5rem_minmax(0,1fr)_auto] lg:items-center lg:gap-8 lg:px-10 lg:py-8">
+          <span className="font-mono text-sm font-bold text-gold-contrast tabular-nums">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="eyebrow !text-gold-contrast">
+                {coffee.origin}
+              </span>
+              <span className="text-xs font-semibold text-white/85">
+                {[coffee.process, coffee.cupScore]
+                  .filter((value) => value !== null && value !== "")
+                  .join(" · ")}
+              </span>
+            </span>
+            <span
+              lang={coffee.nameLang}
+              className="display-title mt-3 block max-w-[22ch] text-[2rem] sm:text-4xl lg:text-[3.15rem]"
+            >
+              {coffee.name}
+            </span>
+          </span>
+
+          <span className="flex shrink-0 flex-col gap-4 text-sm text-white/90 lg:items-end lg:text-end">
+            <span className="flex items-center gap-2">
+              <PackageOpen
+                className="size-4 shrink-0 text-gold-contrast"
+                aria-hidden="true"
+              />
+              {coffee.bags} {bagsLabel} · {coffee.warehouse}
+            </span>
+            <span className="inline-flex items-center gap-2 font-bold text-gold-contrast">
+              {viewLabel}
+              <ArrowUpRight
+                className="size-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5"
+                aria-hidden="true"
+              />
+            </span>
+          </span>
+        </span>
+      </Link>
+    </motion.li>
+  );
+}
+
+function DimLayer({ dim }: { dim: MotionValue<number> }) {
+  return (
+    <motion.span
+      className="absolute inset-0 bg-[#081d17]"
+      style={{ opacity: dim }}
+    />
   );
 }

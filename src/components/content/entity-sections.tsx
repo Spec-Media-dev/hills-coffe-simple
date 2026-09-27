@@ -2,7 +2,7 @@ import { ArrowUpRight, MapPin } from "lucide-react";
 import type { OfferListItem } from "@/lib/data/catalog";
 import type { AwaitedReturn } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
-import { SectionReveal } from "@/components/motion/primitives";
+import { SectionReveal } from "@/components/home/home-reveal";
 import {
   CoffeeHighlightList,
   type CoffeeHighlight,

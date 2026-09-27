@@ -81,6 +81,12 @@ export type CatalogRow = {
 
 export type CatalogPage = {
   rows: CatalogRow[];
+  /**
+   * Expandable-preview fields for `rows`, present only when requested with
+   * `withDetails`. Read in parallel with the row translations rather than
+   * after them, so asking for details adds no extra round trip.
+   */
+  details?: Map<string, CatalogRowDetail>;
   total: number;
   page: number;
   pageSize: number;
@@ -187,6 +193,7 @@ async function countMatching(
 export async function queryCatalog(
   locale: Locale,
   filters: CatalogFilters,
+  options: { withDetails?: boolean } = {},
 ): Promise<CatalogPage> {
   if (!isSupabaseConfigured()) return EMPTY;
   const db = await createSupabaseServerClient();
@@ -282,6 +289,21 @@ export async function queryCatalog(
   const warehouseIds = rows.map((row) =>
     String((row.warehouse as never)["id"]),
   );
+
+  // Details only need ids that the first query already returned, so they are
+  // started alongside the translation reads instead of after them.
+  const detailsPromise = options.withDetails
+    ? getCatalogRowDetails(
+        rows.map((row) => ({
+          id: String(row.id),
+          coffeeId: String((row.coffee as never)["id"]),
+          packagingTypeId: row.packaging_type_id
+            ? String(row.packaging_type_id)
+            : null,
+        })),
+        locale,
+      )
+    : undefined;
 
   const [coffeeT, originT, regionT, warehouseT, mediaRows, mediaT] =
     await Promise.all([
@@ -405,6 +427,7 @@ export async function queryCatalog(
   const total = count ?? 0;
   return {
     rows: mapped,
+    details: detailsPromise ? await detailsPromise : undefined,
     total,
     page,
     pageSize: CATALOG_PAGE_SIZE,
@@ -522,8 +545,14 @@ export type CatalogRowDetail = {
  * "English-only by schema". They are returned as stored rather than invented in
  * Arabic.
  */
+/** The only row fields the detail read needs — available before translation. */
+export type CatalogRowKey = Pick<
+  CatalogRow,
+  "id" | "coffeeId" | "packagingTypeId"
+>;
+
 export async function getCatalogRowDetails(
-  rows: CatalogRow[],
+  rows: CatalogRowKey[],
   locale: Locale,
 ): Promise<Map<string, CatalogRowDetail>> {
   const result = new Map<string, CatalogRowDetail>();

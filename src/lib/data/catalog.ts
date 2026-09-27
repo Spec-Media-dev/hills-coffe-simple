@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { Locale } from "@/i18n/routing";
 import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -78,8 +79,42 @@ const localesFrom = (rows: readonly { locale: string }[]): Locale[] =>
   );
 
 export async function getOfferList(locale: Locale): Promise<CatalogData> {
+  return loadCatalog(locale);
+}
+
+/**
+ * Narrows the catalog read to a single published coffee.
+ *
+ * Only the coffee-owned tables are narrowed (the coffee, its translations,
+ * offers and certifications, and its one origin). Every visibility predicate
+ * below is applied exactly as for the full list, so a scoped read can never
+ * return an offer the full list would hide — it simply stops transferring
+ * every other coffee's rows to render one detail page.
+ */
+type CoffeeScope = { coffeeId: string; originId: string };
+
+async function loadCatalog(
+  locale: Locale,
+  scope?: CoffeeScope,
+): Promise<CatalogData> {
   if (!isSupabaseConfigured()) return empty();
   const db = await createSupabaseServerClient();
+  const coffeesBase = db
+    .from("coffees")
+    .select("*")
+    .eq("status", "PUBLISHED")
+    .is("deleted_at", null);
+  const offersBase = db
+    .from("coffee_offers")
+    .select("*")
+    .eq("is_visible", true)
+    .neq("status", "INACTIVE")
+    .is("deleted_at", null);
+  const originsBase = db
+    .from("origins")
+    .select("*")
+    .eq("is_active", true)
+    .is("deleted_at", null);
   const [
     coffeesQ,
     coffeeTranslationsQ,
@@ -106,20 +141,21 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
     regionsQ,
     regionTranslationsQ,
   ] = await Promise.all([
-    db
-      .from("coffees")
-      .select("*")
-      .eq("status", "PUBLISHED")
-      .is("deleted_at", null),
-    db.from("coffee_translations").select("*"),
-    db
-      .from("coffee_offers")
-      .select("*")
-      .eq("is_visible", true)
-      .neq("status", "INACTIVE")
-      .is("deleted_at", null),
-    db.from("origins").select("*").eq("is_active", true).is("deleted_at", null),
-    db.from("origin_translations").select("*"),
+    scope ? coffeesBase.eq("id", scope.coffeeId) : coffeesBase,
+    scope
+      ? db
+          .from("coffee_translations")
+          .select("*")
+          .eq("coffee_id", scope.coffeeId)
+      : db.from("coffee_translations").select("*"),
+    scope ? offersBase.eq("coffee_id", scope.coffeeId) : offersBase,
+    scope ? originsBase.eq("id", scope.originId) : originsBase,
+    scope
+      ? db
+          .from("origin_translations")
+          .select("*")
+          .eq("origin_id", scope.originId)
+      : db.from("origin_translations").select("*"),
     db.from("warehouses").select("*").eq("is_active", true),
     db.from("warehouse_translations").select("*"),
     db.from("coffee_types").select("*").eq("is_active", true),
@@ -131,7 +167,12 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
     db.from("offer_sensory_notes").select("*"),
     db.from("sensory_notes").select("*").eq("is_active", true),
     db.from("sensory_note_translations").select("*"),
-    db.from("coffee_certifications").select("*"),
+    scope
+      ? db
+          .from("coffee_certifications")
+          .select("*")
+          .eq("coffee_id", scope.coffeeId)
+      : db.from("coffee_certifications").select("*"),
     db.from("certifications").select("*").eq("is_active", true),
     db.from("certification_translations").select("*"),
     db.from("offer_tags").select("*"),
@@ -342,32 +383,75 @@ export async function getOfferList(locale: Locale): Promise<CatalogData> {
   };
 }
 
-export async function getCoffeeBySlug(slug: string, locale: Locale) {
-  const data = await getOfferList(locale);
+/**
+ * One published coffee and all of its visible offers.
+ *
+ * This used to call `getOfferList()` — the whole catalog, 24 unfiltered reads
+ * fired at once — and then keep the rows matching one slug. With every read in
+ * flight together, each took several times its normal latency, and the detail
+ * page could not start fetching its images until all of them returned. Now the
+ * slug resolves to one coffee first and the same loader runs narrowed to it.
+ *
+ * `cache()` is per-request memoization (React's server `cache`), not a shared
+ * cache: `generateMetadata` and the page body reuse one result for the same
+ * request and nothing survives into another visitor's request.
+ */
+export const getCoffeeBySlug = cache(async (slug: string, locale: Locale) => {
+  const row = await resolvePublishedCoffee(slug);
+  if (!row) return null;
+
+  const [data, varieties] = await Promise.all([
+    loadCatalog(locale, { coffeeId: row.id, originId: row.origin_id }),
+    getCoffeeVarieties(row.id),
+  ]);
   const offers = data.offers.filter((item) => item.slug === slug);
   if (!offers.length) return null;
 
-  // Varieties are a normalized relation and intentionally English-only in the
-  // current schema. Fetch just this published coffee's rows rather than
-  // teaching the full-catalog loader about another global join.
-  let varieties: string[] = [];
-  if (isSupabaseConfigured()) {
-    const db = await createSupabaseServerClient();
-    const joins = await db
-      .from("coffee_varieties")
-      .select("variety_id")
-      .eq("coffee_id", offers[0].coffeeId);
-    const ids = [...new Set((joins.data ?? []).map((row) => row.variety_id))];
-    if (!joins.error && ids.length) {
-      const rows = await db.from("varieties").select("id,name").in("id", ids);
-      if (!rows.error)
-        varieties = (rows.data ?? [])
-          .map((row) => row.name?.trim() || null)
-          .filter((name): name is string => Boolean(name));
-    }
-  }
-
   return { ...offers[0], offers, detail: { ...offers[0].detail, varieties } };
+});
+
+/**
+ * A published coffee's id and origin, from its slug — the first step of the
+ * detail page, memoized per request so the page can start work that needs
+ * only the id (its images) alongside `getCoffeeBySlug` instead of after it.
+ * Applies the same published/not-deleted predicate as the catalog loader.
+ */
+export const resolvePublishedCoffee = cache(
+  async (slug: string): Promise<{ id: string; origin_id: string } | null> => {
+    if (!isSupabaseConfigured()) return null;
+    const db = await createSupabaseServerClient();
+    const { data, error } = await db
+      .from("coffees")
+      .select("id,origin_id")
+      .eq("slug", slug)
+      .eq("status", "PUBLISHED")
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (error)
+      throw new Error(`Catalog data unavailable (${error.code ?? "upstream"})`);
+    return data;
+  },
+);
+
+/**
+ * Varieties are a normalized relation and intentionally English-only in the
+ * current schema. Fetch just this published coffee's rows rather than teaching
+ * the full-catalog loader about another global join.
+ */
+async function getCoffeeVarieties(coffeeId: string): Promise<string[]> {
+  const db = await createSupabaseServerClient();
+  const joins = await db
+    .from("coffee_varieties")
+    .select("variety_id")
+    .eq("coffee_id", coffeeId);
+  const ids = [...new Set((joins.data ?? []).map((row) => row.variety_id))];
+  if (joins.error || !ids.length) return [];
+  const rows = await db.from("varieties").select("id,name").in("id", ids);
+  if (rows.error) return [];
+  return (rows.data ?? [])
+    .map((row) => row.name?.trim() || null)
+    .filter((name): name is string => Boolean(name));
 }
 
 /**

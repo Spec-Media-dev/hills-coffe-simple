@@ -58,7 +58,7 @@ export function StackedFeaturePanels({ panels }: { panels: StackedPanel[] }) {
             ) : (
               <p className="eyebrow !text-gold-contrast">{panel.eyebrow}</p>
             )}
-            <h3 className="mt-4 font-heading text-4xl leading-[1.02] font-extrabold tracking-[-0.03em] sm:text-5xl lg:text-6xl">
+            <h3 className="display-title mt-4 text-4xl sm:text-5xl lg:text-6xl">
               {panel.title}
             </h3>
             <p className="mt-5 max-w-[46ch] text-base leading-7 text-white/80 md:text-lg md:leading-8">

@@ -106,7 +106,7 @@ export function AccountMenu({
          * still opens the same panel. Only the name and chevron — both
          * redundant beside an avatar — wait for room.
          */
-        className="flex h-11 min-h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition hover:border-gold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:w-auto sm:justify-start sm:gap-2 sm:ps-1 sm:pe-3"
+        className="nav-chip flex h-11 min-h-11 w-11 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:w-auto sm:justify-start sm:gap-2 sm:ps-1 sm:pe-3"
       >
         <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary text-xs font-bold text-gold-bright">
           {avatarUrl ? (
@@ -137,7 +137,7 @@ export function AccountMenu({
           role="menu"
           onKeyDown={onMenuKeyDown}
           // `end-0` keeps the panel inside the viewport in both directions.
-          className="absolute end-0 top-[calc(100%+0.5rem)] z-50 w-56 rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-soft)]"
+          className="absolute end-0 top-[calc(100%+0.75rem)] z-50 w-56 rounded-2xl border border-border bg-card p-2 text-card-foreground shadow-[var(--shadow-soft)]"
         >
           {links.map((link) => (
             <Link
