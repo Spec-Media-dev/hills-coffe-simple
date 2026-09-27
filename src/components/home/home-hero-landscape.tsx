@@ -95,7 +95,9 @@ export function HomeHeroLandscape({
   // The bean: lags more than any plane (like the reference's sun, ~1.4× its
   // own size over the travel), grows a little, and turns a few degrees. It
   // fades out only once the bushes and the shade have covered it anyway.
-  const beanY = useTransform(travel, (p) => `${p * 140 * k}%`);
+  const beanY = useTransform(travel, (p) =>
+    full ? `${-p * 130}%` : `${p * 140 * k}%`,
+  );
   const beanScale = useTransform(travel, (p) => (full ? 1 + 0.16 * p : 1));
   const beanRotate = useTransform(travel, (p) => (full ? -8 + 20 * p : 0));
   const beanOpacity = useTransform(travel, (p) =>
@@ -162,7 +164,7 @@ export function HomeHeroLandscape({
 
             <motion.div
               aria-hidden="true"
-              className="hero-plate pointer-events-none z-[2]"
+              className="hero-plate pointer-events-none z-[2] lg:z-[3]"
               style={{ y: depthY }}
             >
               <Image
@@ -179,7 +181,7 @@ export function HomeHeroLandscape({
 
             {/* The bean is the scene's one interactive object: a link to the
                 offer list, between the ridge and the bushes. */}
-            <div className="hero-bean-slot pointer-events-none absolute inset-x-0 z-[3] flex justify-center">
+            <div className="hero-bean-slot pointer-events-none absolute inset-x-0 z-[3] lg:z-[2] flex justify-center">
               <motion.div
                 className="pointer-events-auto"
                 style={{

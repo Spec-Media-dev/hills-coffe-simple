@@ -901,6 +901,11 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
     calc(var(--land-overlap) + 1.25rem)
   );
 }
+@media (min-width: 1024px) {
+  .hero-bean-slot {
+    top: calc(var(--plate-h) * 0.35);
+  }
+}
 /* The near plate ends above the land's tail; feather that edge so it never
    reads as a horizontal line through the ending. */
 .hero-plate-front .hero-plate-img {

@@ -242,6 +242,7 @@ export function OriginScrollList({
                   className={cn(
                     "home-reveal-item group relative isolate flex min-h-[23rem] overflow-hidden rounded-[1.6rem] outline-none ring-1 ring-black/5 transition-[transform,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-gold-bright focus-visible:ring-offset-4 focus-visible:ring-offset-primary sm:min-h-[25rem] lg:min-h-[27rem] lg:hover:-translate-y-1 lg:hover:shadow-[0_30px_80px_rgb(2_20_14/.38)]",
                     CARD_TONES[tone],
+                    "lg:bg-[#21584d] lg:text-primary-foreground",
                   )}
                 >
                   <span
@@ -258,7 +259,7 @@ export function OriginScrollList({
                           "object-cover transition-[opacity,transform] duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none lg:group-hover:scale-[1.06]",
                           active
                             ? "scale-100 opacity-100"
-                            : "opacity-100 lg:scale-[1.03] lg:opacity-40",
+                            : "opacity-100 lg:scale-[1.03] lg:opacity-40 lg:group-hover:opacity-70",
                         )}
                       />
                     ) : (
@@ -273,7 +274,7 @@ export function OriginScrollList({
                     className={cn(
                       "absolute inset-0 -z-10",
                       light
-                        ? "bg-gradient-to-br from-white/88 via-white/52 to-[#e2cf97]/72"
+                        ? "bg-gradient-to-br from-white/88 via-white/52 to-[#e2cf97]/72 lg:from-[#0e332a]/86 lg:via-[#123c32]/62 lg:to-[#0e332a]/34"
                         : "bg-gradient-to-br from-[#0e332a]/86 via-[#123c32]/62 to-[#0e332a]/34",
                     )}
                   />
@@ -283,7 +284,7 @@ export function OriginScrollList({
                       <span
                         className={cn(
                           "font-mono text-sm font-bold tabular-nums",
-                          light ? "text-[#a44819]" : "text-gold-bright",
+                          light ? "text-[#a44819] lg:text-gold-bright" : "text-gold-bright",
                         )}
                       >
                         {pad(index + 1)}
@@ -291,7 +292,7 @@ export function OriginScrollList({
                       <ArrowUpRight
                         className={cn(
                           "size-5 shrink-0 transition-transform duration-500 group-hover:-translate-y-1 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1",
-                          light ? "text-[#a44819]" : "text-gold-bright",
+                          light ? "text-[#a44819] lg:text-gold-bright" : "text-gold-bright",
                         )}
                         aria-hidden="true"
                       />
@@ -302,7 +303,7 @@ export function OriginScrollList({
                         lang={origin.lang}
                         className={cn(
                           "display-title block text-5xl sm:text-6xl lg:text-[4.25rem]",
-                          light ? "text-[#173c32]" : "text-primary-foreground",
+                          light ? "text-[#173c32] lg:text-primary-foreground" : "text-primary-foreground",
                         )}
                       >
                         {origin.name}
@@ -311,7 +312,7 @@ export function OriginScrollList({
                         <span
                           className={cn(
                             "mt-5 block max-w-[44ch] text-base leading-7",
-                            light ? "text-[#173c32]/72" : "text-white/78",
+                            light ? "text-[#173c32]/72 lg:text-white/78" : "text-white/78",
                           )}
                         >
                           {origin.summary}
@@ -320,13 +321,13 @@ export function OriginScrollList({
                       <span
                         className={cn(
                           "mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold",
-                          light ? "text-[#173c32]/78" : "text-white/80",
+                          light ? "text-[#173c32]/78 lg:text-white/80" : "text-white/80",
                         )}
                       >
                         <Globe2
                           className={cn(
                             "size-4",
-                            light ? "text-[#a44819]" : "text-gold-bright",
+                            light ? "text-[#a44819] lg:text-gold-bright" : "text-gold-bright",
                           )}
                           aria-hidden="true"
                         />
