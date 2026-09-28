@@ -233,7 +233,9 @@
     "pricingBlockedTitle": "الحساب مقيّد",
     "pricingBlockedBody": "الأسعار غير متاحة أثناء تقييد هذا الحساب.",
     "pricingVisible": "الأسعار المحمية معروضة لحسابك.",
-    "pricingOnRequest": "السعر عند الطلب"
+    "pricingOnRequest": "السعر عند الطلب",
+    "score": "تقييم الكوب",
+    "pts": "نقطة"
   },
   "product": {
     "back": "العودة للكتالوج",

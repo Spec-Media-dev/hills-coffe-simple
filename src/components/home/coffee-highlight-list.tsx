@@ -222,7 +222,10 @@ function HighlightCard({
                 {coffee.origin}
               </span>
               <span className="text-xs font-semibold text-white/85">
-                {[coffee.process, coffee.cupScore]
+                {[
+                  coffee.process,
+                  coffee.cupScore != null ? `${coffee.cupScore} pts` : null,
+                ]
                   .filter((value) => value !== null && value !== "")
                   .join(" · ")}
               </span>

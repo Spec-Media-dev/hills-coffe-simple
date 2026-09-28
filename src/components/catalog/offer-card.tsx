@@ -9,15 +9,31 @@ export function OfferCard({
 }: {
   item: OfferListItem;
   price?: number;
-  labels: { bags: string; pricing: string; view: string };
+  labels: {
+    bags: string;
+    pricing: string;
+    view: string;
+    score?: string;
+    pts?: string;
+  };
 }) {
   return (
     <article className="group flex h-full flex-col rounded-[1.5rem] border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition duration-300 hover:-translate-y-1 hover:border-highlight">
       <div className="flex items-start justify-between gap-4">
         <p className="eyebrow">{item.origin}</p>
         {item.cupScore ? (
-          <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
-            {item.cupScore}
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-xs"
+            title={
+              labels.score
+                ? `${labels.score}: ${item.cupScore}`
+                : `Score: ${item.cupScore}`
+            }
+          >
+            <span dir="ltr">{item.cupScore}</span>
+            <span className="text-[10px] font-semibold opacity-90">
+              {labels.pts ?? "pts"}
+            </span>
           </span>
         ) : null}
       </div>

@@ -43,6 +43,8 @@ export default async function FavoritesPage({
     pricing: catalogT("pricingOnRequest"),
     view: actionsT("view"),
     remove: t("remove"),
+    score: catalogT("score"),
+    pts: catalogT("pts"),
   };
   return (
     <section className="site-container section-space">

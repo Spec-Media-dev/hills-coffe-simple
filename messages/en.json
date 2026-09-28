@@ -233,7 +233,9 @@
     "pricingBlockedTitle": "Account restricted",
     "pricingBlockedBody": "Pricing is unavailable while this account is restricted.",
     "pricingVisible": "Protected pricing is shown for your account.",
-    "pricingOnRequest": "Pricing on request"
+    "pricingOnRequest": "Pricing on request",
+    "score": "Cup score",
+    "pts": "pts"
   },
   "product": {
     "back": "Back to catalog",

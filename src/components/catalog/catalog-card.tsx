@@ -18,7 +18,13 @@ export function CatalogCard({
 }: {
   item: CatalogRow;
   price?: number;
-  labels: { bags: string; pricing: string; view: string };
+  labels: {
+    bags: string;
+    pricing: string;
+    view: string;
+    score?: string;
+    pts?: string;
+  };
 }) {
   return (
     <HoverLift className="h-full">
@@ -42,8 +48,18 @@ export function CatalogCard({
             </span>
           )}
           {item.cupScore ? (
-            <span className="absolute top-3 end-3 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
-              {item.cupScore}
+            <span
+              className="absolute top-3 end-3 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-sm"
+              title={
+                labels.score
+                  ? `${labels.score}: ${item.cupScore}`
+                  : `Score: ${item.cupScore}`
+              }
+            >
+              <span dir="ltr">{item.cupScore}</span>
+              <span className="text-[10px] font-semibold opacity-90">
+                {labels.pts ?? "pts"}
+              </span>
             </span>
           ) : null}
         </div>

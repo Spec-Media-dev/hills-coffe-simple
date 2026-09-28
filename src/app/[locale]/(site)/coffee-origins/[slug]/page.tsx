@@ -46,6 +46,7 @@ export default async function OriginPage({
   const { locale, slug } = await params;
   const seo = await getTranslations("seo");
   const originsT = await getTranslations("origins");
+  const catalogT = await getTranslations("catalog");
   const origin = await getOriginBySlug(slug, locale as Locale);
   if (!origin) notFound();
   // Scoped to this origin by the database rather than fetched whole and
@@ -65,6 +66,8 @@ export default async function OriginPage({
     bags: originsT("bags"),
     pricing: originsT("pricingSignIn"),
     view: originsT("viewCoffee"),
+    score: catalogT("score"),
+    pts: catalogT("pts"),
   };
   /* The country entity this page is about; only facts the row actually holds. */
   const jsonLd = originPlaceJsonLd({
