@@ -40,6 +40,8 @@ export type ContactPhone = {
    * ever read, so the two are distinguished at the number, not the office.
    */
   whatsapp: boolean;
+  /** Optional dedicated WhatsApp destination when different from `dial`. */
+  whatsappNumber?: string;
 };
 
 export type ContactRegion = {
@@ -154,7 +156,12 @@ export const CONTACT_REGIONS: readonly ContactRegion[] = [
     id: "egypt",
     email: resolveEmail(EGYPT_EMAIL),
     phones: [
-      { dial: "+971 52 361 8866", display: "+971 52 361 8866", whatsapp: true },
+      {
+        dial: "+201117993300",
+        display: "+20 111 799 3300",
+        whatsapp: true,
+        whatsappNumber: "+971523618866",
+      },
     ],
     mapsUrl: "https://maps.app.goo.gl/oEAXKwMMRqFqBchJ8?g_st=ic",
     mapQuery: "Sheraton Residences, Zone 1, Heliopolis, Cairo, Egypt",

@@ -6,6 +6,7 @@ import { OfferCard } from "@/components/catalog/offer-card";
 import type { Locale } from "@/i18n/routing";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import { getOfferList } from "@/lib/data/catalog";
+import { getProtectedPriceTiers } from "@/lib/data/pricing";
 import { Link } from "@/i18n/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -33,12 +34,13 @@ export default async function FavoritesPage({
         .map((x) => [x.coffeeId, x]),
     ).values(),
   ];
+  const prices = await getProtectedPriceTiers(offers.map((x) => x.id));
   const t = await getTranslations("account.favorites");
   const catalogT = await getTranslations("catalog");
   const actionsT = await getTranslations("actions");
   const labels = {
     bags: catalogT("bags"),
-    pricing: actionsT("pricing"),
+    pricing: catalogT("pricingOnRequest"),
     view: actionsT("view"),
     remove: t("remove"),
   };
@@ -50,7 +52,11 @@ export default async function FavoritesPage({
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {offers.map((item) => (
             <div key={item.coffeeId}>
-              <OfferCard item={item} labels={labels} />
+              <OfferCard
+                item={item}
+                price={prices.get(item.id)?.[0]?.pricePerKgUsd}
+                labels={labels}
+              />
               <div className="mt-2">
                 <FavoriteButton
                   coffeeId={item.coffeeId}

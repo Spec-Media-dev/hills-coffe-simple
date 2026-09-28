@@ -136,7 +136,7 @@ async function RegionCard({
                       <a
                         /* https, never `tel:` — this must open WhatsApp, not
                            the operating system's call-app chooser. */
-                        href={whatsAppUrl(phone.dial)!}
+                        href={whatsAppUrl(phone.whatsappNumber ?? phone.dial)!}
                         target="_blank"
                         rel="noreferrer noopener"
                         className={ACTION}

@@ -41,7 +41,7 @@ const EGYPT = {
   city: { en: /Cairo/i, ar: /القاهرة/ },
   hours: /9:00/,
   tel: ["tel:+201117993300"],
-  whatsapp: ["https://wa.me/201117993300"],
+  whatsapp: ["https://wa.me/971523618866"],
   shownNumbers: ["+20 111 799 3300"],
   maps: "https://maps.app.goo.gl/oEAXKwMMRqFqBchJ8",
 };

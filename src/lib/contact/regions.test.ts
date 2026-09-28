@@ -95,7 +95,7 @@ describe("WhatsApp-capable lines", () => {
     for (const region of CONTACT_REGIONS)
       for (const phone of region.phones) {
         if (!phone.whatsapp) continue;
-        const url = whatsAppUrl(phone.dial)!;
+        const url = whatsAppUrl(phone.whatsappNumber ?? phone.dial)!;
         expect(url).toMatch(/^https:\/\/wa\.me\/[0-9]+$/);
         expect(url).not.toContain("tel:");
       }
