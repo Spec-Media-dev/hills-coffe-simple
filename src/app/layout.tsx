@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { canonicalUrl } from "@/lib/env";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react"
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -106,6 +107,7 @@ export default async function RootLayout({
         className={`${benito.variable} ${manrope.variable} ${cairo.variable} ${readex.variable}`}
       >
         {children}
+        <Analytics />
       </body>
     </html>
   );
