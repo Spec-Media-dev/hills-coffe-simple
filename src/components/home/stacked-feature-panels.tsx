@@ -24,7 +24,7 @@ export function StackedFeaturePanels({ panels }: { panels: StackedPanel[] }) {
         <article
           key={panel.key}
           style={{ zIndex: index + 1 }}
-          className="relative isolate flex min-h-[30rem] overflow-hidden rounded-[2rem] bg-primary text-primary-foreground shadow-[0_32px_90px_rgb(10_20_16/.35)] transition-transform duration-500 ease-out sm:sticky sm:top-[6.5rem] sm:h-[min(72svh,42rem)] sm:min-h-[32rem] sm:hover:-translate-y-1 lg:rounded-[2.5rem] motion-reduce:transition-none"
+          className="home-mobile-depth relative isolate flex min-h-[30rem] overflow-hidden rounded-[2rem] bg-primary text-primary-foreground shadow-[0_32px_90px_rgb(10_20_16/.35)] transition-transform duration-500 ease-out sm:sticky sm:top-[6.5rem] sm:h-[min(72svh,42rem)] sm:min-h-[32rem] sm:hover:-translate-y-1 lg:rounded-[2.5rem] motion-reduce:transition-none"
         >
           <div className="absolute inset-0">
             <Image
@@ -44,7 +44,7 @@ export function StackedFeaturePanels({ panels }: { panels: StackedPanel[] }) {
             className="absolute inset-0 bg-gradient-to-t from-primary/70 via-transparent to-primary/25"
           />
 
-          <div className="relative flex w-full flex-col justify-end p-7 sm:p-10 lg:max-w-[46rem] lg:p-14">
+          <div className="home-section-reveal relative flex w-full flex-col justify-end p-7 sm:p-10 lg:max-w-[46rem] lg:p-14">
             {panel.badge ? (
               <p className="flex items-center gap-2.5">
                 <Lock

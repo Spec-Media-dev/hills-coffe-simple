@@ -9,6 +9,7 @@ import { getSiteSettings } from "@/lib/data/site-content";
 import { requireVerifiedUser } from "@/lib/auth/session";
 import { getPublicPersona } from "@/lib/auth/persona";
 import { AuthCta } from "@/components/auth/auth-cta";
+import { CookieSettingsButton } from "@/components/privacy/cookie-consent";
 
 export async function SiteFooter() {
   const t = await getTranslations("footer");
@@ -124,6 +125,7 @@ export async function SiteFooter() {
           <p className="eyebrow">{t("legal")}</p>
           <div className="footer-links mt-6 grid gap-3 text-sm text-[#c8bfb0]">
             <Link href="/legal">{legal("title")}</Link>
+            <CookieSettingsButton />
           </div>
         </div>
       </div>

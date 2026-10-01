@@ -32,7 +32,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
 !/.env.example
 
 # vercel
@@ -47,3 +46,4 @@ artifacts/
 
 # Phase 12 E2E run manifests and fixture credentials (never committed)
 tests/e2e/.p12-runs/
+config.bat

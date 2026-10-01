@@ -1,4 +1,26 @@
 {
+  "homeEntry": {
+    "loading": "Preparing your view of origin",
+    "ready": "Ready to explore"
+  },
+  "privacy": {
+    "eyebrow": "Your privacy, your choice",
+    "title": "A little clarity before you explore.",
+    "description": "We use essential storage to keep the website working. With your permission, Vercel Analytics helps us understand visits and improve the experience. Optional analytics stays off until you choose to enable it.",
+    "noAdvertising": "We do not use advertising or marketing trackers.",
+    "policy": "Read our privacy information",
+    "necessary": "Necessary",
+    "necessaryDescription": "Sign-in, security, language and display choices keep the site usable. These remain enabled.",
+    "alwaysOn": "Always on",
+    "analytics": "Analytics",
+    "analyticsDescription": "Allow Vercel Analytics to measure website visits. This is optional and can be changed at any time.",
+    "accept": "Accept all",
+    "reject": "Reject optional",
+    "manage": "Manage preferences",
+    "save": "Save preferences",
+    "settings": "Cookie preferences",
+    "close": "Close privacy preferences"
+  },
   "legal": {
     "title": "Privacy & website terms",
     "description": "How Hills Coffee handles your information, account access, sample requests and inquiries.",

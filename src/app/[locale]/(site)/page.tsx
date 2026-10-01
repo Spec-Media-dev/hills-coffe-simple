@@ -4,6 +4,7 @@ import { ArrowUpRight, BookOpen, MapPin } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CmsPageView } from "@/components/content/cms-page";
 import { HomeHeroLandscape } from "@/components/home/home-hero-landscape";
+import { HomeEntry } from "@/components/home/home-entry";
 import {
   StackedFeaturePanels,
   type StackedPanel,
@@ -167,7 +168,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   );
 
   return (
-    <>
+    <HomeEntry>
       <JsonLd id={`home-json-ld-${locale}`} data={jsonLd} />
       {page ? (
         <PageReveal>
@@ -801,6 +802,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           </div>
         </SectionReveal>
       </section>
-    </>
+    </HomeEntry>
   );
 }
