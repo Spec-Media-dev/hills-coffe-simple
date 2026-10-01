@@ -4,6 +4,7 @@ import { WhatsAppFab } from "@/components/contact/whatsapp-fab";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { whatsAppUrl } from "@/lib/contact/regions";
 import { getTranslations } from "next-intl/server";
+import { CookieConsentDialog } from "@/components/privacy/cookie-consent";
 
 export default async function SiteLayout({
   children,
@@ -29,6 +30,7 @@ export default async function SiteLayout({
         {children}
       </main>
       <SiteFooter />
+      <CookieConsentDialog />
       {whatsapp ? (
         <WhatsAppFab
           href={whatsapp}

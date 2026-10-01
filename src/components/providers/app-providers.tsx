@@ -3,6 +3,7 @@
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppToaster } from "@/components/providers/app-toaster";
+import { ConsentProvider } from "@/components/privacy/consent-provider";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -13,8 +14,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <TooltipProvider>
-        {children}
-        <AppToaster />
+        <ConsentProvider>
+          {children}
+          <AppToaster />
+        </ConsentProvider>
       </TooltipProvider>
     </ThemeProvider>
   );

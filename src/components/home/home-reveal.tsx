@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { CSSProperties } from "react";
 
 type RevealProps = {
   children: React.ReactNode;
@@ -15,8 +16,15 @@ export function PageReveal({ children, className }: RevealProps) {
   return <div className={cn("home-page-reveal", className)}>{children}</div>;
 }
 
-export function SectionReveal({ children, className }: RevealProps) {
-  return <div className={cn("home-section-reveal", className)}>{children}</div>;
+export function SectionReveal({ children, className, delay = 0 }: RevealProps) {
+  return (
+    <div
+      className={cn("home-section-reveal", className)}
+      style={{ "--reveal-index": delay * 20 } as CSSProperties}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function ImageReveal({ children, className }: RevealProps) {

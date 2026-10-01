@@ -343,20 +343,22 @@
   @media (prefers-reduced-motion: no-preference) {
     @keyframes hero-entry {
       from {
-        transform: translate3d(0, 1.25rem, 0);
+        opacity: 0;
+        transform: translate3d(-2.75rem, 0.75rem, 0);
       }
       to {
+        opacity: 1;
         transform: translate3d(0, 0, 0);
       }
     }
     .hero-entry {
-      animation: hero-entry 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: hero-entry 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
     .hero-entry-2 {
-      animation-delay: 0.08s;
+      animation-delay: 0.25s;
     }
     .hero-entry-3 {
-      animation-delay: 0.16s;
+      animation-delay: 0.5s;
     }
   }
   /* The homepage has intentionally rich editorial content. Let Chromium
@@ -423,8 +425,8 @@
         --reveal-distance: 1.5rem;
         --reveal-from-opacity: 0.5;
         /* Each later card finishes a little later in the same scroll. */
-        animation-range: entry calc(var(--reveal-index, 0) * 4%)
-          cover calc(22% + var(--reveal-index, 0) * 4%);
+        animation-range: entry calc(var(--reveal-index, 0) * 4%) cover
+          calc(22% + var(--reveal-index, 0) * 4%);
       }
       .home-image-reveal > img {
         animation: home-reveal-focus linear both;
@@ -432,12 +434,68 @@
         animation-timing-function: cubic-bezier(0.2, 0.7, 0.25, 1);
         animation-range: entry 0% cover 55%;
       }
+      @keyframes home-reveal-left {
+        from {
+          opacity: var(--reveal-from-opacity, 0.25);
+          transform: translate3d(
+            var(--reveal-x, -2.75rem),
+            var(--reveal-distance, 2.25rem),
+            0
+          );
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      /* Physical leftward origin in both locales; text alignment stays logical.
+         Scope the new choreography to Home, not shared editorial surfaces. */
+      .home-content .home-section-reveal,
+      .home-content .home-page-reveal,
+      .home-content .home-reveal-item {
+        animation-name: home-reveal-left;
+        animation-duration: auto;
+        animation-fill-mode: both;
+        animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        animation-timeline: view();
+        animation-range: entry calc(var(--reveal-index, 0) * 4%) cover
+          calc(36% + var(--reveal-index, 0) * 4%);
+      }
       @media (max-width: 767px) {
         .home-section-reveal {
           --reveal-distance: 1.25rem;
         }
         .home-reveal-item {
           --reveal-distance: 1rem;
+        }
+        .home-content .home-section-reveal {
+          --reveal-distance: 2.5rem;
+          --reveal-x: -2rem;
+        }
+        .home-content .home-reveal-item {
+          --reveal-distance: 2.25rem;
+          --reveal-x: -1.5rem;
+          --reveal-from-opacity: 0.25;
+          animation-range: entry 0% cover 40%;
+        }
+        @keyframes home-mobile-depth {
+          from {
+            opacity: 0.3;
+            transform: translate3d(-1.5rem, 2.5rem, 0) scale(0.96);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        .home-content .home-mobile-depth {
+          animation: home-mobile-depth cubic-bezier(0.22, 1, 0.36, 1) both;
+          animation-timeline: view();
+          animation-range: entry 0% cover 40%;
+          transform-origin: center top;
+        }
+        .home-content .home-image-reveal > img {
+          animation-range: entry 0% cover 65%;
         }
       }
     }
@@ -831,6 +889,9 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
     var(--page) calc(100% - 4px)
   );
 }
+.home-content {
+  overflow-x: clip;
+}
 .hero-scene {
   container-type: inline-size;
 }
@@ -843,10 +904,16 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
   --land-overlap: clamp(4.5rem, 12svh, 6.5rem);
   /* The deep-green run below the plates that carries the band. */
   --land-tail: 11rem;
+  --bean-size: 7rem;
+  --bean-top: max(
+    calc(var(--plate-h) * 0.21),
+    calc(var(--land-overlap) + 1.25rem)
+  );
 }
 @media (min-width: 640px) {
   .hero-scene > * {
     --land-tail: clamp(7rem, 14svh, 10rem);
+    --bean-size: 10rem;
   }
 }
 @media (min-width: 1024px) {
@@ -856,10 +923,121 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
     --plate-w: max(117cqw, 105svh);
     --land-overlap: clamp(7rem, 16svh, 10rem);
     --land-tail: clamp(7.5rem, 16svh, 11rem);
+    --bean-size: 12rem;
+    /* Position the artwork's midpoint at the initial viewport edge. This is
+       independent of the ridge's 15% overlap; the bean stays 12rem wide. */
+    --bean-top: max(
+      calc(var(--land-overlap) + 1.25rem),
+      calc(100svh - var(--hero-scene-top, 1.8rem) - var(--hero-copy-h, 30rem) + var(--land-overlap) - var(--bean-size) * 0.5)
+    );
   }
 }
 .hero-copy {
   padding-top: calc(var(--site-header-h) + clamp(1.75rem, 7svh, 5.5rem));
+}
+
+.home-entry-loader {
+  transition: opacity 380ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* route-frame is an existing stacking context. Raise it only during entry so
+   the full-screen splash also covers the sibling header and WhatsApp control. */
+body:has(.home-content[data-home-loading="true"]) .route-frame {
+  position: relative;
+  z-index: 100;
+}
+[data-home-phase="leaving"] .home-entry-loader {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+[data-home-loading="true"] .hero-entry {
+  animation-play-state: paused;
+}
+.home-entry-progress {
+  appearance: none;
+  border: 0;
+  background: var(--border);
+  color: var(--foreground);
+}
+.home-entry-progress::-webkit-progress-bar { background: var(--border); }
+.home-entry-progress::-webkit-progress-value { background: var(--foreground); }
+.home-entry-progress::-moz-progress-bar { background: var(--foreground); }
+
+@media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
+  /* Replayable viewport reveals: phone depth is stronger, tablet restrained.
+     No scroll handlers, layout animation, filters or sticky/pinned additions. */
+  .home-content > section[data-depth-state] {
+    --depth-scale: 0.94;
+    --depth-y: 2.5rem;
+    --depth-x: -1rem;
+    opacity: 1;
+    transform: none;
+    transform-origin: center top;
+    transition: transform 1.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 1s ease;
+  }
+  .home-content > section[data-depth-pattern="1"] {
+    --depth-scale: 0.97;
+    --depth-x: -2rem;
+    --depth-y: 2rem;
+  }
+  .home-content > section[data-depth-pattern="2"] {
+    --depth-scale: 0.95;
+    --depth-x: 0rem;
+    --depth-y: 3rem;
+  }
+  .home-content > section[data-depth-state="waiting"] {
+    opacity: 0.25;
+    transform: translate3d(var(--depth-x), var(--depth-y), 0) scale(var(--depth-scale));
+  }
+  .home-content > section[data-depth-state] .home-section-reveal,
+  .home-content > section[data-depth-state] .home-page-reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: opacity 1s ease 120ms, transform 1.25s cubic-bezier(0.16, 1, 0.3, 1) 120ms;
+  }
+  .home-content > section[data-depth-state="waiting"] .home-section-reveal,
+  .home-content > section[data-depth-state="waiting"] .home-page-reveal {
+    opacity: 0.35;
+    transform: translate3d(-0.75rem, 1.5rem, 0);
+  }
+  .home-content > section[data-depth-state] .home-reveal-item {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: opacity 1s ease, transform 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: min(calc(var(--reveal-index, 0) * 40ms), 320ms);
+  }
+  .home-content > section[data-depth-state="waiting"] .home-reveal-item {
+    opacity: 0.35;
+    transform: translate3d(-0.5rem, 2rem, 0) scale(0.97);
+  }
+  .home-content > section[data-depth-state] [data-depth-child] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transform-origin: center top;
+    transition: opacity 1s ease, transform 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: min(calc(var(--reveal-index, 0) * 40ms), 240ms);
+  }
+  .home-content > section[data-depth-state] [data-depth-child="waiting"] {
+    opacity: 0.3;
+    transform: translate3d(-0.75rem, 2rem, 0) scale(0.95);
+  }
+}
+@media (max-width: 639px) and (prefers-reduced-motion: no-preference) {
+  .home-content > section[data-depth-pattern="0"] {
+    --depth-scale: 0.91;
+    --depth-y: 4rem;
+    --depth-x: -1.25rem;
+  }
+  .home-content > section[data-depth-pattern="2"] {
+    --depth-scale: 0.93;
+    --depth-y: 3.5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-entry-loader { transition: none; }
 }
 .hero-land {
   height: calc(var(--plate-h) + var(--land-tail));
@@ -895,15 +1073,23 @@ html:active-view-transition-type(back) ::view-transition-new(route-content) {
   );
 }
 .hero-bean-slot {
-  /* Below the headline, in the valley, and never tucked under the intro. */
-  top: max(
-    calc(var(--plate-h) * 0.2),
-    calc(var(--land-overlap) + 1.25rem)
-  );
+  top: var(--bean-top);
 }
-@media (min-width: 1024px) {
-  .hero-bean-slot {
-    top: calc(var(--plate-h) * 0.35);
+.hero-plate-depth {
+  /* The supplied cutout's centre ridge is 626 / 1920 of its width down.
+     The bean's alpha bounds are 9–91% of its square: meeting it at 78.4%
+     leaves about 85% of the artwork exposed, without cropping the bean. */
+  top: calc(
+    var(--bean-top) + var(--bean-size) * 0.784 - var(--plate-w) * 0.326
+  );
+  height: var(--plate-h);
+}
+@media (min-width: 1600px) {
+  /* The unchanged foreground asset becomes very tall on wide screens. Keep
+     its centre bushes below the bean, rather than hiding the entire object
+     before the viewport reveal starts. Normal laptop/mobile placement stays. */
+  .hero-plate-front {
+    top: max(0px, calc(var(--bean-top) + var(--bean-size) * 0.9 - var(--plate-h) * 0.54));
   }
 }
 /* The near plate ends above the land's tail; feather that edge so it never

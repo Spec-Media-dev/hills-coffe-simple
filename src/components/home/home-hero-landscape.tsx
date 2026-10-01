@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { motion, useScroll, useSpring, useTransform } from "motion/react";
 import { Link } from "@/i18n/navigation";
 import { useMotionTier } from "@/hooks/use-motion-tier";
@@ -20,8 +20,8 @@ import { useMotionTier } from "@/hooks/use-motion-tier";
  *
  *   base  — hero-coffee-midground.png, the far plane (sky, mountains). Lags
  *           the most and hazes out.
- *   depth — hero-coffee-landscape-bg.png, the ridge and valley. Lags less.
- *   bean  — the coffee bean, between depth and the bushes. Lags like a distant
+ *   depth — hills-for-hero.png, the transparent wooded ridge. Lags less.
+ *   bean  — the coffee bean, behind the ridge and bushes. Lags like a distant
  *           object and grows slightly, so it travels up the viewport and gains
  *           presence while the coffee bushes rise in front of it.
  *   front — hero-coffee-foreground.png, the bushes. Moves with the page.
@@ -32,7 +32,7 @@ import { useMotionTier } from "@/hooks/use-motion-tier";
  * and opacity — no layout work and no React renders while scrolling.
  *
  * Stacking inside the landscape block:
- *   0 base · 1 wash · 2 depth · 3 bean · 4 front · 5 ending shade · 6 band
+ *   0 base · 1 wash · 2 bean · 3 depth · 4 front · 5 ending shade · 6 band
  * The headline sits above the whole landscape (z 6 in the scene).
  */
 
@@ -66,15 +66,37 @@ export function HomeHeroLandscape({
   offer: string;
 }) {
   const landRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const copyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const copy = copyRef.current;
+    if (!scene || !copy) return;
+    const measure = () => {
+      scene.style.setProperty("--hero-copy-h", `${copy.offsetHeight}px`);
+      scene.style.setProperty(
+        "--hero-scene-top",
+        `${scene.getBoundingClientRect().top + window.scrollY}px`,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(copy);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
   const tier = useMotionTier();
   const k = INTENSITY[tier];
   const full = tier === "full";
 
-  // Transform timeline: from the landscape's centre reaching the bottom of the
-  // viewport to its bottom leaving the top — the whole time it is travelling.
+  // Start at the scene's resting position, not a viewport-dependent midpoint:
+  // the initial bean/ridge relationship must be stable on every screen.
   const { scrollYProgress: travelRaw } = useScroll({
-    target: landRef,
-    offset: ["center end", "end start"],
+    target: sceneRef,
+    offset: ["start start", "end start"],
   });
   // Fade timeline: from the landscape's top entering the viewport until a
   // third of it has passed the top — the ending is fully formed by then.
@@ -95,9 +117,7 @@ export function HomeHeroLandscape({
   // The bean: lags more than any plane (like the reference's sun, ~1.4× its
   // own size over the travel), grows a little, and turns a few degrees. It
   // fades out only once the bushes and the shade have covered it anyway.
-  const beanY = useTransform(travel, (p) =>
-    full ? `${-p * 130}%` : `${p * 140 * k}%`,
-  );
+  const beanY = useTransform(travel, (p) => `${-p * 130 * k}%`);
   const beanScale = useTransform(travel, (p) => (full ? 1 + 0.16 * p : 1));
   const beanRotate = useTransform(travel, (p) => (full ? -8 + 20 * p : 0));
   const beanOpacity = useTransform(travel, (p) =>
@@ -116,7 +136,7 @@ export function HomeHeroLandscape({
 
   return (
     <section className="home-hero relative isolate bg-primary text-primary-foreground">
-      <div className="hero-scene relative overflow-hidden">
+      <div ref={sceneRef} className="hero-scene relative overflow-hidden">
         <div
           aria-hidden="true"
           className="hero-aurora pointer-events-none absolute inset-0 z-[1]"
@@ -124,7 +144,10 @@ export function HomeHeroLandscape({
 
         {/* Headline block — in flow, above every plane, moving with the page
             like the reference's heading. */}
-        <div className="hero-copy site-container relative z-[6] flex flex-col items-center text-center">
+        <div
+          ref={copyRef}
+          className="hero-copy site-container relative z-[6] flex flex-col items-center text-center"
+        >
           <p className="hero-entry hero-entry-1 eyebrow hero-eyebrow !text-gold-contrast">
             {eyebrow}
           </p>
@@ -164,14 +187,14 @@ export function HomeHeroLandscape({
 
             <motion.div
               aria-hidden="true"
-              className="hero-plate pointer-events-none z-[2] lg:z-[3]"
+              className="hero-plate hero-plate-depth pointer-events-none z-[3]"
               style={{ y: depthY }}
             >
               <Image
-                src="/images/new%20edit/hero-coffee-landscape-bg.png"
+                src="/images/hills-for-hero.png"
                 alt=""
-                width={1672}
-                height={941}
+                width={1920}
+                height={1280}
                 loading="eager"
                 fetchPriority="low"
                 sizes="(min-width: 1024px) 117vw, max(44rem, 95vh)"
@@ -180,8 +203,8 @@ export function HomeHeroLandscape({
             </motion.div>
 
             {/* The bean is the scene's one interactive object: a link to the
-                offer list, between the ridge and the bushes. */}
-            <div className="hero-bean-slot pointer-events-none absolute inset-x-0 z-[3] lg:z-[2] flex justify-center">
+                offer list, with its lower edge covered by the ridge. */}
+            <div className="hero-bean-slot pointer-events-none absolute inset-x-0 z-[2] flex justify-center">
               <motion.div
                 className="pointer-events-auto"
                 style={{
